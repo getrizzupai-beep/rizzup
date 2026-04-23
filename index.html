@@ -1,73 +1,97 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>RizzUp AI</title>
-  <link rel="stylesheet" href="css/style.css">
-</head>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
 
-<body>
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
 
-<!-- LANDING -->
-<div id="landingView">
-  <h1>RizzUp AI 💘</h1>
-  <button onclick="openAuthModal()">Try Free</button>
-</div>
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAdaZDY3LOAfPSVlCMKxMPLDV1OZxfL9oU",
+  authDomain: "rizzup-a9aab.firebaseapp.com",
+  projectId: "rizzup-a9aab",
+  storageBucket: "rizzup-a9aab.firebasestorage.app",
+  messagingSenderId: "1054041538795",
+  appId: "1:1054041538795:web:cb2b22d4725aaab2853eae",
+  measurementId: "G-XWZ9EV6C4X"
+};
 
-<!-- AUTH MODAL -->
-<div id="authModal" style="display:none;">
-  <h2>Login / Signup</h2>
+// Init
+const app = initializeApp(firebaseConfig);
+getAnalytics(app);
+const auth = getAuth(app);
 
-  <input id="mName" placeholder="Your Name"><br><br>
-  <input id="mEmail" placeholder="Email"><br><br>
-
-  <button onclick="doSignup()">Signup</button>
-  <button onclick="quickSignup()">Login</button>
-</div>
-
-<!-- APP -->
-<div id="appView" style="display:none;">
-  <h2>Welcome to App 🚀</h2>
-  <button onclick="doLogout()">Logout</button>
-</div>
-
-<script>
-function openAuthModal(){
-  document.getElementById("authModal").style.display = "block";
-}
-
-// TEMP FAKE LOGIN (no Firebase)
-function doSignup(){
+// =====================
+// ✅ SIGNUP
+// =====================
+window.doSignup = async function () {
   const email = document.getElementById("mEmail").value;
+  const password = "123456"; // fixed simple password
 
-  if(!email){
+  if (!email) {
     alert("Enter email");
     return;
   }
 
-  localStorage.setItem("user", email);
-  showApp();
-}
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+    alert("Signup successful 🚀");
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
-function quickSignup(){
-  doSignup();
-}
+// =====================
+// ✅ LOGIN
+// =====================
+window.quickSignup = async function () {
+  const email = document.getElementById("mEmail").value;
+  const password = "123456";
 
-function doLogout(){
-  localStorage.removeItem("user");
-  location.reload();
-}
+  if (!email) {
+    alert("Enter email");
+    return;
+  }
 
-function showApp(){
-  document.getElementById("landingView").style.display = "none";
-  document.getElementById("appView").style.display = "block";
-}
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    alert("Login successful ✅");
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
-// auto login
-if(localStorage.getItem("user")){
-  showApp();
-}
+// =====================
+// ✅ LOGOUT
+// =====================
+window.doLogout = async function () {
+  try {
+    await signOut(auth);
+    alert("Logged out");
+  } catch (err) {
+    alert(err.message);
+  }
+};
+
+// =====================
+// ✅ AUTO LOGIN SWITCH
+// =====================
+onAuthStateChanged(auth, (user) => {
+  const landing = document.getElementById("landingView");
+  const appView = document.getElementById("appView");
+
+  if (user) {
+    landing.style.display = "none";
+    appView.style.display = "block";
+  } else {
+    landing.style.display = "block";
+    appView.style.display = "none";
+  }
+});
+
 </script>
-
-</body>
-</html>
