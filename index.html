@@ -1,97 +1,32 @@
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
+<div class="modal-overlay" id="authModal">
+  <div class="modal-box">
+    <div style="text-align:center;font-size:36px;margin-bottom:8px">💘</div>
+    
+    <h3>Join RizzUp AI</h3>
+    <p>Enter your details to start practicing.</p>
 
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+    <div class="form-group">
+      <label class="form-label">Your Name</label>
+      <input id="mName" class="form-input" placeholder="Rahul Kumar" type="text">
+    </div>
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyAdaZDY3LOAfPSVlCMKxMPLDV1OZxfL9oU",
-  authDomain: "rizzup-a9aab.firebaseapp.com",
-  projectId: "rizzup-a9aab",
-  storageBucket: "rizzup-a9aab.firebasestorage.app",
-  messagingSenderId: "1054041538795",
-  appId: "1:1054041538795:web:cb2b22d4725aaab2853eae",
-  measurementId: "G-XWZ9EV6C4X"
-};
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input id="mEmail" class="form-input" placeholder="rahul@gmail.com" type="email">
+    </div>
 
-// Init
-const app = initializeApp(firebaseConfig);
-getAnalytics(app);
-const auth = getAuth(app);
+    <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">
+      Start Practicing Free →
+    </button>
 
-// =====================
-// ✅ SIGNUP
-// =====================
-window.doSignup = async function () {
-  const email = document.getElementById("mEmail").value;
-  const password = "123456"; // fixed simple password
+    <div class="modal-divider"><span>or</span></div>
 
-  if (!email) {
-    alert("Enter email");
-    return;
-  }
+    <button class="btn-google-modal" onclick="quickSignup()">
+      ⚡ Quick Start
+    </button>
 
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    alert("Signup successful 🚀");
-  } catch (err) {
-    alert(err.message);
-  }
-};
-
-// =====================
-// ✅ LOGIN
-// =====================
-window.quickSignup = async function () {
-  const email = document.getElementById("mEmail").value;
-  const password = "123456";
-
-  if (!email) {
-    alert("Enter email");
-    return;
-  }
-
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    alert("Login successful ✅");
-  } catch (err) {
-    alert(err.message);
-  }
-};
-
-// =====================
-// ✅ LOGOUT
-// =====================
-window.doLogout = async function () {
-  try {
-    await signOut(auth);
-    alert("Logged out");
-  } catch (err) {
-    alert(err.message);
-  }
-};
-
-// =====================
-// ✅ AUTO LOGIN SWITCH
-// =====================
-onAuthStateChanged(auth, (user) => {
-  const landing = document.getElementById("landingView");
-  const appView = document.getElementById("appView");
-
-  if (user) {
-    landing.style.display = "none";
-    appView.style.display = "block";
-  } else {
-    landing.style.display = "block";
-    appView.style.display = "none";
-  }
-});
-
-</script>
+    <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:14px">
+      🔒 Your data is safe · No API key required
+    </div>
+  </div>
+</div>
