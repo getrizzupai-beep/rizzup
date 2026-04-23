@@ -1,83 +1,126 @@
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RizzUp AI</title>
 
-// ✅ ADD THIS (AUTH)
-import { 
-  getAuth, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
+  <link rel="stylesheet" href="css/style.css">
+</head>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAdaZDY3LOAfPSVlCMKxMPLDV1OZxfL9oU",
-  authDomain: "rizzup-a9aab.firebaseapp.com",
-  projectId: "rizzup-a9aab",
-  storageBucket: "rizzup-a9aab.firebasestorage.app",
-  messagingSenderId: "1054041538795",
-  appId: "1:1054041538795:web:cb2b22d4725aaab2853eae",
-  measurementId: "G-XWZ9EV6C4X"
-};
+<body>
 
-// Init
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const auth = getAuth(app);
+<!-- ===== LANDING ===== -->
+<div id="landingView">
 
-// ============================
-// ✅ SIGNUP
-// ============================
-window.doSignup = async function () {
+<nav style="padding:20px;display:flex;justify-content:space-between;">
+  <h2>RizzUp 💘</h2>
+  <button onclick="openAuthModal()">Login</button>
+</nav>
+
+<section style="text-align:center;padding:80px 20px;">
+  <h1>Your AI Dating Coach</h1>
+  <p>Practice conversations & improve your confidence</p>
+
+  <button onclick="openAuthModal()">Start Free</button>
+</section>
+
+</div>
+
+<!-- ===== AUTH MODAL ===== -->
+<div id="authModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#00000080;">
+  <div style="background:white;padding:20px;max-width:300px;margin:100px auto;border-radius:10px;">
+    
+    <h3>Join RizzUp</h3>
+    <p>Enter your details to start practicing</p>
+
+    <input id="mName" placeholder="Your Name" style="width:100%;margin-bottom:10px;">
+    <input id="mEmail" placeholder="Email" style="width:100%;margin-bottom:10px;">
+
+    <button onclick="doSignup()" style="width:100%;">Start</button>
+    <br><br>
+    <button onclick="quickSignup()" style="width:100%;">Quick Login</button>
+
+  </div>
+</div>
+
+<!-- ===== APP VIEW ===== -->
+<div id="appView" style="display:none;padding:20px;">
+  <h2>Welcome to RizzUp 🚀</h2>
+
+  <button onclick="doLogout()">Logout</button>
+
+  <hr><br>
+
+  <h3>Chat Demo 💬</h3>
+
+  <div id="chatBox" style="border:1px solid #ccc;height:200px;overflow:auto;padding:10px;margin-bottom:10px;"></div>
+
+  <input id="chatInput" placeholder="Type message..." style="width:70%;">
+  <button onclick="sendMessage()">Send</button>
+
+</div>
+
+<!-- ===== JS ===== -->
+<script>
+
+function openAuthModal(){
+  document.getElementById("authModal").style.display = "block";
+}
+
+// FAKE LOGIN (for now)
+function doSignup(){
   const email = document.getElementById("mEmail").value;
-  const password = document.getElementById("mApiKey").value; // temp use API key as password
 
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-    alert("Signup successful 🚀");
-    closeAuthModal();
-  } catch (err) {
-    alert(err.message);
+  if(!email){
+    alert("Enter email");
+    return;
   }
-};
 
-// ============================
-// ✅ LOGIN (Quick start button)
-// ============================
-window.quickSignup = async function () {
-  const email = document.getElementById("mEmail").value;
-  const password = document.getElementById("mApiKey").value;
+  localStorage.setItem("user", email);
+  showApp();
+}
 
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-    alert("Login successful ✅");
-    closeAuthModal();
-  } catch (err) {
-    alert(err.message);
-  }
-};
+function quickSignup(){
+  doSignup();
+}
 
-// ============================
-// ✅ LOGOUT
-// ============================
-window.doLogout = async function () {
-  await signOut(auth);
-  alert("Logged out");
+function doLogout(){
+  localStorage.removeItem("user");
   location.reload();
-};
+}
 
-// ============================
-// ✅ AUTO LOGIN STATE
-// ============================
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    document.getElementById("landingView").style.display = "none";
-    document.getElementById("appView").style.display = "block";
-  } else {
-    document.getElementById("landingView").style.display = "block";
-    document.getElementById("appView").style.display = "none";
-  }
-});
+function showApp(){
+  document.getElementById("landingView").style.display = "none";
+  document.getElementById("authModal").style.display = "none";
+  document.getElementById("appView").style.display = "block";
+}
+
+// Auto login
+if(localStorage.getItem("user")){
+  showApp();
+}
+
+// ===== SIMPLE CHAT (DEMO AI) =====
+function sendMessage(){
+  const input = document.getElementById("chatInput");
+  const chatBox = document.getElementById("chatBox");
+
+  const userMsg = input.value;
+  if(!userMsg) return;
+
+  chatBox.innerHTML += "<div><b>You:</b> " + userMsg + "</div>";
+
+  // Fake AI reply
+  setTimeout(()=>{
+    chatBox.innerHTML += "<div><b>AI:</b> Hmm nice... try being more playful 😄</div>";
+    chatBox.scrollTop = chatBox.scrollHeight;
+  },500);
+
+  input.value = "";
+}
 
 </script>
+
+</body>
+</html>
