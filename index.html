@@ -1,32 +1,73 @@
-<div class="modal-overlay" id="authModal">
-  <div class="modal-box">
-    <div style="text-align:center;font-size:36px;margin-bottom:8px">💘</div>
-    
-    <h3>Join RizzUp AI</h3>
-    <p>Enter your details to start practicing.</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RizzUp AI</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
 
-    <div class="form-group">
-      <label class="form-label">Your Name</label>
-      <input id="mName" class="form-input" placeholder="Rahul Kumar" type="text">
-    </div>
+<body>
 
-    <div class="form-group">
-      <label class="form-label">Email</label>
-      <input id="mEmail" class="form-input" placeholder="rahul@gmail.com" type="email">
-    </div>
-
-    <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">
-      Start Practicing Free →
-    </button>
-
-    <div class="modal-divider"><span>or</span></div>
-
-    <button class="btn-google-modal" onclick="quickSignup()">
-      ⚡ Quick Start
-    </button>
-
-    <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:14px">
-      🔒 Your data is safe · No API key required
-    </div>
-  </div>
+<!-- LANDING -->
+<div id="landingView">
+  <h1>RizzUp AI 💘</h1>
+  <button onclick="openAuthModal()">Try Free</button>
 </div>
+
+<!-- AUTH MODAL -->
+<div id="authModal" style="display:none;">
+  <h2>Login / Signup</h2>
+
+  <input id="mName" placeholder="Your Name"><br><br>
+  <input id="mEmail" placeholder="Email"><br><br>
+
+  <button onclick="doSignup()">Signup</button>
+  <button onclick="quickSignup()">Login</button>
+</div>
+
+<!-- APP -->
+<div id="appView" style="display:none;">
+  <h2>Welcome to App 🚀</h2>
+  <button onclick="doLogout()">Logout</button>
+</div>
+
+<script>
+function openAuthModal(){
+  document.getElementById("authModal").style.display = "block";
+}
+
+// TEMP FAKE LOGIN (no Firebase)
+function doSignup(){
+  const email = document.getElementById("mEmail").value;
+
+  if(!email){
+    alert("Enter email");
+    return;
+  }
+
+  localStorage.setItem("user", email);
+  showApp();
+}
+
+function quickSignup(){
+  doSignup();
+}
+
+function doLogout(){
+  localStorage.removeItem("user");
+  location.reload();
+}
+
+function showApp(){
+  document.getElementById("landingView").style.display = "none";
+  document.getElementById("appView").style.display = "block";
+}
+
+// auto login
+if(localStorage.getItem("user")){
+  showApp();
+}
+</script>
+
+</body>
+</html>
