@@ -2,7 +2,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-analytics.js";
 
-// ✅ ADD THIS (AUTH)
 import { 
   getAuth, 
   createUserWithEmailAndPassword, 
@@ -11,6 +10,7 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-auth.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAdaZDY3LOAfPSVlCMKxMPLDV1OZxfL9oU",
   authDomain: "rizzup-a9aab.firebaseapp.com",
@@ -23,60 +23,74 @@ const firebaseConfig = {
 
 // Init
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+getAnalytics(app);
 const auth = getAuth(app);
 
-// ============================
+// =====================
 // ✅ SIGNUP
-// ============================
+// =====================
 window.doSignup = async function () {
   const email = document.getElementById("mEmail").value;
-  const password = document.getElementById("mApiKey").value; // temp use API key as password
+  const password = "123456"; // fixed simple password
+
+  if (!email) {
+    alert("Enter email");
+    return;
+  }
 
   try {
     await createUserWithEmailAndPassword(auth, email, password);
     alert("Signup successful 🚀");
-    closeAuthModal();
   } catch (err) {
     alert(err.message);
   }
 };
 
-// ============================
-// ✅ LOGIN (Quick start button)
-// ============================
+// =====================
+// ✅ LOGIN
+// =====================
 window.quickSignup = async function () {
   const email = document.getElementById("mEmail").value;
-  const password = document.getElementById("mApiKey").value;
+  const password = "123456";
+
+  if (!email) {
+    alert("Enter email");
+    return;
+  }
 
   try {
     await signInWithEmailAndPassword(auth, email, password);
     alert("Login successful ✅");
-    closeAuthModal();
   } catch (err) {
     alert(err.message);
   }
 };
 
-// ============================
+// =====================
 // ✅ LOGOUT
-// ============================
+// =====================
 window.doLogout = async function () {
-  await signOut(auth);
-  alert("Logged out");
-  location.reload();
+  try {
+    await signOut(auth);
+    alert("Logged out");
+  } catch (err) {
+    alert(err.message);
+  }
 };
 
-// ============================
-// ✅ AUTO LOGIN STATE
-// ============================
+// =====================
+// ✅ AUTO LOGIN SWITCH
+// =====================
 onAuthStateChanged(auth, (user) => {
+  const landing = document.getElementById("landingView");
+  const appView = document.getElementById("appView");
+
   if (user) {
-    document.getElementById("landingView").style.display = "none";
-    document.getElementById("appView").style.display = "block";
+    landing.style.display = "none";
+    appView.style.display = "block";
   } else {
-    document.getElementById("landingView").style.display = "block";
-    document.getElementById("appView").style.display = "none";
+    landing.style.display = "block";
+    appView.style.display = "none";
   }
 });
 
