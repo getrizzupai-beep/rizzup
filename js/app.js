@@ -1,6 +1,6 @@
 /**
  * RizzUp AI — app.js
- * Uses Claude API directly via Anthropic JS SDK (browser-compatible fetch)
+ * No API key needed from user — works out of the box!
  */
 
 // ============ CONFIG ============
@@ -83,7 +83,6 @@ const COURSE_DAYS = [
 let state = {
   user: null,
   plan: 'free',
-  apiKey: '',
   minsUsed: 0,
   totalMsgs: 0,
   sessions: 0,
@@ -144,24 +143,19 @@ function toggleFaq(el) {
   el.parentElement.classList.toggle('open');
 }
 
-// ============ AUTH ============
+// ============ AUTH — NO API KEY NEEDED ============
 function doSignup() {
   const name = $('#mName').value.trim() || 'User';
   const email = $('#mEmail').value.trim() || 'user@rizzup.in';
-  const key = $('#mApiKey').value.trim();
-  if (!key) { showToast('API key daalo pehle! 🔑', 'error'); return; }
-  initUser(name, email, key);
+  initUser(name, email);
 }
 
 function quickSignup() {
-  const key = $('#mApiKey').value.trim();
-  if (!key) { showToast('API key daalo pehle! 🔑', 'error'); return; }
-  initUser('Rahul', 'rahul@rizzup.in', key);
+  initUser('Rahul', 'rahul@rizzup.in');
 }
 
-function initUser(name, email, apiKey) {
+function initUser(name, email) {
   state.user = { id: btoa(email).replace(/=/g,''), name, email };
-  state.apiKey = apiKey;
   loadUserData();
 
   const today = new Date().toDateString();
@@ -205,7 +199,7 @@ setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
 
 function doLogout() {
   saveUserData();
-  state = { ...state, user: null, apiKey: '', history: [] };
+  state = { ...state, user: null, history: [] };
   $('#appView').style.display = 'none';
   $('#landingView').style.display = 'block';
 }
@@ -360,7 +354,6 @@ async function callClaude(messages, systemPrompt) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': state.apiKey,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
@@ -419,8 +412,7 @@ async function sendMessage() {
     addBubble('ai', reply);
   } catch(e) {
     hideTyping();
-    const msg = e.message.includes('401') ? 'Invalid API key! Check karo 🔑' :
-                e.message.includes('429') ? 'Rate limit! Thoda ruko ⏳' :
+    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' :
                 'Connection issue. Try again! 🔄';
     addBubble('ai', msg);
     showToast(msg, 'error');
