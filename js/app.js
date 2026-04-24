@@ -1,7 +1,28 @@
 /**
  * RizzUp AI — app.js
- * No API key needed from user — works out of the box!
+ * Full Supabase Auth: Signup + Login (Password/OTP) + Google
  */
+
+// ============ SUPABASE CONFIG ============
+const SUPABASE_URL = 'https://xzdjxvitqktsfeuzshik.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW';
+let supabase = null;
+
+async function initSupabase() {
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) await loadUserFromSupabase(session.user);
+
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      await loadUserFromSupabase(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      handleSignedOut();
+    }
+  });
+}
 
 // ============ CONFIG ============
 const CONFIG = {
@@ -88,127 +109,356 @@ let state = {
   sessions: 0,
   currentScenario: 'first_date',
   history: [],
-  loading: false
+  loading: false,
+  authMode: 'signup',
+  otpEmail: ''
 };
 
 // ============ UTILITIES ============
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-function sanitize(str) {
-  if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str.trim().slice(0, CONFIG.MAX_CHARS);
-  return div.innerHTML;
-}
-
 function formatText(text) {
   return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\n/g,'<br>')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 }
 
 function showToast(message, type = 'default') {
   const existing = $('.toast');
-  if (existing) existing.remove();
+  if (existing) { existing.textContent = message; existing.className = `toast ${type} show`; return; }
   const toast = document.createElement('div');
-  toast.className = `toast ${type}`;
+  toast.className = `toast ${type} show`;
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.classList.add('show'), 10);
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-// ============ LANDING PAGE ============
-function openAuthModal() {
+// ============ AUTH MODAL ============
+function openAuthModal(mode = 'signup') {
+  state.authMode = mode;
+  renderAuthModal();
   $('#authModal').classList.add('open');
 }
+
 function closeAuthModal() {
   $('#authModal').classList.remove('open');
 }
 
-$('#authModal').addEventListener('click', (e) => {
-  if (e.target === $('#authModal')) closeAuthModal();
+document.addEventListener('click', (e) => {
+  if (e.target?.id === 'authModal') closeAuthModal();
 });
 
-function switchFeature(el, idx) {
-  $$('.feat-tab').forEach(t => t.classList.remove('active'));
-  $$('.preview-card').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById(`prev-${idx}`).classList.add('active');
+function renderAuthModal() {
+  const box = $('#authModalBox');
+  if (!box) return;
+
+  // ---- SIGNUP ----
+  if (state.authMode === 'signup') {
+    box.innerHTML = `
+      <button onclick="closeAuthModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">✕</button>
+      <div style="text-align:center;font-size:38px;margin-bottom:8px">💘</div>
+      <h3 class="modal-title">Join RizzUp AI</h3>
+      <p class="modal-sub">Free forever. No credit card. 30 seconds.</p>
+
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input id="authName" class="form-input" type="text" placeholder="Rahul Kumar">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="authEmail" class="form-input" type="email" placeholder="rahul@gmail.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div style="position:relative">
+          <input id="authPassword" class="form-input" type="password" placeholder="Min 6 characters" style="padding-right:44px">
+          <button type="button" onclick="togglePass('authPassword',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted)">👁️</button>
+        </div>
+      </div>
+
+      <button id="signupBtn" class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">Create Free Account 🚀</button>
+
+      <div class="modal-divider"><span>or</span></div>
+      <button class="btn-google-modal" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+
+      <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--muted)">
+        Already have account? <a href="#" style="color:var(--pink);font-weight:700" onclick="openAuthModal('login');return false">Login here →</a>
+      </p>`;
+
+  // ---- LOGIN ----
+  } else if (state.authMode === 'login') {
+    box.innerHTML = `
+      <button onclick="closeAuthModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">✕</button>
+      <div style="text-align:center;font-size:38px;margin-bottom:8px">👋</div>
+      <h3 class="modal-title">Welcome Back!</h3>
+      <p class="modal-sub">Login to continue your journey.</p>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="authEmail" class="form-input" type="email" placeholder="rahul@gmail.com">
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button id="methPassBtn" onclick="setLoginMethod('password')" style="flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--pink);background:#fff0f3;color:var(--pink);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">🔑 Password</button>
+        <button id="methOtpBtn" onclick="setLoginMethod('otp')" style="flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--muted);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">📧 Magic Link</button>
+      </div>
+
+      <div id="passSection">
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div style="position:relative">
+            <input id="authPassword" class="form-input" type="password" placeholder="Your password" style="padding-right:44px">
+            <button type="button" onclick="togglePass('authPassword',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted)">👁️</button>
+          </div>
+        </div>
+        <div style="text-align:right;margin:-4px 0 14px">
+          <a href="#" style="font-size:13px;color:var(--pink);font-weight:600" onclick="setLoginMethod('otp');return false">Forgot password? Use magic link →</a>
+        </div>
+        <button id="loginBtn" class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doLogin()">Login →</button>
+      </div>
+
+      <div id="otpSection" style="display:none">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">Email pe magic link bhejenge — no password needed! Click the link to login instantly.</p>
+        <button id="otpBtn" class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doOTPLogin()">Send Magic Link 📧</button>
+      </div>
+
+      <div class="modal-divider"><span>or</span></div>
+      <button class="btn-google-modal" onclick="doGoogleLogin()">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continue with Google
+      </button>
+
+      <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--muted)">
+        New here? <a href="#" style="color:var(--pink);font-weight:700" onclick="openAuthModal('signup');return false">Create free account →</a>
+      </p>`;
+
+  // ---- OTP SENT ----
+  } else if (state.authMode === 'otp_sent') {
+    box.innerHTML = `
+      <div style="text-align:center;padding:1rem 0">
+        <div style="font-size:56px;margin-bottom:14px">📬</div>
+        <h3 class="modal-title">Email Check Karo!</h3>
+        <p class="modal-sub">Magic link bhej diya <strong>${state.otpEmail}</strong> pe.<br>Link click karo — seedha login ho jaega!</p>
+        <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:14px;margin:20px 0;font-size:14px;color:#059669;font-weight:700">
+          ✅ Inbox check karo aur link pe click karo
+        </div>
+        <button onclick="openAuthModal('login')" style="width:100%;padding:11px;border-radius:10px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--muted)">← Back to Login</button>
+      </div>`;
+  }
 }
 
-function toggleFaq(el) {
-  el.parentElement.classList.toggle('open');
+// ---- Toggle password/otp method ----
+function setLoginMethod(method) {
+  const passBtn = document.getElementById('methPassBtn');
+  const otpBtn = document.getElementById('methOtpBtn');
+  const passSection = document.getElementById('passSection');
+  const otpSection = document.getElementById('otpSection');
+  if (!passBtn) return;
+
+  const activeStyle = 'flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--pink);background:#fff0f3;color:var(--pink);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit';
+  const inactiveStyle = 'flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--muted);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit';
+
+  if (method === 'password') {
+    passBtn.style.cssText = activeStyle;
+    otpBtn.style.cssText = inactiveStyle;
+    passSection.style.display = '';
+    otpSection.style.display = 'none';
+  } else {
+    otpBtn.style.cssText = activeStyle;
+    passBtn.style.cssText = inactiveStyle;
+    passSection.style.display = 'none';
+    otpSection.style.display = '';
+  }
 }
 
-// ============ AUTH — NO API KEY NEEDED ============
-function doSignup() {
-  const name = $('#mName').value.trim() || 'User';
-  const email = $('#mEmail').value.trim() || 'user@rizzup.in';
-  initUser(name, email);
+// ---- Toggle password visibility ----
+function togglePass(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
 }
 
-function quickSignup() {
-  initUser('Rahul', 'rahul@rizzup.in');
+// ============ AUTH FUNCTIONS ============
+async function doSignup() {
+  const name = document.getElementById('authName')?.value.trim();
+  const email = document.getElementById('authEmail')?.value.trim();
+  const password = document.getElementById('authPassword')?.value;
+
+  if (!name || name.length < 2) { showToast('Apna naam daalo! 😊', 'error'); return; }
+  if (!email || !email.includes('@')) { showToast('Valid email daalo!', 'error'); return; }
+  if (!password || password.length < 6) { showToast('Password 6+ characters ka hona chahiye!', 'error'); return; }
+
+  const btn = document.getElementById('signupBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating... ⏳'; }
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email, password,
+      options: { data: { full_name: name, name: name } }
+    });
+    if (error) throw error;
+
+    if (data.user) {
+      await supabase.from('users').upsert({
+        id: data.user.id, email, name, plan: 'free',
+        mins_used: 0, total_msgs: 0, sessions: 0,
+        created_at: new Date().toISOString()
+      });
+
+      if (data.session) {
+        showToast(`Welcome ${name.split(' ')[0]}! 🎉`, 'success');
+        closeAuthModal();
+        await loadUserFromSupabase(data.user);
+      } else {
+        showToast(`Account bana! 🎉 Check email to verify, then login.`, 'success');
+        if (btn) { btn.disabled = false; btn.textContent = 'Create Free Account 🚀'; }
+        setTimeout(() => openAuthModal('login'), 2000);
+      }
+    }
+  } catch (err) {
+    if (err.message?.includes('already registered')) {
+      showToast('Email already registered! Login karo 😊', 'error');
+      openAuthModal('login');
+    } else {
+      showToast(err.message || 'Signup failed. Try again!', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Create Free Account 🚀'; }
+    }
+  }
 }
 
-function initUser(name, email) {
-  state.user = { id: btoa(email).replace(/=/g,''), name, email };
-  loadUserData();
+async function doLogin() {
+  const email = document.getElementById('authEmail')?.value.trim();
+  const password = document.getElementById('authPassword')?.value;
+
+  if (!email || !email.includes('@')) { showToast('Valid email daalo!', 'error'); return; }
+  if (!password) { showToast('Password daalo!', 'error'); return; }
+
+  const btn = document.getElementById('loginBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Logging in... ⏳'; }
+
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    showToast('Welcome back! 🔥', 'success');
+    closeAuthModal();
+    await loadUserFromSupabase(data.user);
+  } catch (err) {
+    const msg = err.message?.includes('Invalid') ? 'Email ya password galat hai!' : err.message || 'Login failed!';
+    showToast(msg, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Login →'; }
+  }
+}
+
+async function doOTPLogin() {
+  const email = document.getElementById('authEmail')?.value.trim();
+  if (!email || !email.includes('@')) { showToast('Valid email daalo!', 'error'); return; }
+
+  const btn = document.getElementById('otpBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending... ⏳'; }
+
+  try {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin }
+    });
+    if (error) throw error;
+    state.otpEmail = email;
+    state.authMode = 'otp_sent';
+    renderAuthModal();
+    showToast('Magic link bhej diya! Email check karo 📧', 'success');
+  } catch (err) {
+    showToast(err.message || 'Error sending link!', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Send Magic Link 📧'; }
+  }
+}
+
+async function doGoogleLogin() {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) throw error;
+  } catch (err) {
+    showToast('Google login mein problem! Try email se.', 'error');
+  }
+}
+
+async function doLogout() {
+  await saveUserToSupabase();
+  await supabase.auth.signOut();
+}
+
+function handleSignedOut() {
+  state = { ...state, user: null, plan: 'free', minsUsed: 0, totalMsgs: 0, sessions: 0, history: [] };
+  document.getElementById('appView').style.display = 'none';
+  document.getElementById('landingView').style.display = 'block';
+  showToast('Logged out! See you soon 👋');
+}
+
+// ============ USER DATA ============
+async function loadUserFromSupabase(authUser) {
+  const { data: userData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
+  const name = userData?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User';
+
+  state.user = { id: authUser.id, name, email: authUser.email };
 
   const today = new Date().toDateString();
-  if (localStorage.getItem(`rz_d_${state.user.id}`) !== today) {
+  const lastDate = localStorage.getItem(`rz_date_${authUser.id}`);
+  if (lastDate !== today) {
     state.minsUsed = 0;
-    localStorage.setItem(`rz_d_${state.user.id}`, today);
+    localStorage.setItem(`rz_date_${authUser.id}`, today);
+    await supabase.from('users').update({ mins_used: 0 }).eq('id', authUser.id);
+  } else {
+    state.minsUsed = userData?.mins_used || 0;
+  }
+
+  state.plan = userData?.plan || 'free';
+  state.totalMsgs = userData?.total_msgs || 0;
+  state.sessions = userData?.sessions || 0;
+
+  if (!userData) {
+    await supabase.from('users').upsert({
+      id: authUser.id, email: authUser.email, name, plan: 'free',
+      mins_used: 0, total_msgs: 0, sessions: 0,
+      created_at: new Date().toISOString()
+    });
   }
 
   closeAuthModal();
-  $('#landingView').style.display = 'none';
-  $('#appView').style.display = 'block';
+  document.getElementById('landingView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
   buildApp();
-  showToast(`Welcome, ${name.split(' ')[0]}! 🚀 Let's gooo`, 'success');
 }
 
-function loadUserData() {
-  const saved = localStorage.getItem(`rz_${state.user.id}`);
-  if (saved) {
-    try {
-      const d = JSON.parse(saved);
-      state.plan = d.plan || 'free';
-      state.minsUsed = d.minsUsed || 0;
-      state.totalMsgs = d.totalMsgs || 0;
-      state.sessions = d.sessions || 0;
-    } catch(e) {}
-  }
-  const sc = localStorage.getItem(`rz_sc_${state.user.id}`);
-  if (sc && SCENARIOS[sc]) state.currentScenario = sc;
+async function saveUserToSupabase() {
+  if (!state.user || !supabase) return;
+  await supabase.from('users').update({
+    plan: state.plan,
+    mins_used: state.minsUsed,
+    total_msgs: state.totalMsgs,
+    sessions: state.sessions,
+    updated_at: new Date().toISOString()
+  }).eq('id', state.user.id);
 }
 
-function saveUserData() {
-  if (!state.user) return;
-  localStorage.setItem(`rz_${state.user.id}`, JSON.stringify({
-    plan: state.plan, minsUsed: state.minsUsed,
-    totalMsgs: state.totalMsgs, sessions: state.sessions
-  }));
-  localStorage.setItem(`rz_sc_${state.user.id}`, state.currentScenario);
-}
-
-setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
-
-function doLogout() {
-  saveUserData();
-  state = { ...state, user: null, history: [] };
-  $('#appView').style.display = 'none';
-  $('#landingView').style.display = 'block';
-}
+setInterval(saveUserToSupabase, CONFIG.AUTO_SAVE_INTERVAL);
 
 // ============ APP BUILD ============
 function buildApp() {
   const name = state.user.name.split(' ')[0];
-  $('#dashGreet').textContent = `Hey ${name}! 👋`;
-  $('#appPlanBadge').textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
+  const greet = document.getElementById('dashGreet');
+  if (greet) greet.textContent = `Hey ${name}! 👋`;
+  const badge = document.getElementById('appPlanBadge');
+  if (badge) badge.textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
+  const logoutEl = document.getElementById('appLogout');
+  if (logoutEl) { logoutEl.textContent = `Logout (${name})`; logoutEl.onclick = doLogout; }
   buildDashboardScenarios();
   buildChatSidebar();
   buildCourse();
@@ -222,7 +472,7 @@ function switchPanel(btn, id) {
   $$('.app-nav-btn').forEach(b => b.classList.remove('active'));
   $$('.app-panel').forEach(p => p.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  document.getElementById(`panel-${id}`).classList.add('active');
+  document.getElementById(`panel-${id}`)?.classList.add('active');
 }
 
 function updateDashboard() {
@@ -293,12 +543,9 @@ function initChat() {
   const opening = OPENING_MESSAGES[state.currentScenario];
   state.history = [{ role: 'assistant', content: opening }];
   addBubble('ai', opening);
-
   const sugs = SCENARIOS[state.currentScenario].suggestions || [];
   const strip = $('#sugStrip');
-  if (strip) strip.innerHTML = sugs.map(s =>
-    `<button class="sug-chip" onclick="useSuggestion(this)">${s}</button>`
-  ).join('');
+  if (strip) strip.innerHTML = sugs.map(s => `<button class="sug-chip" onclick="useSuggestion(this)">${s}</button>`).join('');
 }
 
 function resetChat() {
@@ -348,7 +595,7 @@ function hideTyping() {
   const r = $('#typingRow'); if (r) r.remove();
 }
 
-// ============ CLAUDE API CALL ============
+// ============ CLAUDE API ============
 async function callClaude(messages, systemPrompt) {
   const response = await fetch(CONFIG.API_URL, {
     method: 'POST',
@@ -378,12 +625,12 @@ async function sendMessage() {
   if (!input || state.loading) return;
 
   const raw = input.value.trim();
-  if (!raw) { showToast('Kuch toh likho! 🤔', 'error'); return; }
+  if (!raw) return;
 
   const max = state.plan === 'free' ? 20 : state.plan === 'starter' ? 60 : 9999;
   if (state.minsUsed >= max && state.plan === 'free') {
     switchPanel($$('.app-nav-btn')[3], 'upgrade');
-    showToast('Limit ho gayi! Upgrade karo 🚀', 'error');
+    showToast('Daily limit ho gayi! Upgrade karo 🚀', 'error');
     return;
   }
 
@@ -399,26 +646,20 @@ async function sendMessage() {
   state.totalMsgs++;
   if (state.totalMsgs % 5 === 1) state.sessions++;
   updateDashboard();
-
   showTyping();
 
   try {
-    const reply = await callClaude(
-      state.history,
-      SCENARIOS[state.currentScenario].system
-    );
+    const reply = await callClaude(state.history, SCENARIOS[state.currentScenario].system);
     hideTyping();
     state.history.push({ role: 'assistant', content: reply });
     addBubble('ai', reply);
-  } catch(e) {
+    saveUserToSupabase();
+  } catch (e) {
     hideTyping();
-    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' :
-                'Connection issue. Try again! 🔄';
+    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' : 'Connection issue. Try again! 🔄';
     addBubble('ai', msg);
-    showToast(msg, 'error');
   }
 
-  saveUserData();
   state.loading = false;
   if (sendBtn) sendBtn.disabled = false;
   input.focus();
@@ -426,50 +667,28 @@ async function sendMessage() {
 
 async function getCoach() {
   if (state.loading) return;
-  if (state.history.length < 3) {
-    addCoachCard('Thoda aur chat karo pehle — phir feedback dunga! 😄');
-    return;
-  }
+  if (state.history.length < 3) { addCoachCard('Thoda aur chat karo pehle — phir feedback dunga! 😄'); return; }
   state.loading = true;
   showTyping();
 
   const sc = SCENARIOS[state.currentScenario];
-  const convo = state.history
-    .map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`)
-    .join('\n');
-
-  const coachPrompt = `You are an expert Indian dating coach. Analyze this ${sc.label} conversation and give sharp, warm Hinglish feedback.
-
-Conversation:
-${convo}
-
-Reply EXACTLY in this format (max 90 words total):
-**Vibe Score:** X/10 — [one punchy line]
-**Kya kaam kiya:** [what worked — 1 line]
-**Improve karo:** [1-2 specific actionable tips]
-**Next bolna chahiye:** "[exact Hinglish line they should say next]"
-
-Be direct, fun, warm. Hinglish only. No generic advice.`;
+  const convo = state.history.map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`).join('\n');
+  const coachPrompt = `You are an expert Indian dating coach. Analyze this ${sc.label} conversation and give sharp, warm Hinglish feedback.\n\nConversation:\n${convo}\n\nReply EXACTLY in this format (max 90 words total):\n**Vibe Score:** X/10 — [one punchy line]\n**Kya kaam kiya:** [what worked — 1 line]\n**Improve karo:** [1-2 specific actionable tips]\n**Next bolna chahiye:** "[exact Hinglish line they should say next]"\n\nBe direct, fun, warm. Hinglish only. No generic advice.`;
 
   try {
-    const reply = await callClaude(
-      [{ role: 'user', content: coachPrompt }],
-      'You are a sharp, warm Indian dating coach. Give advice in Hinglish. Always use the exact format asked.'
-    );
+    const reply = await callClaude([{ role: 'user', content: coachPrompt }], 'You are a sharp, warm Indian dating coach. Give advice in Hinglish. Always use the exact format asked.');
     hideTyping();
     addCoachCard(reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'));
-  } catch(e) {
+  } catch (e) {
     hideTyping();
     addCoachCard('Coach unavailable right now. Try again! 🔄');
   }
-
   state.loading = false;
 }
 
 function useSuggestion(btn) {
-  const text = btn.textContent;
   const input = $('#chatInput');
-  if (input) { input.value = text; sendMessage(); }
+  if (input) { input.value = btn.textContent; sendMessage(); }
 }
 
 function handleKeydown(e) {
@@ -485,20 +704,15 @@ function autoResize(el) {
 function buildCourse() {
   const c = $('#courseList'); if (!c) return;
   c.innerHTML = '';
-
-  const week1 = COURSE_DAYS.filter(d => d.free);
   c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--pink);margin-bottom:12px;display:flex;align-items:center;gap:10px">WEEK 1 — FREE <span style="flex:1;height:1px;background:var(--pink-pale2);display:block"></span></div>`;
-  week1.forEach(day => {
+  COURSE_DAYS.filter(d => d.free).forEach(day => {
     const cls = day.done ? 'cd-done' : day.cur ? 'cd-cur' : 'cd-default';
-    const icon = day.done ? '✓' : day.day;
-    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:pointer" onclick="showToast('Day ${day.day}: ${day.title} — Coming soon! 📚')"><div class="cd-num ${cls}">${icon}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · Free</div></div></div>`;
+    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:pointer" onclick="showToast('Day ${day.day}: ${day.title} — Coming soon! 📚')"><div class="cd-num ${cls}">${day.done ? '✓' : day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · Free</div></div></div>`;
   });
-
-  const week2 = COURSE_DAYS.filter(d => !d.free);
   c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:20px 0 12px;display:flex;align-items:center;gap:10px">WEEK 2–4 — STARTER+ <span style="flex:1;height:1px;background:var(--border);display:block"></span></div>`;
-  week2.forEach(day => {
+  COURSE_DAYS.filter(d => !d.free).forEach(day => {
     const locked = state.plan === 'free';
-    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked?'not-allowed':'pointer'};opacity:${locked?'0.5':'1'}" onclick="${locked?`switchPanel($$('.app-nav-btn')[3],'upgrade')`:`showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked?'🔒':day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked?'Unlock Starter':'Unlocked'}</div></div></div>`;
+    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked ? 'not-allowed' : 'pointer'};opacity:${locked ? '0.5' : '1'}" onclick="${locked ? `switchPanel($$('.app-nav-btn')[3],'upgrade')` : `showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked ? '🔒' : day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked ? 'Unlock Starter' : 'Unlocked'}</div></div></div>`;
   });
 }
 
@@ -552,13 +766,28 @@ function buildAppPlans() {
 
 function unlockDemo(plan) {
   state.plan = plan;
-  saveUserData();
+  saveUserToSupabase();
   buildApp();
-  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked! Sab scenarios open hai!`, 'success');
+  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked! Sab scenarios open!`, 'success');
   switchPanel($$('.app-nav-btn')[0], 'dashboard');
+}
+
+// ============ LANDING ============
+function switchFeature(el, idx) {
+  $$('.feat-tab').forEach(t => t.classList.remove('active'));
+  $$('.preview-card').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`prev-${idx}`)?.classList.add('active');
+}
+
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('open');
 }
 
 // ============ KEYBOARD ============
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeAuthModal();
 });
+
+// ============ INIT ============
+initSupabase();
