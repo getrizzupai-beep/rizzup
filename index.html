@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RizzUp AI — India's #1 AI Dating Coach</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Auth Modal Styles */
+        /* Auth Modal - Added Styles */
         .auth-modal {
             display: none;
             position: fixed;
@@ -18,12 +18,12 @@
             background-color: rgba(0,0,0,0.8);
             backdrop-filter: blur(5px);
         }
-        .auth-modal.active {
+        .auth-modal.open {
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .auth-card {
+        #authModalBox {
             background: #1a1a2e;
             border-radius: 20px;
             padding: 40px;
@@ -31,30 +31,33 @@
             width: 90%;
             color: white;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
         }
-        .auth-card h2 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
+        .auth-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 24px;
+            cursor: pointer;
         }
-        .auth-card p {
-            color: #888;
-            margin: 0 0 30px 0;
-        }
+        .auth-close-btn:hover { color: #fff; }
+        .auth-title { font-size: 26px; font-weight: 700; margin: 0 0 8px 0; }
+        .auth-subtitle { color: #888; margin: 0 0 25px 0; font-size: 14px; }
         .auth-input {
             width: 100%;
-            padding: 15px 20px;
+            padding: 14px 16px;
             border: 2px solid #333;
             border-radius: 12px;
             background: #16213e;
             color: white;
-            font-size: 16px;
-            margin-bottom: 15px;
+            font-size: 15px;
+            margin-bottom: 12px;
             box-sizing: border-box;
         }
-        .auth-input:focus {
-            outline: none;
-            border-color: #e94560;
-        }
+        .auth-input:focus { outline: none; border-color: #e94560; }
         .auth-btn {
             width: 100%;
             padding: 15px;
@@ -63,15 +66,15 @@
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             transition: all 0.3s;
         }
+        .auth-btn:hover { transform: translateY(-2px); }
         .auth-btn-primary {
             background: linear-gradient(135deg, #e94560, #ff6b6b);
             color: white;
         }
         .auth-btn-primary:hover {
-            transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(233,69,96,0.4);
         }
         .auth-btn-google {
@@ -82,344 +85,126 @@
             justify-content: center;
             gap: 10px;
         }
-        .auth-btn-google:hover {
-            background: #f5f5f5;
-        }
+        .auth-btn-google:hover { background: #f5f5f5; }
         .auth-divider {
             text-align: center;
-            color: #666;
-            margin: 20px 0;
-            position: relative;
+            color: #555;
+            margin: 18px 0;
+            font-size: 13px;
         }
-        .auth-divider::before,
-        .auth-divider::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 40%;
-            height: 1px;
-            background: #333;
-        }
-        .auth-divider::before { left: 0; }
-        .auth-divider::after { right: 0; }
         .auth-switch {
             text-align: center;
-            margin-top: 20px;
+            margin-top: 18px;
             color: #888;
+            font-size: 14px;
         }
-        .auth-switch a {
-            color: #e94560;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .auth-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 28px;
-            cursor: pointer;
-        }
-        .auth-error {
-            background: rgba(255,0,0,0.1);
-            border: 1px solid #ff4444;
-            color: #ff4444;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: none;
-        }
-        .auth-success {
-            background: rgba(0,255,0,0.1);
-            border: 1px solid #44ff44;
-            color: #44ff44;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            display: none;
-        }
-        .password-toggle {
+        .auth-switch a { color: #e94560; cursor: pointer; text-decoration: none; }
+        .auth-switch a:hover { text-decoration: underline; }
+        .pass-toggle {
             position: relative;
         }
-        .password-toggle span {
+        .pass-toggle span {
             position: absolute;
-            right: 15px;
-            top: 15px;
+            right: 12px;
+            top: 13px;
+            color: #666;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .login-methods {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .meth-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background: transparent;
+            color: #888;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .meth-btn.active {
+            border-color: #e94560;
+            background: rgba(233,69,96,0.15);
+            color: #e94560;
+        }
+        .pass-section, .otp-section { display: none; }
+        .forgot-link {
+            text-align: center;
+            color: #888;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+        .forgot-link a { color: #e94560; cursor: pointer; }
+        .otp-note {
+            background: rgba(233,69,96,0.1);
+            border: 1px solid #e94560;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 15px;
+            color: #e94560;
+            font-size: 13px;
+            text-align: center;
+        }
+        .success-icon {
+            font-size: 60px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .success-msg {
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .back-link {
             color: #888;
             cursor: pointer;
+            text-align: center;
+            font-size: 13px;
         }
-        .login-options {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .login-option-btn {
-            padding: 12px;
-            border: 2px solid #333;
-            border-radius: 12px;
-            background: transparent;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: all 0.3s;
-        }
-        .login-option-btn:hover {
-            border-color: #e94560;
-            background: rgba(233,69,96,0.1);
-        }
-        .hidden { display: none; }
+        .back-link:hover { color: #e94560; }
     </style>
 </head>
 <body>
-    <!-- Auth Modal -->
+    <!-- Auth Modal - Added to index.html -->
     <div id="authModal" class="auth-modal">
-        <div class="auth-card" style="position: relative;">
-            <button class="auth-close" onclick="closeAuthModal()">&times;</button>
-            <div id="authContent">
-                <!-- Dynamic content from JS -->
-            </div>
-        </div>
+        <div id="authModalBox"></div>
     </div>
 
-    <!-- Your existing navbar code stays here -->
-    <!-- Just make sure these buttons have onclick: -->
-    <!-- 
-    <a href="#" onclick="openAuthModal('login')">Login</a>
-    <a href="#" onclick="openAuthModal('signup')">Sign Up Free</a>
-    -->
+    <!-- Landing View -->
+    <div id="landingView">
+        <nav class="navbar">
+            <div class="nav-left">
+                <a href="#" class="nav-logo">
+                    <span class="logo-icon">💘</span>
+                    <span class="logo-text">Rizz Up</span>
+                </a>
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#scenarios" class="nav-link">Scenarios</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#faq" class="nav-link">FAQ</a>
+            </div>
+            <div class="nav-right">
+                <a href="#" class="nav-btn-outline" onclick="openAuthModal('login'); return false;">Login</a>
+                <a href="#" class="nav-btn-primary" onclick="openAuthModal('signup'); return false;">Sign Up Free →</a>
+            </div>
+        </nav>
+        
+        <!-- Rest of landing page stays the same -->
+        <!-- ... (hero section, features, etc.) ... -->
+    </div>
 
-    <script>
-        // Supabase Configuration
-        const supabaseUrl = 'https://xzdjxvitqktsfeuzshik.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6ZGp4dml0cWtzdGZldXoifQ.daDPzN9m1Xj6x-t9Z5gYZ3X8QZ9F3K9h8Y2M5Bv1n0=';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+    <!-- App View (hidden by default) -->
+    <div id="appView" style="display:none;">
+        <!-- Dashboard, Chat, Course, Upgrade sections -->
+    </div>
 
-        let authMode = 'signup';
-
-        // Open Auth Modal
-        function openAuthModal(mode) {
-            authMode = mode;
-            document.getElementById('authModal').classList.add('active');
-            renderAuthModal();
-        }
-
-        // Close Auth Modal
-        function closeAuthModal() {
-            document.getElementById('authModal').classList.remove('active');
-        }
-
-        // Render Auth Modal Content
-        function renderAuthModal() {
-            const content = document.getElementById('authContent');
-            
-            if (authMode === 'signup') {
-                content.innerHTML = `
-                    <h2>Create Account</h2>
-                    <p>Join 5,000+ Indians mastering their dating game</p>
-                    <div id="signupError" class="auth-error"></div>
-                    <input type="text" id="signupName" class="auth-input" placeholder="Your Name">
-                    <input type="email" id="signupEmail" class="auth-input" placeholder="Email address">
-                    <div class="password-toggle">
-                        <input type="password" id="signupPassword" class="auth-input" placeholder="Password (min 6 chars)">
-                        <span onclick="togglePassword('signupPassword')">👁️</span>
-                    </div>
-                    <button class="auth-btn auth-btn-primary" onclick="doSignup()">Create Account →</button>
-                    <div class="auth-divider">or</div>
-                    <button class="auth-btn auth-btn-google" onclick="doGoogleLogin()">
-                        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                        Continue with Google
-                    </button>
-                    <div class="auth-switch">
-                        Already have account? <a onclick="authMode='login';renderAuthModal()">Login</a>
-                    </div>
-                `;
-            } else if (authMode === 'login') {
-                content.innerHTML = `
-                    <h2>Welcome Back</h2>
-                    <p>Login to continue your dating journey</p>
-                    <div id="loginError" class="auth-error"></div>
-                    <div class="login-options">
-                        <button class="login-option-btn" onclick="showPasswordLogin()">
-                            🔐 Password Login
-                        </button>
-                        <button class="login-option-btn" onclick="doOTPLoginPrompt()">
-                            ✨ Magic Link (Email OTP)
-                        </button>
-                    </div>
-                    <div class="auth-divider">or</div>
-                    <button class="auth-btn auth-btn-google" onclick="doGoogleLogin()">
-                        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                        Continue with Google
-                    </button>
-                    <div class="auth-switch">
-                        Don't have account? <a onclick="authMode='signup';renderAuthModal()">Sign Up Free</a>
-                    </div>
-                `;
-            } else if (authMode === 'passwordLogin') {
-                content.innerHTML = `
-                    <h2>Password Login</h2>
-                    <p>Enter your credentials</p>
-                    <div id="loginError" class="auth-error"></div>
-                    <input type="email" id="loginEmail" class="auth-input" placeholder="Email address">
-                    <div class="password-toggle">
-                        <input type="password" id="loginPassword" class="auth-input" placeholder="Password">
-                        <span onclick="togglePassword('loginPassword')">👁️</span>
-                    </div>
-                    <button class="auth-btn auth-btn-primary" onclick="doLogin()">Login →</button>
-                    <div class="auth-divider">or</div>
-                    <button class="auth-btn auth-btn-google" onclick="doGoogleLogin()">
-                        <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                        Continue with Google
-                    </button>
-                    <div class="auth-switch">
-                        Don't have account? <a onclick="authMode='signup';renderAuthModal()">Sign Up Free</a>
-                        <br><br>
-                        <a onclick="authMode='login';renderAuthModal()">← Back to Login Options</a>
-                    </div>
-                `;
-            } else if (authMode === 'otp') {
-                content.innerHTML = `
-                    <h2>✨ Magic Link Sent!</h2>
-                    <p>Check your email for the login link</p>
-                    <div id="otpSuccess" class="auth-success">📧 Email sent! Check inbox.</div>
-                    <button class="auth-btn auth-btn-primary" onclick="authMode='login';renderAuthModal()">← Back to Login</button>
-                `;
-            }
-        }
-
-        // Show Password Login
-        function showPasswordLogin() {
-            authMode = 'passwordLogin';
-            renderAuthModal();
-        }
-
-        // OTP Login Prompt
-        function doOTPLoginPrompt() {
-            const email = prompt("Enter your email for Magic Link:");
-            if (email) {
-                doOTPLogin(email);
-            }
-        }
-
-        // Toggle Password Visibility
-        function togglePassword(inputId) {
-            const input = document.getElementById(inputId);
-            if (input.type === 'password') {
-                input.type = 'text';
-            } else {
-                input.type = 'password';
-            }
-        }
-
-        // Signup Function
-        async function doSignup() {
-            const name = document.getElementById('signupName').value;
-            const email = document.getElementById('signupEmail').value;
-            const password = document.getElementById('signupPassword').value;
-            const errorEl = document.getElementById('signupError');
-
-            if (!name || !email || !password) {
-                errorEl.textContent = 'Please fill all fields';
-                errorEl.style.display = 'block';
-                return;
-            }
-
-            if (password.length < 6) {
-                errorEl.textContent = 'Password must be at least 6 characters';
-                errorEl.style.display = 'block';
-                return;
-            }
-
-            const { data, error } = await supabase.auth.signUp({
-                email: email,
-                password: password,
-                options: {
-                    data: {
-                        name: name
-                    }
-                }
-            });
-
-            if (error) {
-                errorEl.textContent = error.message;
-                errorEl.style.display = 'block';
-            } else {
-                alert('🎉 Account created! Check email to verify.');
-                closeAuthModal();
-            }
-        }
-
-        // Login Function
-        async function doLogin() {
-            const email = document.getElementById('loginEmail').value;
-            const password = document.getElementById('loginPassword').value;
-            const errorEl = document.getElementById('loginError');
-
-            if (!email || !password) {
-                errorEl.textContent = 'Please fill all fields';
-                errorEl.style.display = 'block';
-                return;
-            }
-
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password
-            });
-
-            if (error) {
-                errorEl.textContent = error.message;
-                errorEl.style.display = 'block';
-            } else {
-                window.location.reload();
-            }
-        }
-
-        // OTP/Magic Link Login
-        async function doOTPLogin(email) {
-            const { error } = await supabase.auth.signInWithOtp({
-                email: email
-            });
-
-            if (error) {
-                alert('Error: ' + error.message);
-            } else {
-                authMode = 'otp';
-                renderAuthModal();
-            }
-        }
-
-        // Google Login
-        async function doGoogleLogin() {
-            const { data, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: window.location.origin
-                }
-            });
-
-            if (error) {
-                alert('Error: ' + error.message);
-            }
-        }
-
-        // Check Session on Load
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (session) {
-                console.log('User logged in:', session.user);
-            }
-        });
-
-        // Close modal on outside click
-        document.getElementById('authModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeAuthModal();
-            }
-        });
-    </script>
+    <script src="js/app.js"></script>
 </body>
 </html>
