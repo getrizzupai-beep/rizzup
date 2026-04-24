@@ -1,606 +1,543 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RizzUp AI — India's #1 AI Dating Coach</title>
-    <link rel="stylesheet" href="css/style.css">
-    <style>
-        /* Auth Modal */
-        #authModal {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            backdrop-filter: blur(4px);
-        }
-        #authModal.show { display: flex; }
-        #authModalBox {
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            max-width: 440px;
-            width: 100%;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-        }
-        .closeBtn {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #888;
-            cursor: pointer;
-        }
-        .modalTitle {
-            font-family: 'Bricolage Grotesque', sans-serif;
-            font-size: 26px;
-            font-weight: 800;
-            color: #1A1A2E;
-            margin: 0 0 10px 0;
-            text-align: center;
-        }
-        .modalSub {
-            font-size: 14px;
-            color: #888;
-            text-align: center;
-            margin: 0 0 28px 0;
-        }
-        .modalInput {
-            width: 100%;
-            padding: 14px 16px;
-            border: 1.5px solid #E9ECEF;
-            border-radius: 10px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 15px;
-            color: #1A1A2E;
-            background: #F8F9FA;
-            outline: none;
-            box-sizing: border-box;
-            margin-bottom: 14px;
-        }
-        .modalInput:focus { border-color: #FF3366; background: white; }
-        .modalBtn {
-            width: 100%;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-bottom: 12px;
-        }
-        .btnPink { background: linear-gradient(135deg, #FF3366, #FF6B35); color: white; }
-        .btnPink:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,51,102,0.35); }
-        .btnWhite {
-            background: white;
-            border: 1.5px solid #E9ECEF;
-            color: #1A1A2E;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        .btnWhite:hover { background: #F8F9FA; }
-        .divider {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin: 20px 0;
-            font-size: 13px;
-            color: #888;
-            font-weight: 600;
-        }
-        .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #E9ECEF; }
-        .switchLink {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 14px;
-            color: #888;
-        }
-        .switchLink a { color: #FF3366; font-weight: 700; cursor: pointer; text-decoration: none; }
-        .switchLink a:hover { text-decoration: underline; }
-        .googleIcon { width: 20px; height: 20px; }
-        .orText { color: #888; font-size: 13px; font-weight: 600; }
-        .loginMethods { display: flex; gap: 10px; margin-bottom: 20px; }
-        .methodBtn {
-            flex: 1;
-            padding: 12px;
-            border: 2px solid #E9ECEF;
-            border-radius: 10px;
-            background: white;
-            color: #888;
-            font-weight: 700;
-            font-size: 13px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .methodBtn.active { border-color: #FF3366; background: #FFF0F4; color: #FF3366; }
-        .passSection, .otpSection { display: none; }
-        .successBox {
-            text-align: center;
-            padding: 20px;
-        }
-        .successIcon { font-size: 60px; margin-bottom: 15px; }
-        .successText { font-size: 14px; color: #888; line-height: 1.6; margin-bottom: 20px; }
-        .backLink { color: #888; cursor: pointer; font-size: 13px; }
-        .backLink:hover { color: #FF3366; }
-        .errorMsg { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px; display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RizzUp AI — India's #1 AI Dating Coach</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+/* Auth Modal */
+#authModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+#authModalBox {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+.closeBtn { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; color: #888; cursor: pointer; }
+.modalTitle { font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 800; color: #1A1A2E; margin: 0 0 10px 0; text-align: center; }
+.modalSub { font-size: 14px; color: #888; text-align: center; margin: 0 0 28px 0; }
+.modalInput { width: 100%; padding: 14px 16px; border: 1.5px solid #E9ECEF; border-radius: 10px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 15px; color: #1A1A2E; background: #F8F9FA; outline: none; box-sizing: border-box; margin-bottom: 14px; }
+.modalInput:focus { border-color: #FF3366; background: white; }
+.modalBtn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; }
+.btnPink { background: linear-gradient(135deg, #FF3366, #FF6B35); color: white; }
+.btnPink:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,51,102,0.35); }
+.btnWhite { background: white; border: 1.5px solid #E9ECEF; color: #1A1A2E; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btnWhite:hover { background: #F8F9FA; }
+.divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; font-size: 13px; color: #888; font-weight: 600; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #E9ECEF; }
+.switchLink { text-align: center; margin-top: 20px; font-size: 14px; color: #888; }
+.switchLink a { color: #FF3366; font-weight: 700; cursor: pointer; text-decoration: none; }
+.switchLink a:hover { text-decoration: underline; }
+.googleIcon { width: 20px; height: 20px; }
+.orText { color: #888; font-size: 13px; font-weight: 600; }
+.loginMethods { display: flex; gap: 10px; margin-bottom: 20px; }
+.methodBtn { flex: 1; padding: 12px; border: 2px solid #E9ECEF; border-radius: 10px; background: white; color: #888; font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.methodBtn.active { border-color: #FF3366; background: #FFF0F4; color: #FF3366; }
+.errorMsg { background: #FEF2F2; border: 1px solid #FECACA; color: #DC2626; padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px; display: none; }
+</style>
 </head>
 <body>
-    <!-- Auth Modal -->
-    <div id="authModal" style="display:none;">
-        <div id="authModalBox"></div>
+
+<!-- Auth Modal -->
+<div id="authModal" style="display:none;">
+  <div id="authModalBox"></div>
+</div>
+
+<!-- Landing View -->
+<div id="landingView">
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="nav-logo">Rizz<span class="r">Up</span></a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#scenarios">Scenarios</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#faq">FAQ</a></li>
+      </ul>
+      <div class="nav-right">
+        <span class="nav-login" onclick="showAuth('login')" style="cursor:pointer;">Login</span>
+        <a href="#" class="nav-cta" onclick="showAuth('signup'); return false;">Sign Up Free →</a>
+      </div>
     </div>
+  </nav>
 
-    <!-- Landing View -->
-    <div id="landingView">
-        <nav>
-            <div class="nav-inner">
-                <a href="#" class="nav-logo">Rizz<span class="r">Up</span></a>
-                <ul class="nav-links">
-                    <li><a href="#features">Features</a></li>
-                    <li><a href="#scenarios">Scenarios</a></li>
-                    <li><a href="#pricing">Pricing</a></li>
-                    <li><a href="#faq">FAQ</a></li>
-                </ul>
-                <div class="nav-right">
-                    <span class="nav-login" onclick="showAuth('login')" style="cursor:pointer;">Login</span>
-                    <a href="#" class="nav-cta" onclick="showAuth('signup'); return false;">Sign Up Free →</a>
-                </div>
-            </div>
-        </nav>
-
-        <!-- Ticker -->
-        <div class="ticker-wrap">
-            <div class="ticker-track">
-                <span class="ticker-item">🇮🇳 Made for India</span>
-                <span class="ticker-item">⚡ Free to start</span>
-                <span class="ticker-item">💬 Hinglish support</span>
-                <span class="ticker-item">🔒 100% Private</span>
-                <span class="ticker-item">🏆 5,000+ Users</span>
-                <span class="ticker-item">🇮🇳 Made for India</span>
-                <span class="ticker-item">⚡ Free to start</span>
-                <span class="ticker-item">💬 Hinglish support</span>
-                <span class="ticker-item">🔒 100% Private</span>
-                <span class="ticker-item">🏆 5,000+ Users</span>
-            </div>
-        </div>
-
-        <!-- Hero -->
-        <section class="hero">
-            <div class="hero-content">
-                <div class="hero-badge">🇮🇳 Trusted by 5,000+ Indians</div>
-                <h1>Your personal AI dating coach <span class="pink">for real results.</span></h1>
-                <p class="hero-sub">Practice real conversations, get live coaching, and master the art of dating — all in Hinglish. India ka pehla AI dating coach.</p>
-                <div class="hero-actions">
-                    <a href="#" class="btn-primary" onclick="showAuth('signup'); return false;">Start Free — No Card Needed</a>
-                    <a href="#features" class="btn-secondary">See How It Works</a>
-                </div>
-                <div class="hero-trust">
-                    <span class="trust-item">⚡ Free to start</span>
-                    <span class="trust-item">🔒 100% Private</span>
-                    <span class="trust-item">💬 Hinglish support</span>
-                    <span class="trust-item">🇮🇳 Made for India</span>
-                </div>
-            </div>
-            <div class="hero-right">
-                <div class="phone-mockup">
-                    <div class="phone-top"><div class="phone-av">👩</div><div class="phone-persona"><div class="phone-name">Priya</div><div class="phone-status">● Online · First Date</div></div></div>
-                    <div class="phone-body">
-                        <div class="chat-msg ai"><div class="cb">Hiii! *nervously sips coffee* Tum actually apni photo jaise ho 😄 So tell me something interesting!</div></div>
-                        <div class="chat-msg user"><div class="cb">Haha thanks! Honestly I was nervous too... but you seem really easy to talk to 😊</div></div>
-                        <div class="coach-msg"><div class="cl">🎯 Coach Feedback</div>Vibe Score: 8.5/10 — Vulnerability + compliment combo = 🔥 Keep going!</div>
-                    </div>
-                    <div class="phone-score">
-                        <div class="score-item"><div class="sv">8.5</div><div class="sl">Vibe Score</div></div>
-                        <div class="score-item"><div class="sv">+50</div><div class="sl">XP Earned</div></div>
-                        <div class="score-item"><div class="sv">🔥</div><div class="sl">Day 3 Streak</div></div>
-                    </div>
-                </div>
-                <div class="float-badge fb1"><div class="fb-icon">🎯</div><div class="fb-val">8.5</div><div class="fb-lbl">Vibe Score</div></div>
-                <div class="float-badge fb2"><div class="fb-icon">🏆</div><div class="fb-val">5K+</div><div class="fb-lbl">Happy Users</div></div>
-            </div>
-        </section>
-
-        <!-- Stats -->
-        <section class="stats-section">
-            <div class="stats-inner">
-                <div class="stat-box"><div class="stat-icon">🏆</div><div class="stat-num">5,000<span>+</span></div><div class="stat-lbl">Happy Users</div></div>
-                <div class="stat-box"><div class="stat-icon">💬</div><div class="stat-num">50,000<span>+</span></div><div class="stat-lbl">Chats Practiced</div></div>
-                <div class="stat-box"><div class="stat-icon">⭐</div><div class="stat-num">4.8</div><div class="stat-lbl">Average Rating</div></div>
-                <div class="stat-box"><div class="stat-icon">🚀</div><div class="stat-num">3<span>x</span></div><div class="stat-lbl">Confidence Boost</div></div>
-            </div>
-        </section>
-
-        <!-- Features -->
-        <section class="section features-section" id="features">
-            <div class="section-inner">
-                <div class="features-layout">
-                    <div class="feat-tabs">
-                        <div class="feat-tab active" onclick="switchFeature(this, 0)"><div class="ft-header"><span class="ft-icon">🎭</span><span class="ft-name">AI Roleplay Practice</span></div><div class="ft-desc">Practice real dating conversations with AI personas trained on actual Indian dating scenarios. First date, texting, arranged meet — all in Hinglish.</div></div>
-                        <div class="feat-tab" onclick="switchFeature(this, 1)"><div class="ft-header"><span class="ft-icon">🎯</span><span class="ft-name">Live Coach Feedback</span></div><div class="ft-desc">Get a Vibe Score, what worked, what to fix, and exactly what to say next — like a wingman in your pocket.</div></div>
-                        <div class="feat-tab" onclick="switchFeature(this, 2)"><div class="ft-header"><span class="ft-icon">📚</span><span class="ft-name">30-Day Course</span></div><div class="ft-desc">Structured daily lessons from first message to first date. Week 1 is free. Go from nervous to confident in 30 days.</div></div>
-                        <div class="feat-tab" onclick="switchFeature(this, 3)"><div class="ft-header"><span class="ft-icon">🪽</span><span class="ft-name">Wingman Mode</span></div><div class="ft-desc">Stuck on a real chat? Paste the conversation — get 3 reply options ranked by vibe score. Your secret AI wingman.</div></div>
-                    </div>
-                    <div class="feat-preview">
-                        <div class="preview-card active" id="prev-0">
-                            <div class="pc-title">💬 Practice · First Date</div>
-                            <div class="mini-chat">
-                                <div class="mc-row"><div class="mc-av">👩</div><div class="mc-bub ai">Hiii! Tum actually apni photo jaise ho 😄 Tell me something interesting!</div></div>
-                                <div class="mc-row user"><div class="mc-bub user">Haha I was nervous too — but you seem really easy to talk to 😊</div><div class="mc-av u">🧑</div></div>
-                                <div class="mc-row"><div class="mc-av">👩</div><div class="mc-bub ai">Aww that's sweet! *smiles* Okay — chai ya coffee? 😄</div></div>
-                                <div class="mc-coach"><div class="mc-coach-hdr">🎯 Dating Coach</div><strong>Vibe Score: 8.5/10</strong> — Vulnerability ka use bahut achha kiya!<br><strong>Next bolna chahiye:</strong> "Okay fair — chai date sounds perfect 😄"</div>
-                            </div>
-                            <div class="score-grid" style="margin-top:14px;"><div class="sg-card"><div class="sg-num">8.5</div><div class="sg-lbl">Vibe Score</div></div><div class="sg-card"><div class="sg-num">+50</div><div class="sg-lbl">XP Earned</div></div></div>
-                        </div>
-                        <div class="preview-card" id="prev-1"><div class="pc-title">📚 30-Day Bootcamp</div><div class="course-days"><div class="cd-row"><div class="cd-num cd-done">✓</div><div class="cd-info"><div class="cd-t">Why You're Getting Ignored</div><div class="cd-s">Foundation · Free</div></div></div><div class="cd-row"><div class="cd-num cd-cur">2</div><div class="cd-info"><div class="cd-t">The Confidence Framework</div><div class="cd-s">Today's lesson · Free</div></div></div></div></div>
-                        <div class="preview-card" id="prev-2"><div class="pc-title">🪽 Wingman Mode</div><div style="background:var(--gray);border-radius:12px;padding:16px;font-size:13px;"><div style="color:var(--muted);font-weight:600;margin-bottom:8px;">Their message:</div><div style="background:white;border-radius:8px;padding:12px;margin-bottom:14px;">"haha okay I'll think about it 😏"</div><div style="color:var(--muted);font-weight:600;margin-bottom:8px;">Top Replies</div><div style="background:var(--green-pale);border-radius:8px;padding:10px 12px;margin-bottom:8px;color:var(--green);font-weight:600;">🔥 9.2 — "haha okay I'll help you think then 😄 coffee ya chai?"</div><div style="background:var(--gray);border-radius:8px;padding:10px 12px;">😊 7.8 — "take your time, I'm not going anywhere 😊"</div></div></div>
-                        <div class="preview-card" id="prev-3"><div class="pc-title">🎯 Coach Feedback</div><div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;"><div style="font-size:11px;font-weight:800;color:#D97706;text-transform:uppercase;margin-bottom:10px;">🎯 Vibe Score: 8.5/10</div><p style="font-size:13px;line-height:1.7;">Vulnerability ka use bahut achha kiya!</p><p style="font-size:13px;line-height:1.7;margin-top:10px;"><strong>Next bolna chahiye:</strong> "Okay fair — chai date sounds perfect 😄"</p></div></div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Comparison -->
-        <section class="section compare-section">
-            <div class="section-inner">
-                <div class="sec-tag">Why RizzUp</div>
-                <h2 class="sec-title">RizzUp vs Generic AI Tools</h2>
-                <p class="sec-sub" style="margin-bottom:32px;">ChatGPT ke saath dating practice? That's like using a calculator to play cricket.</p>
-                <div class="compare-grid">
-                    <div class="compare-card winner"><div class="cc-header"><div class="cc-logo">RizzUp AI 💘</div><span class="winner-tag">Better Choice</span></div><div class="compare-items"><div class="ci good">Trained on real Indian dating scenarios</div><div class="ci good">Hinglish native — responds like a real person</div><div class="ci good">Knows Indian culture — arranged meets, chai dates</div><div class="ci good">Instant vibe score + specific coaching</div><div class="ci good">6+ roleplay scenarios built for India</div><div class="ci good">30-day structured transformation course</div></div></div>
-                    <div class="compare-card"><div class="cc-header"><div class="cc-logo">Generic AI 🤖</div></div><div class="compare-items"><div class="ci bad">Generic responses — sounds like a work email</div><div class="ci bad">No Hinglish or Indian cultural context</div><div class="ci bad">No concept of arranged meetings or desi vibes</div><div class="ci bad">No coaching — just replies, no improvement</div><div class="ci bad">Copy-paste prompts every single time</div><div class="ci bad">No structured learning path</div></div></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Scenarios -->
-        <section class="section scenarios-section" id="scenarios">
-            <div class="section-inner">
-                <div class="sec-tag">Practice</div>
-                <h2 class="sec-title">Practice Scenarios</h2>
-                <p class="sec-sub">Every Indian dating situation — covered</p>
-                <div class="scen-grid">
-                    <div class="scen-card" onclick="showAuth('signup')"><span class="sc-emoji">☕</span><div class="sc-name">First Date</div><div class="sc-desc">Coffee meetup — make a great first impression.</div><span class="sc-badge sc-free">Free</span></div>
-                    <div class="scen-card" onclick="showAuth('signup')"><span class="sc-emoji">💬</span><div class="sc-name">Texting Game</div><div class="sc-desc">Dating app convo — keep it interesting.</div><span class="sc-badge sc-free">Free</span></div>
-                    <div class="scen-card" onclick="showAuth('signup')"><span class="sc-emoji">💪</span><div class="sc-name">Handle Rejection</div><div class="sc-desc">Stay confident and graceful.</div><span class="sc-badge sc-free">Free</span></div>
-                    <div class="scen-card locked"><span class="sc-lock">🔒</span><span class="sc-emoji">😏</span><div class="sc-name">Flirting</div><div class="sc-desc">Playful banter, wit, and charm.</div><span class="sc-badge sc-pro">Starter+</span></div>
-                    <div class="scen-card locked"><span class="sc-lock">🔒</span><span class="sc-emoji">💐</span><div class="sc-name">Arranged Meet</div><div class="sc-desc">Navigate the Indian arranged setup.</div><span class="sc-badge sc-pro">Starter+</span></div>
-                    <div class="scen-card locked"><span class="sc-lock">🔒</span><span class="sc-emoji">🌙</span><div class="sc-name">Second Date</div><div class="sc-desc">Deepen the connection.</div><span class="sc-badge sc-pro">Starter+</span></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Testimonials -->
-        <section class="section testi-section">
-            <div class="section-inner">
-                <div class="sec-tag">Reviews</div>
-                <h2 class="sec-title">Real Users</h2>
-                <p class="sec-sub">What Indians are saying</p>
-                <div class="testi-grid">
-                    <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"Pehle date pe kya bolun samajh hi nahi aata tha. RizzUp ke 2 weeks baad — puri conversation maine lead ki. She texted me first the next day!"</p><div class="testi-author"><div class="ta-av">👨</div><div><div class="ta-name">Arjun K. Mumbai · 24</div></div></div></div>
-                    <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"The coach feedback is insane — it told me exactly what I did wrong and what to say next. Itna specific advice kisi real coach ne bhi nahi diya."</p><div class="testi-author"><div class="ta-av">🧑</div><div><div class="ta-name">Rahul S. Delhi · 26</div></div></div></div>
-                    <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"Arranged meet scenario ne mujhe save kiya. Family ke saamne kitna awkward hota tha — ab I actually look forward to these meetings!"</p><div class="testi-author"><div class="ta-av">👦</div><div><div class="ta-name">Varun M. Bangalore · 27</div></div></div></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Pricing -->
-        <section class="section pricing-section" id="pricing">
-            <div class="section-inner">
-                <div class="pricing-header"><div class="sec-tag">Pricing</div><h2 class="sec-title">Start free. Upgrade when ready.</h2><p class="sec-sub">No credit card needed to start. Indian payments — UPI, Cards, NetBanking.</p></div>
-                <div class="pricing-grid">
-                    <div class="price-card"><div class="pc-name">Free</div><div class="pc-price">₹0</div><div class="pc-tagline">Forever free, no card needed</div><div class="pc-feats"><div class="pf">20 min AI practice/day</div><div class="pf">3 free scenarios</div><div class="pf">Week 1 of 30-day course</div><div class="pf off">All 6 scenarios</div><div class="pf off">Wingman Mode</div></div><button class="pc-btn pc-btn-out" onclick="showAuth('signup')">Get Started Free</button></div>
-                    <div class="price-card hot"><div class="hot-badge">🔥 Most Popular</div><div class="pc-name">Starter</div><div class="pc-price">₹199<sub>/mo</sub></div><div class="pc-tagline">Perfect for getting serious</div><div class="pc-feats"><div class="pf">60 min AI practice/day</div><div class="pf">All 6+ scenarios</div><div class="pf">Full 30-day course</div><div class="pf">Live coaching feedback</div><div class="pf">Wingman Mode (10/mo)</div><div class="pf">Voice calls</div></div><button class="pc-btn pc-btn-main" onclick="unlockDemo('starter')">Get Starter ⚡</button></div>
-                    <div class="price-card"><div class="pc-name">Pro</div><div class="pc-price">₹499<sub>/mo</sub></div><div class="pc-tagline">Full transformation mode</div><div class="pc-feats"><div class="pf">Unlimited voice + chat</div><div class="pf">Complete 90-day course</div><div class="pf">Unlimited Wingman Mode</div><div class="pf">Human coach Q&A (2x/mo)</div><div class="pf">Profile & bio review</div></div><button class="pc-btn pc-btn-main" onclick="unlockDemo('pro')">Get Pro 👑</button></div>
-                </div>
-                <div class="pricing-footer">🔒 Secure payments via Razorpay · UPI · Debit/Credit Cards · NetBanking · 7-day money back guarantee</div>
-            </div>
-        </section>
-
-        <!-- Privacy -->
-        <section class="section privacy-section">
-            <div class="section-inner">
-                <div class="sec-tag">Privacy</div>
-                <h2 class="sec-title">Your conversations stay private</h2>
-                <p class="sec-sub" style="margin-bottom:40px;">We know how personal dating conversations are. Privacy is our top priority.</p>
-                <div class="privacy-grid">
-                    <div class="privacy-card"><div class="pv-icon">🔒</div><div class="pv-title">100% Encrypted</div><div class="pv-desc">All conversations are encrypted. Nobody can read your practice sessions — not even us.</div></div>
-                    <div class="privacy-card"><div class="pv-icon">🚫</div><div class="pv-title">Zero Data Selling</div><div class="pv-desc">We never sell your data to third parties. Your conversations are yours alone — period.</div></div>
-                    <div class="privacy-card"><div class="pv-icon">🗑️</div><div class="pv-title">Delete Anytime</div><div class="pv-desc">Delete your account and all data disappears completely. No hidden backups.</div></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- FAQ -->
-        <section class="section faq-section" id="faq">
-            <div class="section-inner faq-inner">
-                <div class="sec-tag">FAQ</div>
-                <h2 class="sec-title">Frequently Asked Questions</h2>
-                <div class="faq-list">
-                    <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">What is RizzUp AI? <span class="arr">+</span></div><div class="faq-a">RizzUp is India's first AI dating coach. Practice real dating conversations with AI personas, get live coaching feedback, and learn from daily lessons — all in Hinglish.</div></div>
-                    <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Is it really free to start? <span class="arr">+</span></div><div class="faq-a">Yes — 100% free, no credit card needed. You get 20 min of AI practice per day, 3 free scenarios, and the first week of the 30-day course completely free forever.</div></div>
-                    <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Does it support Hinglish? <span class="arr">+</span></div><div class="faq-a">Absolutely. RizzUp is built natively for India. The AI understands and responds in Hinglish, and we have specific scenarios for arranged meets, Hinge/Bumble matches, and typical Indian dating situations.</div></div>
-                    <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Is my data private? <span class="arr">+</span></div><div class="faq-a">Yes. All conversations are encrypted. We never sell data. You can delete everything anytime. Your practice sessions are completely private.</div></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- CTA -->
-        <section class="cta-section">
-            <div class="cta-inner">
-                <h2 class="cta-title">Ready to level up your dating game?</h2>
-                <p class="cta-sub">Join 5,000+ Indians already practicing with RizzUp. Start free today — no excuses.</p>
-                <div class="cta-actions">
-                    <button class="btn-white-solid" onclick="showAuth('signup')">Start Free Now 🚀</button>
-                    <a href="#scenarios" class="btn-white-ghost">See Scenarios →</a>
-                </div>
-                <div class="cta-trust"><span>⚡ Free forever plan</span><span>🔒 100% private</span><span>🇮🇳 Made for India</span></div>
-            </div>
-        </section>
-
-        <!-- Footer -->
-        <footer>
-            <div class="footer-inner">
-                <div class="footer-top">
-                    <div class="footer-brand"><div class="fl">Rizz<span class="r">Up</span></div><p>India's first AI dating coach. Practice, learn, and level up your dating game — in Hinglish.</p></div>
-                    <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#scenarios">Scenarios</a><a href="#pricing">Pricing</a><a href="#">Course</a></div>
-                    <div class="footer-col"><h4>Company</h4><a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a><a href="#">Contact</a></div>
-                    <div class="footer-col"><h4>Legal</h4><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Refunds</a></div>
-                </div>
-                <div class="footer-bottom"><div class="footer-copy">© 2025 RizzUp AI. Made with 💕 in India. Not affiliated with Anthropic.</div></div>
-            </div>
-        </footer>
+  <!-- Ticker -->
+  <div class="ticker-wrap">
+    <div class="ticker-track">
+      <span class="ticker-item">🇮🇳 Made for India</span>
+      <span class="ticker-item">⚡ Free to start</span>
+      <span class="ticker-item">💬 Hinglish support</span>
+      <span class="ticker-item">🔒 100% Private</span>
+      <span class="ticker-item">🏆 5,000+ Users</span>
+      <span class="ticker-item">🇮🇳 Made for India</span>
+      <span class="ticker-item">⚡ Free to start</span>
+      <span class="ticker-item">💬 Hinglish support</span>
+      <span class="ticker-item">🔒 100% Private</span>
+      <span class="ticker-item">🏆 5,000+ Users</span>
     </div>
+  </div>
 
-    <!-- App View -->
-    <div id="appView" style="display:none;">
-        <div class="app-topbar">
-            <div class="app-logo">Rizz<span class="r">Up</span></div>
-            <div class="app-nav">
-                <button class="app-nav-btn active" onclick="switchPanel(this, 'dashboard')">🏠 Dashboard</button>
-                <button class="app-nav-btn" onclick="switchPanel(this, 'practice')">💬 Practice</button>
-                <button class="app-nav-btn" onclick="switchPanel(this, 'course')">📚 Course</button>
-                <button class="app-nav-btn" onclick="switchPanel(this, 'upgrade')">⚡ Upgrade</button>
-            </div>
-            <div class="app-user">
-                <span class="app-plan" id="appPlanBadge">Free Plan</span>
-                <span class="app-logout" id="appLogout" onclick="doLogout()">Logout</span>
-            </div>
-        </div>
-        <div class="app-content">
-            <div class="app-panel active" id="panel-dashboard">
-                <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;" id="dashGreet">Hey! 👋</h2>
-                <p style="color:var(--muted);margin-bottom:24px;">Ready to practice today? Choose a scenario below.</p>
-                <div class="dash-grid">
-                    <div class="dash-card"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">Practice Time Used</div><div class="dc-val" id="dashMins">0</div><div class="usage-bar"><div class="usage-fill" id="dashFill" style="width:0%"></div></div><div class="usage-text" id="dashUsageText">0/20 min</div></div>
-                    <div class="dash-card"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">Total Messages Sent</div><div class="dc-val" id="dashMsgs">0</div><div style="font-size:12px;color:var(--muted);margin-top:8px;">Keep practicing!</div></div>
-                </div>
-                <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:14px;">Pick a Scenario to Practice</div>
-                <div class="app-scen-grid" id="dashScens"></div>
-                <div class="limit-notice" id="limitNotice">⚠️ Daily limit reached!<button onclick="switchPanel(null,'upgrade')">Upgrade Now</button></div>
-            </div>
-            <div class="app-panel" id="panel-practice">
-                <div class="chat-container">
-                    <div class="chat-sidebar"><div class="cs-label">Scenarios</div><div id="chatSidebar"></div></div>
-                    <div class="chat-main">
-                        <div class="chat-persona-bar"><div class="cp-av" id="cpAv">👩</div><div><div class="cp-nm" id="cpName">Priya</div><div class="cp-st">● Online now</div></div><button class="coach-toggle" onclick="getCoach()">🎯 Get Coach Tip</button></div>
-                        <div class="messages-area" id="msgsArea"></div>
-                        <div class="sug-strip" id="sugStrip"></div>
-                        <div class="input-row"><textarea class="chat-textarea" id="chatInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea><button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button></div>
-                    </div>
-                </div>
-            </div>
-            <div class="app-panel" id="panel-course">
-                <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;">30-Day Dating Bootcamp 📚</h2>
-                <p style="color:var(--muted);margin-bottom:24px;">Daily lessons to go from nervous to confident. Week 1 is free!</p>
-                <div id="courseList"></div>
-            </div>
-            <div class="app-panel" id="panel-upgrade">
-                <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;">⚡ Unlock Everything</h2>
-                <p style="color:var(--muted);margin-bottom:8px;">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
-                <p style="font-size:13px;color:var(--pink);margin-bottom:24px;">Demo mode: Click any plan to unlock features instantly</p>
-                <div class="upgrade-plans" id="appPlans"></div>
-            </div>
-        </div>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-badge">🇮🇳 Trusted by 5,000+ Indians</div>
+      <h1>Your personal AI dating coach <span class="pink">for real results.</span></h1>
+      <p class="hero-sub">Practice real conversations, get live coaching, and master the art of dating — all in Hinglish. India ka pehla AI dating coach.</p>
+      <div class="hero-actions">
+        <a href="#" class="btn-primary" onclick="showAuth('signup'); return false;">Start Free — No Card Needed</a>
+        <a href="#features" class="btn-secondary">See How It Works</a>
+      </div>
+      <div class="hero-trust">
+        <span class="trust-item">⚡ Free to start</span>
+        <span class="trust-item">🔒 100% Private</span>
+        <span class="trust-item">💬 Hinglish support</span>
+        <span class="trust-item">🇮🇳 Made for India</span>
+      </div>
     </div>
+    <div class="hero-right">
+      <div class="phone-mockup">
+        <div class="phone-top"><div class="phone-av">👩</div><div class="phone-persona"><div class="phone-name">Priya</div><div class="phone-status">● Online · First Date</div></div></div>
+        <div class="phone-body">
+          <div class="chat-msg ai"><div class="cb">Hiii! *nervously sips coffee* Tum actually apni photo jaise ho 😄 So tell me something interesting!</div></div>
+          <div class="chat-msg user"><div class="cb">Haha thanks! Honestly I was nervous too... but you seem really easy to talk to 😊</div></div>
+          <div class="coach-msg"><div class="cl">🎯 Coach Feedback</div>Vibe Score: 8.5/10 — Vulnerability + compliment combo = 🔥 Keep going!</div>
+        </div>
+        <div class="phone-score">
+          <div class="score-item"><div class="sv">8.5</div><div class="sl">Vibe Score</div></div>
+          <div class="score-item"><div class="sv">+50</div><div class="sl">XP Earned</div></div>
+          <div class="score-item"><div class="sv">🔥</div><div class="sl">Day 3 Streak</div></div>
+        </div>
+      </div>
+      <div class="float-badge fb1"><div class="fb-icon">🎯</div><div class="fb-val">8.5</div><div class="fb-lbl">Vibe Score</div></div>
+      <div class="float-badge fb2"><div class="fb-icon">🏆</div><div class="fb-val">5K+</div><div class="fb-lbl">Happy Users</div></div>
+    </div>
+  </section>
 
-    <!-- AUTH SCRIPTS - SELF CONTAINED! -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // Supabase Config - YOUR KEYS!
-        const supabaseUrl = 'https://xzdjxvitqktsfeuzshik.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6ZGp4dml0cWtzdGZldXoifQ.daDPzN9m1Xj6x-t9Z5gYZ3X8QZ9F3K9h8Y2M5Bv1n0=';
-        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  <!-- Stats -->
+  <section class="stats-section">
+    <div class="stats-inner">
+      <div class="stat-box"><div class="stat-icon">🏆</div><div class="stat-num">5,000<span>+</span></div><div class="stat-lbl">Happy Users</div></div>
+      <div class="stat-box"><div class="stat-icon">💬</div><div class="stat-num">50,000<span>+</span></div><div class="stat-lbl">Chats Practiced</div></div>
+      <div class="stat-box"><div class="stat-icon">⭐</div><div class="stat-num">4.8</div><div class="stat-lbl">Average Rating</div></div>
+      <div class="stat-box"><div class="stat-icon">🚀</div><div class="stat-num">3<span>x</span></div><div class="stat-lbl">Confidence Boost</div></div>
+    </div>
+  </section>
 
-        let currentAuthMode = 'signup';
+  <!-- Features -->
+  <section class="section features-section" id="features">
+    <div class="section-inner">
+      <div class="features-layout">
+        <div class="feat-tabs">
+          <div class="feat-tab active" onclick="switchFeature(this, 0)"><div class="ft-header"><span class="ft-icon">🎭</span><span class="ft-name">AI Roleplay Practice</span></div><div class="ft-desc">Practice real dating conversations with AI personas trained on actual Indian dating scenarios. First date, texting, arranged meet — all in Hinglish.</div></div>
+          <div class="feat-tab" onclick="switchFeature(this, 1)"><div class="ft-header"><span class="ft-icon">🎯</span><span class="ft-name">Live Coach Feedback</span></div><div class="ft-desc">Get a Vibe Score, what worked, what to fix, and exactly what to say next — like a wingman in your pocket.</div></div>
+          <div class="feat-tab" onclick="switchFeature(this, 2)"><div class="ft-header"><span class="ft-icon">📚</span><span class="ft-name">30-Day Course</span></div><div class="ft-desc">Structured daily lessons from first message to first date. Week 1 is free. Go from nervous to confident in 30 days.</div></div>
+          <div class="feat-tab" onclick="switchFeature(this, 3)"><div class="ft-header"><span class="ft-icon">🪽</span><span class="ft-name">Wingman Mode</span></div><div class="ft-desc">Stuck on a real chat? Paste the conversation — get 3 reply options ranked by vibe score. Your secret AI wingman.</div></div>
+        </div>
+        <div class="feat-preview">
+          <div class="preview-card active" id="prev-0">
+            <div class="pc-title">💬 Practice · First Date</div>
+            <div class="mini-chat">
+              <div class="mc-row"><div class="mc-av">👩</div><div class="mc-bub ai">Hiii! Tum actually apni photo jaise ho 😄 Tell me something interesting!</div></div>
+              <div class="mc-row user"><div class="mc-bub user">Haha I was nervous too — but you seem really easy to talk to 😊</div><div class="mc-av u">🧑</div></div>
+              <div class="mc-row"><div class="mc-av">👩</div><div class="mc-bub ai">Aww that's sweet! *smiles* Okay — chai ya coffee? 😄</div></div>
+              <div class="mc-coach"><div class="mc-coach-hdr">🎯 Dating Coach</div><strong>Vibe Score: 8.5/10</strong> — Vulnerability ka use bahut achha kiya!<br><strong>Next bolna chahiye:</strong> "Okay fair — chai date sounds perfect 😄"</div>
+            </div>
+            <div class="score-grid" style="margin-top:14px;"><div class="sg-card"><div class="sg-num">8.5</div><div class="sg-lbl">Vibe Score</div></div><div class="sg-card"><div class="sg-num">+50</div><div class="sg-lbl">XP Earned</div></div></div>
+          </div>
+          <div class="preview-card" id="prev-1"><div class="pc-title">📚 30-Day Bootcamp</div><div class="course-days"><div class="cd-row"><div class="cd-num cd-done">✓</div><div class="cd-info"><div class="cd-t">Why You're Getting Ignored</div><div class="cd-s">Foundation · Free</div></div></div><div class="cd-row"><div class="cd-num cd-cur">2</div><div class="cd-info"><div class="cd-t">The Confidence Framework</div><div class="cd-s">Today's lesson · Free</div></div></div></div></div>
+          <div class="preview-card" id="prev-2"><div class="pc-title">🪽 Wingman Mode</div><div style="background:var(--gray);border-radius:12px;padding:16px;font-size:13px;"><div style="color:var(--muted);font-weight:600;margin-bottom:8px;">Their message:</div><div style="background:white;border-radius:8px;padding:12px;margin-bottom:14px;">"haha okay I'll think about it 😏"</div><div style="color:var(--muted);font-weight:600;margin-bottom:8px;">Top Replies</div><div style="background:var(--green-pale);border-radius:8px;padding:10px 12px;margin-bottom:8px;color:var(--green);font-weight:600;">🔥 9.2 — "haha okay I'll help you think then 😄 coffee ya chai?"</div><div style="background:var(--gray);border-radius:8px;padding:10px 12px;">😊 7.8 — "take your time, I'm not going anywhere 😊"</div></div></div>
+          <div class="preview-card" id="prev-3"><div class="pc-title">🎯 Coach Feedback</div><div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px;"><div style="font-size:11px;font-weight:800;color:#D97706;text-transform:uppercase;margin-bottom:10px;">🎯 Vibe Score: 8.5/10</div><p style="font-size:13px;line-height:1.7;">Vulnerability ka use bahut achha kiya!</p><p style="font-size:13px;line-height:1.7;margin-top:10px;"><strong>Next bolna chahiye:</strong> "Okay fair — chai date sounds perfect 😄"</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-        // Show Auth Modal
-        function showAuth(mode) {
-            currentAuthMode = mode;
-            const modal = document.getElementById('authModal');
-            modal.style.display = 'flex';
-            renderAuthForm();
-        }
+  <!-- Comparison -->
+  <section class="section compare-section">
+    <div class="section-inner">
+      <div class="sec-tag">Why RizzUp</div>
+      <h2 class="sec-title">RizzUp vs Generic AI Tools</h2>
+      <p class="sec-sub" style="margin-bottom:32px;">ChatGPT ke saath dating practice? That's like using a calculator to play cricket.</p>
+      <div class="compare-grid">
+        <div class="compare-card winner"><div class="cc-header"><div class="cc-logo">RizzUp AI 💘</div><span class="winner-tag">Better Choice</span></div><div class="compare-items"><div class="ci good">Trained on real Indian dating scenarios</div><div class="ci good">Hinglish native — responds like a real person</div><div class="ci good">Knows Indian culture — arranged meets, chai dates</div><div class="ci good">Instant vibe score + specific coaching</div><div class="ci good">6+ roleplay scenarios built for India</div><div class="ci good">30-day structured transformation course</div></div></div>
+        <div class="compare-card"><div class="cc-header"><div class="cc-logo">Generic AI 🤖</div></div><div class="compare-items"><div class="ci bad">Generic responses — sounds like a work email</div><div class="ci bad">No Hinglish or Indian cultural context</div><div class="ci bad">No concept of arranged meetings or desi vibes</div><div class="ci bad">No coaching — just replies, no improvement</div><div class="ci bad">Copy-paste prompts every single time</div><div class="ci bad">No structured learning path</div></div></div>
+      </div>
+    </div>
+  </section>
 
-        // Close Auth Modal
-        function closeAuth() {
-            document.getElementById('authModal').style.display = 'none';
-        }
+  <!-- Scenarios -->
+  <section class="section scenarios-section" id="scenarios">
+    <div class="section-inner">
+      <div class="sec-tag">Practice</div>
+      <h2 class="sec-title">Practice Scenarios</h2>
+      <p class="sec-sub">Every Indian dating situation — covered</p>
+      <div class="scen-grid">
+        <div class="scen-card" onclick="showAuth('signup')"><span class="sc-emoji">☕</span><div class="sc-name">First Date</div><div class="sc-desc">Coffee meetup — make a great first impression.</div><span class="sc-badge sc-free">Free</span></div>
+        <div class="scen-card" onclick="showAuth('signup')"><span class="sc-emoji">💬</span><div class="sc-name">Texting Game</div><div class="sc-desc">Dating app convo — keep it interesting.</div><span class="sc-badge sc-free">Free</span></div>
+        <div class="scen-card" onclick="showAuth('signup')"><span class="sc-emoji">💪</span><div class="sc-name">Handle Rejection</div><div class="sc-desc">Stay confident and graceful.</div><span class="sc-badge sc-free">Free</span></div>
+        <div class="scen-card locked"><span class="sc-lock">🔒</span><span class="sc-emoji">😏</span><div class="sc-name">Flirting</div><div class="sc-desc">Playful banter, wit, and charm.</div><span class="sc-badge sc-pro">Starter+</span></div>
+        <div class="scen-card locked"><span class="sc-lock">🔒</span><span class="sc-emoji">💐</span><div class="sc-name">Arranged Meet</div><div class="sc-desc">Navigate the Indian arranged setup.</div><span class="sc-badge sc-pro">Starter+</span></div>
+        <div class="scen-card locked"><span class="sc-lock">🔒</span><span class="sc-emoji">🌙</span><div class="sc-name">Second Date</div><div class="sc-desc">Deepen the connection.</div><span class="sc-badge sc-pro">Starter+</span></div>
+      </div>
+    </div>
+  </section>
 
-        // Render Auth Form
-        function renderAuthForm() {
-            const box = document.getElementById('authModalBox');
-            
-            if (currentAuthMode === 'signup') {
-                box.innerHTML = `
-                    <button class="closeBtn" onclick="closeAuth()">✕</button>
-                    <div class="modalTitle">Join RizzUp AI</div>
-                    <div class="modalSub">Free forever. No credit card. 30 seconds.</div>
-                    <div id="authError" class="errorMsg"></div>
-                    <input type="text" id="authName" class="modalInput" placeholder="Your Name">
-                    <input type="email" id="authEmail" class="modalInput" placeholder="Email address">
-                    <input type="password" id="authPassword" class="modalInput" placeholder="Password (min 6 chars)">
-                    <button class="modalBtn btnPink" onclick="doSignup()">Create Free Account 🚀</button>
-                    <div class="divider"><span class="orText">or</span></div>
-                    <button class="modalBtn btnWhite" onclick="doGoogleLogin()">
-                        <svg class="googleIcon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                        Continue with Google
-                    </button>
-                    <div class="switchLink">Already have account? <a onclick="currentAuthMode='login';renderAuthForm()">Login here</a></div>
-                `;
-            } else if (currentAuthMode === 'login') {
-                box.innerHTML = `
-                    <button class="closeBtn" onclick="closeAuth()">✕</button>
-                    <div class="modalTitle">Welcome Back!</div>
-                    <div class="modalSub">Login to continue your journey.</div>
-                    <div id="authError" class="errorMsg"></div>
-                    <div class="loginMethods">
-                        <button class="methodBtn active" id="passBtn" onclick="showPasswordLogin()">🔑 Password</button>
-                        <button class="methodBtn" id="otpBtn" onclick="showOTPLogin()">✨ Magic Link</button>
-                    </div>
-                    <div id="passSection">
-                        <input type="email" id="loginEmail" class="modalInput" placeholder="Email address">
-                        <input type="password" id="loginPassword" class="modalInput" placeholder="Password">
-                        <button class="modalBtn btnPink" onclick="doLogin()">Login →</button>
-                    </div>
-                    <div id="otpSection" style="display:none;">
-                        <input type="email" id="otpEmail" class="modalInput" placeholder="Email address">
-                        <button class="modalBtn btnPink" onclick="doOTPLogin()">Send Magic Link 📧</button>
-                    </div>
-                    <div class="divider"><span class="orText">or</span></div>
-                    <button class="modalBtn btnWhite" onclick="doGoogleLogin()">
-                        <svg class="googleIcon" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                        Continue with Google
-                    </button>
-                    <div class="switchLink">Don't have account? <a onclick="currentAuthMode='signup';renderAuthForm()">Sign Up Free</a></div>
-                `;
-            }
-        }
+  <!-- Testimonials -->
+  <section class="section testi-section">
+    <div class="section-inner">
+      <div class="sec-tag">Reviews</div>
+      <h2 class="sec-title">Real Users</h2>
+      <p class="sec-sub">What Indians are saying</p>
+      <div class="testi-grid">
+        <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"Pehle date pe kya bolun samajh hi nahi aata tha. RizzUp ke 2 weeks baad — puri conversation maine lead ki. She texted me first the next day!"</p><div class="testi-author"><div class="ta-av">👨</div><div><div class="ta-name">Arjun K. Mumbai · 24</div></div></div></div>
+        <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"The coach feedback is insane — it told me exactly what I did wrong and what to say next. Itna specific advice kisi real coach ne bhi nahi diya."</p><div class="testi-author"><div class="ta-av">🧑</div><div><div class="ta-name">Rahul S. Delhi · 26</div></div></div></div>
+        <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"Arranged meet scenario ne mujhe save kiya. Family ke saamne kitna awkward hota tha — ab I actually look forward to these meetings!"</p><div class="testi-author"><div class="ta-av">👦</div><div><div class="ta-name">Varun M. Bangalore · 27</div></div></div></div>
+      </div>
+    </div>
+  </section>
 
-        function showPasswordLogin() {
-            document.getElementById('passBtn').classList.add('active');
-            document.getElementById('otpBtn').classList.remove('active');
-            document.getElementById('passSection').style.display = 'block';
-            document.getElementById('otpSection').style.display = 'none';
-        }
+  <!-- Pricing -->
+  <section class="section pricing-section" id="pricing">
+    <div class="section-inner">
+      <div class="pricing-header"><div class="sec-tag">Pricing</div><h2 class="sec-title">Start free. Upgrade when ready.</h2><p class="sec-sub">No credit card needed to start. Indian payments — UPI, Cards, NetBanking.</p></div>
+      <div class="pricing-grid">
+        <div class="price-card"><div class="pc-name">Free</div><div class="pc-price">₹0</div><div class="pc-tagline">Forever free, no card needed</div><div class="pc-feats"><div class="pf">20 min AI practice/day</div><div class="pf">3 free scenarios</div><div class="pf">Week 1 of 30-day course</div><div class="pf off">All 6 scenarios</div><div class="pf off">Wingman Mode</div></div><button class="pc-btn pc-btn-out" onclick="showAuth('signup')">Get Started Free</button></div>
+        <div class="price-card hot"><div class="hot-badge">🔥 Most Popular</div><div class="pc-name">Starter</div><div class="pc-price">₹199<sub>/mo</sub></div><div class="pc-tagline">Perfect for getting serious</div><div class="pc-feats"><div class="pf">60 min AI practice/day</div><div class="pf">All 6+ scenarios</div><div class="pf">Full 30-day course</div><div class="pf">Live coaching feedback</div><div class="pf">Wingman Mode (10/mo)</div><div class="pf">Voice calls</div></div><button class="pc-btn pc-btn-main" onclick="unlockDemo('starter')">Get Starter ⚡</button></div>
+        <div class="price-card"><div class="pc-name">Pro</div><div class="pc-price">₹499<sub>/mo</sub></div><div class="pc-tagline">Full transformation mode</div><div class="pc-feats"><div class="pf">Unlimited voice + chat</div><div class="pf">Complete 90-day course</div><div class="pf">Unlimited Wingman Mode</div><div class="pf">Human coach Q&A (2x/mo)</div><div class="pf">Profile &amp; bio review</div></div><button class="pc-btn pc-btn-main" onclick="unlockDemo('pro')">Get Pro 👑</button></div>
+      </div>
+      <div class="pricing-footer">🔒 Secure payments via Razorpay · UPI · Debit/Credit Cards · NetBanking · 7-day money back guarantee</div>
+    </div>
+  </section>
 
-        function showOTPLogin() {
-            document.getElementById('otpBtn').classList.add('active');
-            document.getElementById('passBtn').classList.remove('active');
-            document.getElementById('passSection').style.display = 'none';
-            document.getElementById('otpSection').style.display = 'block';
-        }
+  <!-- Privacy -->
+  <section class="section privacy-section">
+    <div class="section-inner">
+      <div class="sec-tag">Privacy</div>
+      <h2 class="sec-title">Your conversations stay private</h2>
+      <p class="sec-sub" style="margin-bottom:40px;">We know how personal dating conversations are. Privacy is our top priority.</p>
+      <div class="privacy-grid">
+        <div class="privacy-card"><div class="pv-icon">🔒</div><div class="pv-title">100% Encrypted</div><div class="pv-desc">All conversations are encrypted. Nobody can read your practice sessions — not even us.</div></div>
+        <div class="privacy-card"><div class="pv-icon">🚫</div><div class="pv-title">Zero Data Selling</div><div class="pv-desc">We never sell your data to third parties. Your conversations are yours alone — period.</div></div>
+        <div class="privacy-card"><div class="pv-icon">🗑️</div><div class="pv-title">Delete Anytime</div><div class="pv-desc">Delete your account and all data disappears completely. No hidden backups.</div></div>
+      </div>
+    </div>
+  </section>
 
-        // Signup
-        async function doSignup() {
-            const name = document.getElementById('authName').value.trim();
-            const email = document.getElementById('authEmail').value.trim();
-            const password = document.getElementById('authPassword').value;
+  <!-- FAQ -->
+  <section class="section faq-section" id="faq">
+    <div class="section-inner faq-inner">
+      <div class="sec-tag">FAQ</div>
+      <h2 class="sec-title">Frequently Asked Questions</h2>
+      <div class="faq-list">
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">What is RizzUp AI? <span class="arr">+</span></div><div class="faq-a">RizzUp is India's first AI dating coach. Practice real dating conversations with AI personas, get live coaching feedback, and learn from daily lessons — all in Hinglish.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Is it really free to start? <span class="arr">+</span></div><div class="faq-a">Yes — 100% free, no credit card needed. You get 20 min of AI practice per day, 3 free scenarios, and the first week of the 30-day course completely free forever.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Does it support Hinglish? <span class="arr">+</span></div><div class="faq-a">Absolutely. RizzUp is built natively for India. The AI understands and responds in Hinglish, and we have specific scenarios for arranged meets, Hinge/Bumble matches, and typical Indian dating situations.</div></div>
+        <div class="faq-item" onclick="toggleFaq(this)"><div class="faq-q">Is my data private? <span class="arr">+</span></div><div class="faq-a">Yes. All conversations are encrypted. We never sell data. You can delete everything anytime. Your practice sessions are completely private.</div></div>
+      </div>
+    </div>
+  </section>
 
-            if (!name || !email || !password) {
-                showError('Please fill all fields');
-                return;
-            }
-            if (password.length < 6) {
-                showError('Password must be at least 6 characters');
-                return;
-            }
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-inner">
+      <h2 class="cta-title">Ready to level up your dating game?</h2>
+      <p class="cta-sub">Join 5,000+ Indians already practicing with RizzUp. Start free today — no excuses.</p>
+      <div class="cta-actions">
+        <button class="btn-white-solid" onclick="showAuth('signup')">Start Free Now 🚀</button>
+        <a href="#scenarios" class="btn-white-ghost">See Scenarios →</a>
+      </div>
+      <div class="cta-trust"><span>⚡ Free forever plan</span><span>🔒 100% private</span><span>🇮🇳 Made for India</span></div>
+    </div>
+  </section>
 
-            const { data, error } = await supabase.auth.signUp({
-                email, password,
-                options: { data: { full_name: name, name: name } }
-            });
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-brand"><div class="fl">Rizz<span class="r">Up</span></div><p>India's first AI dating coach. Practice, learn, and level up your dating game — in Hinglish.</p></div>
+        <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#scenarios">Scenarios</a><a href="#pricing">Pricing</a><a href="#">Course</a></div>
+        <div class="footer-col"><h4>Company</h4><a href="#">About</a><a href="#">Blog</a><a href="#">Careers</a><a href="#">Contact</a></div>
+        <div class="footer-col"><h4>Legal</h4><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Refunds</a></div>
+      </div>
+      <div class="footer-bottom"><div class="footer-copy">© 2025 RizzUp AI. Made with 💕 in India. Not affiliated with Anthropic.</div></div>
+    </div>
+  </footer>
+</div>
 
-            if (error) {
-                showError(error.message);
-            } else {
-                alert('🎉 Account created! Check email to verify, then login.');
-                closeAuth();
-            }
-        }
+<!-- ═══════════════════════════════════════════════════════════
+     APP VIEW
+════════════════════════════════════════════════════════════ -->
+<div id="appView" style="display:none;">
+  <div class="app-topbar">
+    <div class="app-logo">Rizz<span class="r">Up</span></div>
+    <div class="app-nav">
+      <button class="app-nav-btn active" onclick="switchPanel(this, 'dashboard')">🏠 Dashboard</button>
+      <button class="app-nav-btn" onclick="switchPanel(this, 'practice')">💬 Practice</button>
+      <button class="app-nav-btn" onclick="switchPanel(this, 'course')">📚 Course</button>
+      <button class="app-nav-btn" onclick="switchPanel(this, 'upgrade')">⚡ Upgrade</button>
+    </div>
+    <div class="app-user">
+      <span class="app-plan" id="appPlanBadge">Free Plan</span>
+      <span class="app-logout" id="appLogout" onclick="doLogout()">Logout</span>
+    </div>
+  </div>
+  <div class="app-content">
+    <div class="app-panel active" id="panel-dashboard">
+      <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;" id="dashGreet">Hey! 👋</h2>
+      <p style="color:var(--muted);margin-bottom:24px;">Ready to practice today? Choose a scenario below.</p>
+      <div class="dash-grid">
+        <div class="dash-card"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">Practice Time Used</div><div class="dc-val" id="dashMins">0</div><div class="usage-bar"><div class="usage-fill" id="dashFill" style="width:0%"></div></div><div class="usage-text" id="dashUsageText">0/20 min</div></div>
+        <div class="dash-card"><div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;">Total Messages Sent</div><div class="dc-val" id="dashMsgs">0</div><div style="font-size:12px;color:var(--muted);margin-top:8px;">Keep practicing!</div></div>
+      </div>
+      <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:14px;">Pick a Scenario to Practice</div>
+      <div class="app-scen-grid" id="dashScens"></div>
+      <div class="limit-notice" id="limitNotice">⚠️ Daily limit reached!<button onclick="switchPanel(null,'upgrade')">Upgrade Now</button></div>
+    </div>
+    <div class="app-panel" id="panel-practice">
+      <div class="chat-container">
+        <div class="chat-sidebar"><div class="cs-label">Scenarios</div><div id="chatSidebar"></div></div>
+        <div class="chat-main">
+          <div class="chat-persona-bar"><div class="cp-av" id="cpAv">👩</div><div><div class="cp-nm" id="cpName">Priya</div><div class="cp-st">● Online now</div></div><button class="coach-toggle" onclick="getCoach()">🎯 Get Coach Tip</button></div>
+          <div class="messages-area" id="msgsArea"></div>
+          <div class="sug-strip" id="sugStrip"></div>
+          <div class="input-row"><textarea class="chat-textarea" id="chatInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea><button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="app-panel" id="panel-course">
+      <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;">30-Day Dating Bootcamp 📚</h2>
+      <p style="color:var(--muted);margin-bottom:24px;">Daily lessons to go from nervous to confident. Week 1 is free!</p>
+      <div id="courseList"></div>
+    </div>
+    <div class="app-panel" id="panel-upgrade">
+      <h2 style="font-family:'Bricolage Grotesque',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px;">⚡ Unlock Everything</h2>
+      <p style="color:var(--muted);margin-bottom:8px;">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
+      <p style="font-size:13px;color:var(--pink);margin-bottom:24px;">Demo mode: Click any plan to unlock features instantly</p>
+      <div class="upgrade-plans" id="appPlans"></div>
+    </div>
+  </div>
+</div>
 
-        // Login
-        async function doLogin() {
-            const email = document.getElementById('loginEmail').value.trim();
-            const password = document.getElementById('loginPassword').value;
+<!-- ═══════════════════════════════════════════════════════════
+     SUPABASE AUTH — FIXED (no reload loop, proper Google login)
+════════════════════════════════════════════════════════════ -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ⚠️ IMPORTANT: Supabase Dashboard → Settings → API → anon public key copy karo
+// Real key ~200+ characters hoti hai
+const SUPABASE_URL  = 'https://xzdjxvitqktsfeuzshik.supabase.co';
+const SUPABASE_ANON = 'APNI_REAL_ANON_KEY_YAHAN_LAGAO';
 
-            if (!email || !password) {
-                showError('Please fill all fields');
-                return;
-            }
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+let currentAuthMode = 'signup';
+let _authHandled    = false; // reload loop rokne ke liye flag
 
-            if (error) {
-                showError('Invalid email or password');
-            } else {
-                window.location.reload();
-            }
-        }
+// ── AUTH STATE LISTENER ──────────────────────────────────────
+// Yeh Google OAuth redirect ke baad bhi fire hoga
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session && !_authHandled) {
+    _authHandled = true;
+    closeAuth();
+    const name =
+      session.user.user_metadata?.full_name ||
+      session.user.user_metadata?.name      ||
+      session.user.email.split('@')[0];
+    // app.js ka initUser directly call karo — NO window.location.reload()
+    if (typeof initUser === 'function') {
+      initUser(name, session.user.email);
+    }
+  }
+  if (event === 'SIGNED_OUT') {
+    _authHandled = false;
+    document.getElementById('appView').style.display     = 'none';
+    document.getElementById('landingView').style.display = 'block';
+  }
+});
 
-        // OTP Login
-        async function doOTPLogin() {
-            const email = document.getElementById('otpEmail').value.trim();
+// ── PAGE LOAD: already logged-in check ───────────────────────
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session && !_authHandled) {
+    _authHandled = true;
+    const name =
+      session.user.user_metadata?.full_name ||
+      session.user.user_metadata?.name      ||
+      session.user.email.split('@')[0];
+    // app.js fully load hone ke baad call karo
+    window.addEventListener('load', () => {
+      if (typeof initUser === 'function') {
+        initUser(name, session.user.email);
+      }
+    });
+  }
+})();
 
-            if (!email) {
-                showError('Please enter your email');
-                return;
-            }
+// ── MODAL ────────────────────────────────────────────────────
+function showAuth(mode) {
+  currentAuthMode = mode;
+  document.getElementById('authModal').style.display = 'flex';
+  renderAuthForm();
+}
 
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: { emailRedirectTo: window.location.origin }
-            });
+function closeAuth() {
+  document.getElementById('authModal').style.display = 'none';
+}
 
-            if (error) {
-                showError(error.message);
-            } else {
-                alert('📧 Magic link sent! Check your email.');
-                closeAuth();
-            }
-        }
+document.getElementById('authModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAuth();
+});
 
-        // Google Login
-        async function doGoogleLogin() {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: window.location.origin }
-            });
-            if (error) showError(error.message);
-        }
+// ── GOOGLE SVG (reusable) ─────────────────────────────────────
+const GOOGLE_SVG = `<svg style="width:20px;height:20px" viewBox="0 0 48 48">
+  <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+  <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+  <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+  <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+</svg>`;
 
-        function showError(msg) {
-            const el = document.getElementById('authError');
-            if (el) {
-                el.textContent = msg;
-                el.style.display = 'block';
-            }
-        }
+// ── FORM RENDER ───────────────────────────────────────────────
+function renderAuthForm() {
+  const box = document.getElementById('authModalBox');
 
-        // Close on outside click
-        document.getElementById('authModal').addEventListener('click', function(e) {
-            if (e.target === this) closeAuth();
-        });
+  if (currentAuthMode === 'signup') {
+    box.innerHTML = `
+      <button class="closeBtn" onclick="closeAuth()">✕</button>
+      <div class="modalTitle">Join RizzUp AI</div>
+      <div class="modalSub">Free forever. No credit card. 30 seconds.</div>
+      <div id="authError" class="errorMsg"></div>
+      <input type="text"     id="authName"     class="modalInput" placeholder="Your Name">
+      <input type="email"    id="authEmail"    class="modalInput" placeholder="Email address">
+      <input type="password" id="authPassword" class="modalInput" placeholder="Password (min 6 chars)">
+      <button class="modalBtn btnPink"  onclick="doSignup()">Create Free Account 🚀</button>
+      <div class="divider"><span class="orText">or</span></div>
+      <button class="modalBtn btnWhite" onclick="doGoogleLogin()" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+        ${GOOGLE_SVG} Continue with Google
+      </button>
+      <div class="switchLink">Already have account?
+        <a onclick="currentAuthMode='login';renderAuthForm()">Login here</a>
+      </div>`;
+  } else {
+    box.innerHTML = `
+      <button class="closeBtn" onclick="closeAuth()">✕</button>
+      <div class="modalTitle">Welcome Back!</div>
+      <div class="modalSub">Login to continue your journey.</div>
+      <div id="authError" class="errorMsg"></div>
+      <div class="loginMethods">
+        <button class="methodBtn active" id="passBtn" onclick="showPasswordLogin()">🔑 Password</button>
+        <button class="methodBtn"        id="otpBtn"  onclick="showOTPLogin()">✨ Magic Link</button>
+      </div>
+      <div id="passSection">
+        <input type="email"    id="loginEmail"    class="modalInput" placeholder="Email address">
+        <input type="password" id="loginPassword" class="modalInput" placeholder="Password">
+        <button class="modalBtn btnPink" onclick="doLogin()">Login →</button>
+      </div>
+      <div id="otpSection" style="display:none;">
+        <input type="email" id="otpEmail" class="modalInput" placeholder="Email address">
+        <button class="modalBtn btnPink" onclick="doOTPLogin()">Send Magic Link 📧</button>
+      </div>
+      <div class="divider"><span class="orText">or</span></div>
+      <button class="modalBtn btnWhite" onclick="doGoogleLogin()" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+        ${GOOGLE_SVG} Continue with Google
+      </button>
+      <div class="switchLink">Don't have account?
+        <a onclick="currentAuthMode='signup';renderAuthForm()">Sign Up Free</a>
+      </div>`;
+  }
+}
 
-        // Check session
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (session) {
-                window.location.reload();
-            }
-        });
-    </script>
+function showPasswordLogin() {
+  document.getElementById('passBtn').classList.add('active');
+  document.getElementById('otpBtn').classList.remove('active');
+  document.getElementById('passSection').style.display = 'block';
+  document.getElementById('otpSection').style.display  = 'none';
+}
 
-    <script src="js/app.js"></script>
+function showOTPLogin() {
+  document.getElementById('otpBtn').classList.add('active');
+  document.getElementById('passBtn').classList.remove('active');
+  document.getElementById('otpSection').style.display  = 'block';
+  document.getElementById('passSection').style.display = 'none';
+}
+
+// ── AUTH ACTIONS ──────────────────────────────────────────────
+async function doSignup() {
+  const name     = document.getElementById('authName').value.trim();
+  const email    = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if (!name || !email || !password) { showError('Please fill all fields'); return; }
+  if (password.length < 6)          { showError('Password must be at least 6 characters'); return; }
+
+  const { error } = await supabase.auth.signUp({
+    email, password,
+    options: { data: { full_name: name, name } }
+  });
+  if (error) showError(error.message);
+  else { alert('🎉 Account created! Check email to verify, then login.'); closeAuth(); }
+}
+
+async function doLogin() {
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  if (!email || !password) { showError('Please fill all fields'); return; }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) showError('Invalid email or password');
+  // onAuthStateChange SIGNED_IN event handle karega — NO reload needed
+}
+
+async function doOTPLogin() {
+  const email = document.getElementById('otpEmail').value.trim();
+  if (!email) { showError('Please enter your email'); return; }
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin }
+  });
+  if (error) showError(error.message);
+  else { alert('📧 Magic link sent! Check your email.'); closeAuth(); }
+}
+
+async function doGoogleLogin() {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin }
+  });
+  if (error) showError(error.message);
+}
+
+// ── LOGOUT — Supabase aware (app.js wale ko override karta hai) ─
+async function doLogout() {
+  await supabase.auth.signOut();
+  // onAuthStateChange SIGNED_OUT event baaki sab handle karega
+}
+
+function showError(msg) {
+  const el = document.getElementById('authError');
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAuth();
+});
+</script>
+
+<!-- app.js MUST come AFTER Supabase script -->
+<script src="js/app.js"></script>
 </body>
 </html>
