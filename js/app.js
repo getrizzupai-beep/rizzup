@@ -1,793 +1,583 @@
-/**
- * RizzUp AI — app.js
- * Full Supabase Auth: Signup + Login (Password/OTP) + Google
- */
+/* ===== RESET & BASE ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --primary: #FF3366;
+  --primary-dark: #E62E5C;
+  --secondary: #FF6B35;
+  --dark: #1A1A2E;
+  --light: #F8F9FA;
+  --gray: #6B7280;
+  --border: #E9ECEF;
+  --success: #10B981;
+  --error: #EF4444;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.15);
+}
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: var(--dark);
+  background: #fff;
+  line-height: 1.6;
+}
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; font-family: inherit; }
 
-// ============ SUPABASE CONFIG ============
-const SUPABASE_URL = 'https://xzdjxvitqktsfeuzshik.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW';
-let supabase = null;
+/* ===== NAVBAR ===== */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 5%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
+  border-bottom: 1px solid var(--border);
+}
+.nav-left { display: flex; align-items: center; gap: 40px; }
+.logo { font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800; color: var(--primary); }
+.nav-links { display: flex; gap: 30px; }
+.nav-links a { font-weight: 500; color: var(--gray); transition: color 0.2s; }
+.nav-links a:hover { color: var(--primary); }
+.nav-right { display: flex; gap: 12px; }
+.btn-login {
+  padding: 10px 20px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: white;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.btn-login:hover { border-color: var(--primary); color: var(--primary); }
+.btn-signup {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+.btn-signup:hover { transform: translateY(-2px); }
 
-async function initSupabase() {
-  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+/* ===== HERO ===== */
+.hero {
+  padding: 140px 5% 80px;
+  text-align: center;
+  background: linear-gradient(180deg, #FFF0F4 0%, #fff 100%);
+}
+.hero-badges { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+.hero-badges span {
+  padding: 6px 14px;
+  background: white;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.hero-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 20px;
+}
+.gradient {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-subtitle {
+  font-size: 18px;
+  color: var(--gray);
+  max-width: 600px;
+  margin: 0 auto 32px;
+}
+.hero-cta { display: flex; justify-content: center; gap: 16px; margin-bottom: 40px; }
+.btn-primary {
+  padding: 14px 32px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,51,102,0.35); }
+.btn-secondary {
+  padding: 14px 32px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+.btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.hero-stats { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+.hero-stat { text-align: center; }
+.hero-stat strong { display: block; font-size: 24px; color: var(--primary); }
+.hero-stat span { font-size: 13px; color: var(--gray); }
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) await loadUserFromSupabase(session.user);
-
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session?.user) {
-      await loadUserFromSupabase(session.user);
-    } else if (event === 'SIGNED_OUT') {
-      handleSignedOut();
-    }
-  });
+/* ===== SECTIONS ===== */
+.section { padding: 80px 5%; }
+.section-alt { background: var(--light); }
+.section-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.section-subtitle {
+  text-align: center;
+  color: var(--gray);
+  font-size: 16px;
+  margin-bottom: 48px;
 }
 
-// ============ CONFIG ============
-const CONFIG = {
-  API_URL: 'https://api.anthropic.com/v1/messages',
-  MODEL: 'claude-sonnet-4-20250514',
-  MAX_TOKENS: 600,
-  MAX_CHARS: 500,
-  AUTO_SAVE_INTERVAL: 30000,
-};
-
-// ============ DATA ============
-const SCENARIOS = {
-  first_date: {
-    name: 'Priya', av: '👩', emoji: '☕', label: 'First Date',
-    desc: 'Coffee meetup, break the ice', free: true,
-    system: `You are Priya, a 25-year-old Mumbai girl on a first coffee date with someone you matched with on a dating app. You're friendly but slightly guarded — you've been on enough bad dates to be cautious. Keep ALL responses to 1-3 short sentences max. React naturally, occasionally use Hinglish (mix of Hindi + English). Show genuine interest if they say something interesting. Never break character. Don't be too easy or too hard to talk to.`,
-    suggestions: ["Heyy! Tu actually apni photo jaisa hai 😄", "Okay first question — chai ya coffee?", "Honestly mujhe bhi first dates awkward lagte hain", "Sach bol — nervous hai kya tu? 😄"]
-  },
-  texting: {
-    name: 'Ananya', av: '💬', emoji: '💬', label: 'Texting',
-    desc: 'Dating app convo', free: true,
-    system: `You are Ananya, a girl the user just matched with on Hinge/Bumble. Casual 1-2 line texting style. Sometimes dry humor. Realistic reactions — if something is boring, say so subtly. Keep it very short like real texts.`,
-    suggestions: ["heyyy finally texted 😄", "okay one question — pizza ya biryani?", "tell me something surprising about you", "coffee date ya dinner? pick one"]
-  },
-  rejection: {
-    name: 'Simran', av: '💪', emoji: '💪', label: 'Rejection',
-    desc: 'Handle it gracefully', free: true,
-    system: `You are Simran letting someone down gently after 2 dates — you don't feel a romantic connection. React based on how gracefully or awkwardly they handle the rejection. Short realistic replies. If they handle it well, appreciate it. If they get weird, be firmer.`,
-    suggestions: ["Haha no worries, you're still cool! 😄", "Fair enough — I respect the honesty", "Can we still be friends?", "Thanks for being real about it!"]
-  },
-  flirting: {
-    name: 'Rhea', av: '😏', emoji: '😏', label: 'Flirting',
-    desc: 'Playful banter', free: false,
-    system: `You are Rhea, confident and playful. Make them earn your interest with wit and originality. Clever lines get appreciation and flirting back. Generic pickup lines get gentle teasing. Keep replies short, punchy.`,
-    suggestions: ["Okay I've been trying to think of a good line 😅", "You have a very distracting smile", "Who's funnier — you or me?"]
-  },
-  arranged: {
-    name: 'Pooja', av: '🌸', emoji: '💐', label: 'Arranged Meet',
-    desc: 'Family intro', free: false,
-    system: `You are Pooja at a first arranged meeting setup by families. Polite and well-mannered but quietly assessing for real compatibility beyond the awkward formality. Use realistic Indian arranged-marriage meeting context. Short replies.`,
-    suggestions: ["Yeh situation thoda awkward hai na? 😅", "Honestly what are you looking for?", "Tumne kya socha tha mere baare mein?"]
-  },
-  second_date: {
-    name: 'Megha', av: '🌙', emoji: '🌙', label: '2nd Date',
-    desc: 'Deepen connection', free: false,
-    system: `You are Megha on a second date. First date went okay but you're not sold yet — you want depth and real personality, not surface-level chat. Push back gently on boring topics. Reward genuine vulnerability and humor.`,
-    suggestions: ["Tell me something you didn't last time", "What's your most random skill?", "Okay honest question — nervous nahi tu?"]
-  }
-};
-
-const OPENING_MESSAGES = {
-  first_date: "Hiii! *nervously sips coffee* Sorry thoda late — Mumbai traffic 😅 Tum actually apni photo jaise ho, refreshing! So... tell me something interesting.",
-  texting: "heyyy so you actually texted 👀 what made you swipe?",
-  rejection: "Hey, I wanted to be upfront... I think you're sweet but I don't see this going romantically. Hope that's okay?",
-  flirting: "Oh so you said hi 😏 Bold move. Prove karo ki it was worth my time.",
-  arranged: "Hii! *awkward laugh* Yeh situation thoda weird hai for both of us? Haha. So... basically kya karte ho?",
-  second_date: "Hey! Glad you came 😄 Last time was nice but I feel like I don't actually know you. Tell me something real."
-};
-
-const COURSE_DAYS = [
-  { day: 1, title: "Why You're Getting Ignored", subtitle: "#1 mistake guys make", free: true, done: true },
-  { day: 2, title: "The Confidence Framework", subtitle: "Real inner confidence", free: true, cur: true },
-  { day: 3, title: "First Message Formula", subtitle: "Openers that work", free: true },
-  { day: 4, title: "Profile Optimization", subtitle: "Bio + photos", free: true },
-  { day: 5, title: "The Curiosity Loop", subtitle: "Make them want more", free: true },
-  { day: 6, title: "Texting Cadence", subtitle: "When to text, when to wait", free: true },
-  { day: 7, title: "Week 1 AI Practice", subtitle: "Full simulation", free: true },
-  { day: 8, title: "Conversation Depth", subtitle: "Beyond haha and lol", free: false },
-  { day: 9, title: "Humor Timing", subtitle: "When jokes land", free: false },
-  { day: 10, title: "The Push-Pull", subtitle: "Create real tension", free: false },
-  { day: 12, title: "The Date Ask", subtitle: "Without sounding desperate", free: false },
-  { day: 16, title: "First Date Script", subtitle: "What to actually say", free: false },
-  { day: 20, title: "Art of Flirting", subtitle: "Playful not cringe", free: false },
-  { day: 25, title: "Handle Rejection", subtitle: "Stay cool always", free: false },
-  { day: 30, title: "Graduation Day 🎓", subtitle: "You've leveled up!", free: false }
-];
-
-// ============ STATE ============
-let state = {
-  user: null,
-  plan: 'free',
-  minsUsed: 0,
-  totalMsgs: 0,
-  sessions: 0,
-  currentScenario: 'first_date',
-  history: [],
-  loading: false,
-  authMode: 'signup',
-  otpEmail: ''
-};
-
-// ============ UTILITIES ============
-const $ = (sel) => document.querySelector(sel);
-const $$ = (sel) => document.querySelectorAll(sel);
-
-function formatText(text) {
-  return text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\n/g, '<br>')
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+/* ===== FEATURES ===== */
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.feature-card {
+  padding: 32px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s;
 }
+.feature-card:hover { transform: translateY(-4px); }
+.feature-icon { font-size: 40px; display: block; margin-bottom: 16px; }
+.feature-card h3 { font-size: 20px; margin-bottom: 12px; }
+.feature-card p { color: var(--gray); font-size: 15px; }
 
-function showToast(message, type = 'default') {
-  const existing = $('.toast');
-  if (existing) { existing.textContent = message; existing.className = `toast ${type} show`; return; }
-  const toast = document.createElement('div');
-  toast.className = `toast ${type} show`;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+/* ===== COURSE PREVIEW ===== */
+.course-preview { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.course-week {
+  padding: 28px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
 }
+.course-week h3 { font-size: 18px; margin-bottom: 16px; color: var(--primary); }
+.course-week ul { list-style: none; }
+.course-week li { padding: 8px 0; color: var(--gray); border-bottom: 1px solid var(--border); }
+.course-week li:last-child { border-bottom: none; }
 
-// ============ AUTH MODAL ============
-function openAuthModal(mode = 'signup') {
-  state.authMode = mode;
-  renderAuthModal();
-  $('#authModal').classList.add('open');
+/* ===== PRICING ===== */
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; max-width: 1000px; margin: 0 auto; }
+.pricing-card {
+  padding: 32px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  position: relative;
+  border: 2px solid transparent;
+  transition: all 0.2s;
 }
-
-function closeAuthModal() {
-  $('#authModal').classList.remove('open');
+.pricing-card.popular { border-color: var(--primary); transform: scale(1.02); }
+.popular-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  background: var(--primary);
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
 }
-
-document.addEventListener('click', (e) => {
-  if (e.target?.id === 'authModal') closeAuthModal();
-});
-
-function renderAuthModal() {
-  const box = $('#authModalBox');
-  if (!box) return;
-
-  // ---- SIGNUP ----
-  if (state.authMode === 'signup') {
-    box.innerHTML = `
-      <button onclick="closeAuthModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">✕</button>
-      <div style="text-align:center;font-size:38px;margin-bottom:8px">💘</div>
-      <h3 class="modal-title">Join RizzUp AI</h3>
-      <p class="modal-sub">Free forever. No credit card. 30 seconds.</p>
-
-      <div class="form-group">
-        <label class="form-label">Your Name</label>
-        <input id="authName" class="form-input" type="text" placeholder="Rahul Kumar">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="authEmail" class="form-input" type="email" placeholder="rahul@gmail.com">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <div style="position:relative">
-          <input id="authPassword" class="form-input" type="password" placeholder="Min 6 characters" style="padding-right:44px">
-          <button type="button" onclick="togglePass('authPassword',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted)">👁️</button>
-        </div>
-      </div>
-
-      <button id="signupBtn" class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">Create Free Account 🚀</button>
-
-      <div class="modal-divider"><span>or</span></div>
-      <button class="btn-google-modal" onclick="doGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-
-      <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--muted)">
-        Already have account? <a href="#" style="color:var(--pink);font-weight:700" onclick="openAuthModal('login');return false">Login here →</a>
-      </p>`;
-
-  // ---- LOGIN ----
-  } else if (state.authMode === 'login') {
-    box.innerHTML = `
-      <button onclick="closeAuthModal()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1">✕</button>
-      <div style="text-align:center;font-size:38px;margin-bottom:8px">👋</div>
-      <h3 class="modal-title">Welcome Back!</h3>
-      <p class="modal-sub">Login to continue your journey.</p>
-
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="authEmail" class="form-input" type="email" placeholder="rahul@gmail.com">
-      </div>
-
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button id="methPassBtn" onclick="setLoginMethod('password')" style="flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--pink);background:#fff0f3;color:var(--pink);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">🔑 Password</button>
-        <button id="methOtpBtn" onclick="setLoginMethod('otp')" style="flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--muted);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit">📧 Magic Link</button>
-      </div>
-
-      <div id="passSection">
-        <div class="form-group">
-          <label class="form-label">Password</label>
-          <div style="position:relative">
-            <input id="authPassword" class="form-input" type="password" placeholder="Your password" style="padding-right:44px">
-            <button type="button" onclick="togglePass('authPassword',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted)">👁️</button>
-          </div>
-        </div>
-        <div style="text-align:right;margin:-4px 0 14px">
-          <a href="#" style="font-size:13px;color:var(--pink);font-weight:600" onclick="setLoginMethod('otp');return false">Forgot password? Use magic link →</a>
-        </div>
-        <button id="loginBtn" class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doLogin()">Login →</button>
-      </div>
-
-      <div id="otpSection" style="display:none">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">Email pe magic link bhejenge — no password needed! Click the link to login instantly.</p>
-        <button id="otpBtn" class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doOTPLogin()">Send Magic Link 📧</button>
-      </div>
-
-      <div class="modal-divider"><span>or</span></div>
-      <button class="btn-google-modal" onclick="doGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continue with Google
-      </button>
-
-      <p style="text-align:center;margin-top:16px;font-size:13px;color:var(--muted)">
-        New here? <a href="#" style="color:var(--pink);font-weight:700" onclick="openAuthModal('signup');return false">Create free account →</a>
-      </p>`;
-
-  // ---- OTP SENT ----
-  } else if (state.authMode === 'otp_sent') {
-    box.innerHTML = `
-      <div style="text-align:center;padding:1rem 0">
-        <div style="font-size:56px;margin-bottom:14px">📬</div>
-        <h3 class="modal-title">Email Check Karo!</h3>
-        <p class="modal-sub">Magic link bhej diya <strong>${state.otpEmail}</strong> pe.<br>Link click karo — seedha login ho jaega!</p>
-        <div style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:12px;padding:14px;margin:20px 0;font-size:14px;color:#059669;font-weight:700">
-          ✅ Inbox check karo aur link pe click karo
-        </div>
-        <button onclick="openAuthModal('login')" style="width:100%;padding:11px;border-radius:10px;background:none;border:1.5px solid var(--border);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--muted)">← Back to Login</button>
-      </div>`;
-  }
+.plan-name { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.plan-price { font-size: 42px; font-weight: 800; color: var(--primary); font-family: 'Bricolage Grotesque', sans-serif; }
+.plan-price span { font-size: 16px; color: var(--gray); font-weight: 500; }
+.plan-features { list-style: none; margin: 24px 0; }
+.plan-features li { padding: 10px 0; color: var(--gray); border-bottom: 1px solid var(--border); }
+.plan-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--dark);
+  color: white;
+  font-weight: 700;
+  transition: all 0.2s;
 }
+.plan-btn.btn-pink { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+.plan-btn:hover { transform: translateY(-2px); }
+.pricing-note { text-align: center; color: var(--gray); font-size: 13px; margin-top: 24px; }
 
-// ---- Toggle password/otp method ----
-function setLoginMethod(method) {
-  const passBtn = document.getElementById('methPassBtn');
-  const otpBtn = document.getElementById('methOtpBtn');
-  const passSection = document.getElementById('passSection');
-  const otpSection = document.getElementById('otpSection');
-  if (!passBtn) return;
-
-  const activeStyle = 'flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--pink);background:#fff0f3;color:var(--pink);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit';
-  const inactiveStyle = 'flex:1;padding:9px 8px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--muted);font-weight:700;cursor:pointer;font-size:13px;font-family:inherit';
-
-  if (method === 'password') {
-    passBtn.style.cssText = activeStyle;
-    otpBtn.style.cssText = inactiveStyle;
-    passSection.style.display = '';
-    otpSection.style.display = 'none';
-  } else {
-    otpBtn.style.cssText = activeStyle;
-    passBtn.style.cssText = inactiveStyle;
-    passSection.style.display = 'none';
-    otpSection.style.display = '';
-  }
+/* ===== FAQ ===== */
+.faq-list { max-width: 700px; margin: 0 auto; }
+.faq-item {
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
 }
-
-// ---- Toggle password visibility ----
-function togglePass(inputId, btn) {
-  const inp = document.getElementById(inputId);
-  if (!inp) return;
-  inp.type = inp.type === 'password' ? 'text' : 'password';
-  btn.textContent = inp.type === 'password' ? '👁️' : '🙈';
+.faq-question {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  cursor: pointer;
+  font-weight: 600;
 }
-
-// ============ AUTH FUNCTIONS ============
-async function doSignup() {
-  const name = document.getElementById('authName')?.value.trim();
-  const email = document.getElementById('authEmail')?.value.trim();
-  const password = document.getElementById('authPassword')?.value;
-
-  if (!name || name.length < 2) { showToast('Apna naam daalo! 😊', 'error'); return; }
-  if (!email || !email.includes('@')) { showToast('Valid email daalo!', 'error'); return; }
-  if (!password || password.length < 6) { showToast('Password 6+ characters ka hona chahiye!', 'error'); return; }
-
-  const btn = document.getElementById('signupBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Creating... ⏳'; }
-
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: name, name: name } }
-    });
-    if (error) throw error;
-
-    if (data.user) {
-      await supabase.from('users').upsert({
-        id: data.user.id, email, name, plan: 'free',
-        mins_used: 0, total_msgs: 0, sessions: 0,
-        created_at: new Date().toISOString()
-      });
-
-      if (data.session) {
-        showToast(`Welcome ${name.split(' ')[0]}! 🎉`, 'success');
-        closeAuthModal();
-        await loadUserFromSupabase(data.user);
-      } else {
-        showToast(`Account bana! 🎉 Check email to verify, then login.`, 'success');
-        if (btn) { btn.disabled = false; btn.textContent = 'Create Free Account 🚀'; }
-        setTimeout(() => openAuthModal('login'), 2000);
-      }
-    }
-  } catch (err) {
-    if (err.message?.includes('already registered')) {
-      showToast('Email already registered! Login karo 😊', 'error');
-      openAuthModal('login');
-    } else {
-      showToast(err.message || 'Signup failed. Try again!', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = 'Create Free Account 🚀'; }
-    }
-  }
+.faq-toggle { font-size: 24px; color: var(--primary); transition: transform 0.2s; }
+.faq-item.open .faq-toggle { transform: rotate(45deg); }
+.faq-answer {
+  max-height: 0;
+  overflow: hidden;
+  padding: 0 24px;
+  color: var(--gray);
+  transition: all 0.3s;
 }
+.faq-item.open .faq-answer { max-height: 200px; padding: 0 24px 20px; }
 
-async function doLogin() {
-  const email = document.getElementById('authEmail')?.value.trim();
-  const password = document.getElementById('authPassword')?.value;
-
-  if (!email || !email.includes('@')) { showToast('Valid email daalo!', 'error'); return; }
-  if (!password) { showToast('Password daalo!', 'error'); return; }
-
-  const btn = document.getElementById('loginBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Logging in... ⏳'; }
-
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    showToast('Welcome back! 🔥', 'success');
-    closeAuthModal();
-    await loadUserFromSupabase(data.user);
-  } catch (err) {
-    const msg = err.message?.includes('Invalid') ? 'Email ya password galat hai!' : err.message || 'Login failed!';
-    showToast(msg, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Login →'; }
-  }
+/* ===== CTA ===== */
+.cta-section {
+  padding: 100px 5%;
+  text-align: center;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
 }
+.cta-section h2 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 36px; margin-bottom: 16px; }
+.cta-section p { font-size: 18px; margin-bottom: 32px; opacity: 0.9; }
+.btn-large { padding: 18px 48px; font-size: 18px; }
+.cta-note { margin-top: 16px; font-size: 14px; opacity: 0.8; }
 
-async function doOTPLogin() {
-  const email = document.getElementById('authEmail')?.value.trim();
-  if (!email || !email.includes('@')) { showToast('Valid email daalo!', 'error'); return; }
+/* ===== FOOTER ===== */
+.footer { padding: 60px 5% 30px; background: var(--dark); color: white; }
+.footer-content { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 40px; margin-bottom: 40px; }
+.footer-brand { max-width: 300px; }
+.footer-brand p { color: #888; margin-top: 12px; }
+.footer-links { display: flex; gap: 60px; flex-wrap: wrap; }
+.footer-col h4 { margin-bottom: 16px; }
+.footer-col a { display: block; color: #888; margin-bottom: 10px; transition: color 0.2s; }
+.footer-col a:hover { color: white; }
+.footer-bottom { text-align: center; padding-top: 30px; border-top: 1px solid #333; color: #666; }
 
-  const btn = document.getElementById('otpBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Sending... ⏳'; }
-
-  try {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin }
-    });
-    if (error) throw error;
-    state.otpEmail = email;
-    state.authMode = 'otp_sent';
-    renderAuthModal();
-    showToast('Magic link bhej diya! Email check karo 📧', 'success');
-  } catch (err) {
-    showToast(err.message || 'Error sending link!', 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Send Magic Link 📧'; }
-  }
+/* ===== AUTH MODAL ===== */
+#authModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(4px);
 }
-
-async function doGoogleLogin() {
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin }
-    });
-    if (error) throw error;
-  } catch (err) {
-    showToast('Google login mein problem! Try email se.', 'error');
-  }
+#authModalBox {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: var(--shadow-lg);
+  position: relative;
 }
+.closeBtn { position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 24px; color: #888; cursor: pointer; z-index: 10; }
+.modalTitle { font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 800; color: var(--dark); margin: 0 0 10px 0; text-align: center; }
+.modalSub { font-size: 14px; color: var(--gray); text-align: center; margin: 0 0 28px 0; }
+.modalInput { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 15px; outline: none; margin-bottom: 14px; background: var(--light); }
+.modalInput:focus { border-color: var(--primary); background: white; }
+.modalBtn { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; }
+.btnPink { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; }
+.btnPink:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255,51,102,0.35); }
+.btnWhite { background: white; border: 1.5px solid var(--border); color: var(--dark); display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btnWhite:hover { background: var(--light); }
+.divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; font-size: 13px; color: var(--gray); font-weight: 600; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.switchLink { text-align: center; margin-top: 20px; font-size: 14px; color: var(--gray); }
+.switchLink a { color: var(--primary); font-weight: 700; cursor: pointer; }
+.errorMsg { background: #FEF2F2; border: 1px solid #FECACA; color: var(--error); padding: 12px; border-radius: 10px; font-size: 14px; margin-bottom: 14px; display: none; }
+.loginMethods { display: flex; gap: 10px; margin-bottom: 20px; }
+.methodBtn { flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: 10px; background: white; color: var(--gray); font-weight: 700; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.methodBtn.active { border-color: var(--primary); background: #FFF0F4; color: var(--primary); }
 
-async function doLogout() {
-  await saveUserToSupabase();
-  await supabase.auth.signOut();
+/* ===== TOAST ===== */
+#toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  padding: 14px 28px;
+  background: var(--dark);
+  color: white;
+  border-radius: 12px;
+  font-weight: 600;
+  z-index: 10000;
+  opacity: 0;
+  transition: all 0.3s;
 }
+#toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+#toast.success { background: var(--success); }
+#toast.error { background: var(--error); }
 
-function handleSignedOut() {
-  state = { ...state, user: null, plan: 'free', minsUsed: 0, totalMsgs: 0, sessions: 0, history: [] };
-  document.getElementById('appView').style.display = 'none';
-  document.getElementById('landingView').style.display = 'block';
-  showToast('Logged out! See you soon 👋');
+/* ===== APP NAVBAR ===== */
+.app-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 5%;
+  background: white;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
-
-// ============ USER DATA ============
-async function loadUserFromSupabase(authUser) {
-  const { data: userData } = await supabase.from('users').select('*').eq('id', authUser.id).single();
-  const name = userData?.name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User';
-
-  state.user = { id: authUser.id, name, email: authUser.email };
-
-  const today = new Date().toDateString();
-  const lastDate = localStorage.getItem(`rz_date_${authUser.id}`);
-  if (lastDate !== today) {
-    state.minsUsed = 0;
-    localStorage.setItem(`rz_date_${authUser.id}`, today);
-    await supabase.from('users').update({ mins_used: 0 }).eq('id', authUser.id);
-  } else {
-    state.minsUsed = userData?.mins_used || 0;
-  }
-
-  state.plan = userData?.plan || 'free';
-  state.totalMsgs = userData?.total_msgs || 0;
-  state.sessions = userData?.sessions || 0;
-
-  if (!userData) {
-    await supabase.from('users').upsert({
-      id: authUser.id, email: authUser.email, name, plan: 'free',
-      mins_used: 0, total_msgs: 0, sessions: 0,
-      created_at: new Date().toISOString()
-    });
-  }
-
-  closeAuthModal();
-  document.getElementById('landingView').style.display = 'none';
-  document.getElementById('appView').style.display = 'block';
-  buildApp();
+.app-nav-left { display: flex; align-items: center; gap: 30px; }
+.app-nav-links { display: flex; gap: 8px; }
+.app-nav-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font-weight: 600;
+  color: var(--gray);
+  transition: all 0.2s;
 }
+.app-nav-btn.active { background: #FFF0F4; color: var(--primary); }
+.app-nav-right { display: flex; align-items: center; gap: 16px; }
+.plan-badge { padding: 6px 12px; background: #FFF0F4; color: var(--primary); border-radius: 8px; font-size: 12px; font-weight: 700; }
+.user-name { font-weight: 600; }
+.btn-logout { padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: white; font-weight: 600; }
 
-async function saveUserToSupabase() {
-  if (!state.user || !supabase) return;
-  await supabase.from('users').update({
-    plan: state.plan,
-    mins_used: state.minsUsed,
-    total_msgs: state.totalMsgs,
-    sessions: state.sessions,
-    updated_at: new Date().toISOString()
-  }).eq('id', state.user.id);
+/* ===== APP PANELS ===== */
+.app-panel { display: none; padding: 40px 5%; }
+.app-panel.active { display: block; }
+
+/* ===== DASHBOARD ===== */
+.dash-welcome { margin-bottom: 32px; }
+.dash-welcome h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; margin-bottom: 8px; }
+.dash-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 32px; }
+.dash-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
 }
-
-setInterval(saveUserToSupabase, CONFIG.AUTO_SAVE_INTERVAL);
-
-// ============ APP BUILD ============
-function buildApp() {
-  const name = state.user.name.split(' ')[0];
-  const greet = document.getElementById('dashGreet');
-  if (greet) greet.textContent = `Hey ${name}! 👋`;
-  const badge = document.getElementById('appPlanBadge');
-  if (badge) badge.textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
-  const logoutEl = document.getElementById('appLogout');
-  if (logoutEl) { logoutEl.textContent = `Logout (${name})`; logoutEl.onclick = doLogout; }
-  buildDashboardScenarios();
-  buildChatSidebar();
-  buildCourse();
-  buildAppPlans();
-  updateDashboard();
-  resetChat();
-  initChat();
+.stat-icon { font-size: 32px; }
+.stat-info { flex: 1; }
+.stat-value { display: block; font-size: 28px; font-weight: 800; color: var(--primary); }
+.stat-label { font-size: 13px; color: var(--gray); }
+.stat-sub { font-size: 12px; color: var(--gray); margin-top: 4px; }
+.dash-limit-notice {
+  display: none;
+  padding: 16px 20px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 12px;
+  color: var(--error);
+  margin-bottom: 24px;
 }
-
-function switchPanel(btn, id) {
-  $$('.app-nav-btn').forEach(b => b.classList.remove('active'));
-  $$('.app-panel').forEach(p => p.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  document.getElementById(`panel-${id}`)?.classList.add('active');
+.dash-limit-notice.show { display: flex; justify-content: space-between; align-items: center; }
+.dash-limit-notice button { padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 8px; font-weight: 600; }
+.panel-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+.scenarios-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.app-scen-card {
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 2px solid transparent;
 }
+.app-scen-card:hover { transform: translateY(-4px); border-color: var(--primary); }
+.app-scen-card.locked { opacity: 0.6; cursor: not-allowed; }
+.scen-emoji { font-size: 36px; margin-bottom: 12px; }
+.scen-name { font-weight: 700; margin-bottom: 4px; }
+.scen-desc { font-size: 13px; color: var(--gray); margin-bottom: 12px; }
+.scen-tag { font-size: 12px; padding: 4px 10px; background: #FFF0F4; color: var(--primary); border-radius: 6px; font-weight: 600; }
 
-function updateDashboard() {
-  const max = state.plan === 'free' ? 20 : state.plan === 'starter' ? 60 : 9999;
-  const pct = Math.min((state.minsUsed / max) * 100, 100);
-  const fill = $('#dashFill'); if (fill) fill.style.width = `${pct}%`;
-  const minsEl = $('#dashMins'); if (minsEl) minsEl.textContent = Math.floor(state.minsUsed);
-  const msgsEl = $('#dashMsgs'); if (msgsEl) msgsEl.textContent = state.totalMsgs;
-  const usageTxt = $('#dashUsageText');
-  if (usageTxt) usageTxt.textContent = state.plan === 'pro' ? 'Unlimited 🚀' : `${Math.floor(state.minsUsed)}/${max} min`;
-  const notice = $('#limitNotice');
-  if (notice) notice.classList.toggle('show', state.minsUsed >= max && state.plan === 'free');
+/* ===== PRACTICE ===== */
+.practice-container { display: flex; gap: 20px; height: calc(100vh - 100px); }
+.chat-sidebar {
+  width: 220px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  overflow-y: auto;
 }
-
-// ============ SCENARIOS ============
-function buildDashboardScenarios() {
-  const c = $('#dashScens'); if (!c) return;
-  c.innerHTML = '';
-  Object.entries(SCENARIOS).forEach(([key, sc]) => {
-    const locked = !sc.free && state.plan === 'free';
-    const el = document.createElement('div');
-    el.className = `app-scen-card ${locked ? 'locked' : ''}`;
-    el.onclick = locked
-      ? () => switchPanel($$('.app-nav-btn')[3], 'upgrade')
-      : () => startScenario(key);
-    el.innerHTML = `
-      <div class="asc-emoji">${sc.emoji}</div>
-      <div class="asc-name">${sc.label}</div>
-      <div class="asc-desc">${sc.desc}</div>
-      <span class="asc-badge ${sc.free ? 'asc-free' : 'asc-pro'}">${sc.free ? 'Free' : locked ? '🔒 Pro' : '✓ Unlocked'}</span>`;
-    c.appendChild(el);
-  });
+.cs-title { font-size: 12px; font-weight: 700; color: var(--gray); margin-bottom: 12px; text-transform: uppercase; }
+.cs-scen {
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 8px;
+  font-size: 14px;
+  transition: all 0.2s;
 }
-
-function buildChatSidebar() {
-  const c = $('#chatSidebar'); if (!c) return;
-  c.innerHTML = '<div class="cs-label">Scenarios</div>';
-  Object.entries(SCENARIOS).forEach(([key, sc]) => {
-    const locked = !sc.free && state.plan === 'free';
-    const el = document.createElement('div');
-    el.className = `cs-scen ${key === state.currentScenario ? 'active' : ''} ${locked ? 'locked-s' : ''}`;
-    el.onclick = locked
-      ? () => switchPanel($$('.app-nav-btn')[3], 'upgrade')
-      : () => switchScenario(key);
-    el.textContent = `${sc.emoji} ${sc.label}`;
-    c.appendChild(el);
-  });
+.cs-scen:hover { background: var(--light); }
+.cs-scen.active { background: #FFF0F4; color: var(--primary); font-weight: 600; }
+.cs-scen.locked-s { opacity: 0.5; cursor: not-allowed; }
+.chat-main { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
 }
-
-function startScenario(key) {
-  state.currentScenario = key;
-  switchPanel($$('.app-nav-btn')[1], 'practice');
-  buildChatSidebar();
-  resetChat();
-  initChat();
+.chat-avatar { font-size: 32px; }
+.chat-info { flex: 1; }
+.chat-name { display: block; font-weight: 700; }
+.chat-status { font-size: 12px; color: var(--success); }
+.btn-coach { padding: 10px 20px; background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border: none; border-radius: 10px; font-weight: 600; }
+.chat-messages { flex: 1; padding: 20px; overflow-y: auto; }
+.msg-row { display: flex; gap: 12px; margin-bottom: 20px; }
+.msg-row.user { flex-direction: row-reverse; }
+.msg-bubble {
+  max-width: 70%;
+  padding: 14px 18px;
+  border-radius: 16px;
+  font-size: 15px;
+  line-height: 1.5;
 }
-
-function switchScenario(key) {
-  state.currentScenario = key;
-  buildChatSidebar();
-  resetChat();
-  initChat();
+.msg-row:not(.user) .msg-bubble { background: var(--light); border-bottom-left-radius: 4px; }
+.msg-row.user .msg-bubble { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: white; border-bottom-right-radius: 4px; }
+.suggestions-strip { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border); overflow-x: auto; }
+.sug-chip {
+  padding: 8px 16px;
+  background: var(--light);
+  border-radius: 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
-// ============ CHAT ============
-function initChat() {
-  updateChatHeader();
-  const opening = OPENING_MESSAGES[state.currentScenario];
-  state.history = [{ role: 'assistant', content: opening }];
-  addBubble('ai', opening);
-  const sugs = SCENARIOS[state.currentScenario].suggestions || [];
-  const strip = $('#sugStrip');
-  if (strip) strip.innerHTML = sugs.map(s => `<button class="sug-chip" onclick="useSuggestion(this)">${s}</button>`).join('');
+.sug-chip:hover { background: #FFF0F4; color: var(--primary); }
+.chat-input-area { display: flex; gap: 12px; padding: 20px; border-top: 1px solid var(--border); }
+#chatInput {
+  flex: 1;
+  padding: 14px 18px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  font-size: 15px;
+  resize: none;
+  max-height: 120px;
+  font-family: inherit;
 }
-
-function resetChat() {
-  state.history = [];
-  const area = $('#msgsArea'); if (area) area.innerHTML = '';
+#chatInput:focus { outline: none; border-color: var(--primary); }
+.btn-send {
+  width: 50px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
 }
-
-function updateChatHeader() {
-  const sc = SCENARIOS[state.currentScenario];
-  const av = $('#cpAv'); const nm = $('#cpName');
-  if (av) av.textContent = sc.av;
-  if (nm) nm.textContent = sc.name;
+.coach-card {
+  background: linear-gradient(135deg, #FFF0F4, #FFE8ED);
+  border: 1px solid var(--primary);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 20px 0;
+  font-size: 14px;
 }
+.coach-card strong { color: var(--primary); }
 
-function addBubble(type, text) {
-  const area = $('#msgsArea'); if (!area) return;
-  const sc = SCENARIOS[state.currentScenario];
-  const row = document.createElement('div');
-  row.className = `msg-row ${type === 'user' ? 'user' : ''}`;
-  row.innerHTML = `
-    <div class="m-av ${type}">${type === 'ai' ? sc.av : '🧑'}</div>
-    <div class="bubble ${type}">${formatText(text)}</div>`;
-  area.appendChild(row);
-  requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; });
+/* ===== COURSE ===== */
+.course-container { max-width: 800px; margin: 0 auto; }
+.course-header { text-align: center; margin-bottom: 40px; }
+.course-header h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; margin-bottom: 12px; }
+.course-header p { color: var(--gray); }
+.course-list { display: flex; flex-direction: column; gap: 12px; }
+.course-day {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
-function addCoachCard(html) {
-  const area = $('#msgsArea'); if (!area) return;
-  const card = document.createElement('div');
-  card.className = 'coach-card';
-  card.innerHTML = `<div class="cc-hdr">🎯 Dating Coach</div>${html}`;
-  area.appendChild(card);
-  area.scrollTop = area.scrollHeight;
+.course-day:hover { transform: translateX(4px); }
+.course-day.locked { opacity: 0.5; cursor: not-allowed; }
+.day-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
 }
+.day-num.free { background: #E8F5E9; color: var(--success); }
+.day-num.paid { background: var(--light); color: var(--gray); }
+.day-num.done { background: var(--success); color: white; }
+.day-num.current { background: var(--primary); color: white; }
+.day-info { flex: 1; }
+.day-title { font-weight: 700; margin-bottom: 4px; }
+.day-subtitle { font-size: 13px; color: var(--gray); }
+.day-tag { font-size: 11px; padding: 4px 10px; border-radius: 6px; font-weight: 600; }
+.day-tag.free { background: #E8F5E9; color: var(--success); }
+.day-tag.locked { background: var(--light); color: var(--gray); }
 
-function showTyping() {
-  const area = $('#msgsArea'); if (!area) return;
-  const sc = SCENARIOS[state.currentScenario];
-  const row = document.createElement('div');
-  row.className = 'msg-row'; row.id = 'typingRow';
-  row.innerHTML = `<div class="m-av ai">${sc.av}</div><div class="typing-bub"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>`;
-  area.appendChild(row);
-  area.scrollTop = area.scrollHeight;
+/* ===== WINGMAN ===== */
+.wingman-container { max-width: 700px; margin: 0 auto; text-align: center; }
+.wingman-container h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; margin-bottom: 12px; }
+.wingman-container > p { color: var(--gray); margin-bottom: 24px; }
+.wingman-input {
+  width: 100%;
+  padding: 20px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  font-size: 15px;
+  min-height: 200px;
+  resize: vertical;
+  font-family: inherit;
+  margin-bottom: 20px;
+  text-align: left;
 }
-
-function hideTyping() {
-  const r = $('#typingRow'); if (r) r.remove();
+.wingman-input:focus { outline: none; border-color: var(--primary); }
+.wingman-results { margin-top: 32px; text-align: left; }
+.wingman-reply {
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+  border-left: 4px solid var(--primary);
 }
+.reply-score { font-size: 12px; font-weight: 700; color: var(--primary); margin-bottom: 8px; }
+.reply-text { font-size: 15px; line-height: 1.5; }
 
-// ============ CLAUDE API ============
-async function callClaude(messages, systemPrompt) {
-  const response = await fetch(CONFIG.API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: CONFIG.MODEL,
-      max_tokens: CONFIG.MAX_TOKENS,
-      system: systemPrompt,
-      messages: messages
-    })
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
-  }
-  const data = await response.json();
-  return data.content?.[0]?.text || '';
+/* ===== PRICING PANEL ===== */
+.pricing-container { max-width: 1000px; margin: 0 auto; text-align: center; }
+.pricing-container h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; margin-bottom: 12px; }
+.pricing-container > p { color: var(--gray); margin-bottom: 40px; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .navbar { flex-direction: column; gap: 16px; padding: 16px 5%; }
+  .nav-left { flex-direction: column; gap: 16px; }
+  .nav-links { display: none; }
+  .hero-title { font-size: 36px; }
+  .hero-cta { flex-direction: column; }
+  .hero-stats { gap: 20px; }
+  .section-title { font-size: 28px; }
+  .practice-container { flex-direction: column; height: auto; }
+  .chat-sidebar { width: 100%; display: flex; overflow-x: auto; padding: 12px; }
+  .cs-title { display: none; }
+  .cs-scen { min-width: fit-content; margin-bottom: 0; margin-right: 8px; }
+  .app-navbar { flex-wrap: wrap; gap: 12px; }
+  .app-nav-links { order: 3; width: 100%; justify-content: center; }
+  .app-nav-right { order: 2; }
 }
-
-async function sendMessage() {
-  const input = $('#chatInput');
-  const sendBtn = $('#sendBtn');
-  if (!input || state.loading) return;
-
-  const raw = input.value.trim();
-  if (!raw) return;
-
-  const max = state.plan === 'free' ? 20 : state.plan === 'starter' ? 60 : 9999;
-  if (state.minsUsed >= max && state.plan === 'free') {
-    switchPanel($$('.app-nav-btn')[3], 'upgrade');
-    showToast('Daily limit ho gayi! Upgrade karo 🚀', 'error');
-    return;
-  }
-
-  const text = raw.slice(0, CONFIG.MAX_CHARS);
-  input.value = '';
-  input.style.height = 'auto';
-  state.loading = true;
-  if (sendBtn) sendBtn.disabled = true;
-
-  addBubble('user', text);
-  state.history.push({ role: 'user', content: text });
-  state.minsUsed += 0.5;
-  state.totalMsgs++;
-  if (state.totalMsgs % 5 === 1) state.sessions++;
-  updateDashboard();
-  showTyping();
-
-  try {
-    const reply = await callClaude(state.history, SCENARIOS[state.currentScenario].system);
-    hideTyping();
-    state.history.push({ role: 'assistant', content: reply });
-    addBubble('ai', reply);
-    saveUserToSupabase();
-  } catch (e) {
-    hideTyping();
-    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' : 'Connection issue. Try again! 🔄';
-    addBubble('ai', msg);
-  }
-
-  state.loading = false;
-  if (sendBtn) sendBtn.disabled = false;
-  input.focus();
-}
-
-async function getCoach() {
-  if (state.loading) return;
-  if (state.history.length < 3) { addCoachCard('Thoda aur chat karo pehle — phir feedback dunga! 😄'); return; }
-  state.loading = true;
-  showTyping();
-
-  const sc = SCENARIOS[state.currentScenario];
-  const convo = state.history.map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`).join('\n');
-  const coachPrompt = `You are an expert Indian dating coach. Analyze this ${sc.label} conversation and give sharp, warm Hinglish feedback.\n\nConversation:\n${convo}\n\nReply EXACTLY in this format (max 90 words total):\n**Vibe Score:** X/10 — [one punchy line]\n**Kya kaam kiya:** [what worked — 1 line]\n**Improve karo:** [1-2 specific actionable tips]\n**Next bolna chahiye:** "[exact Hinglish line they should say next]"\n\nBe direct, fun, warm. Hinglish only. No generic advice.`;
-
-  try {
-    const reply = await callClaude([{ role: 'user', content: coachPrompt }], 'You are a sharp, warm Indian dating coach. Give advice in Hinglish. Always use the exact format asked.');
-    hideTyping();
-    addCoachCard(reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'));
-  } catch (e) {
-    hideTyping();
-    addCoachCard('Coach unavailable right now. Try again! 🔄');
-  }
-  state.loading = false;
-}
-
-function useSuggestion(btn) {
-  const input = $('#chatInput');
-  if (input) { input.value = btn.textContent; sendMessage(); }
-}
-
-function handleKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-}
-
-function autoResize(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-}
-
-// ============ COURSE ============
-function buildCourse() {
-  const c = $('#courseList'); if (!c) return;
-  c.innerHTML = '';
-  c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--pink);margin-bottom:12px;display:flex;align-items:center;gap:10px">WEEK 1 — FREE <span style="flex:1;height:1px;background:var(--pink-pale2);display:block"></span></div>`;
-  COURSE_DAYS.filter(d => d.free).forEach(day => {
-    const cls = day.done ? 'cd-done' : day.cur ? 'cd-cur' : 'cd-default';
-    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:pointer" onclick="showToast('Day ${day.day}: ${day.title} — Coming soon! 📚')"><div class="cd-num ${cls}">${day.done ? '✓' : day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · Free</div></div></div>`;
-  });
-  c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:20px 0 12px;display:flex;align-items:center;gap:10px">WEEK 2–4 — STARTER+ <span style="flex:1;height:1px;background:var(--border);display:block"></span></div>`;
-  COURSE_DAYS.filter(d => !d.free).forEach(day => {
-    const locked = state.plan === 'free';
-    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked ? 'not-allowed' : 'pointer'};opacity:${locked ? '0.5' : '1'}" onclick="${locked ? `switchPanel($$('.app-nav-btn')[3],'upgrade')` : `showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked ? '🔒' : day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked ? 'Unlock Starter' : 'Unlocked'}</div></div></div>`;
-  });
-}
-
-// ============ PRICING ============
-function buildAppPlans() {
-  const c = $('#appPlans'); if (!c) return;
-  c.innerHTML = `
-    <div class="pricing-grid upgrade-plans">
-      <div class="price-card">
-        <div class="pc-name">Free</div>
-        <div class="pc-price">₹0</div>
-        <div class="pc-tagline">Forever free</div>
-        <div class="pc-feats">
-          <div class="pf">20 min AI practice/day</div>
-          <div class="pf">3 free scenarios</div>
-          <div class="pf">Week 1 course</div>
-          <div class="pf off">All 6 scenarios</div>
-          <div class="pf off">Wingman Mode</div>
-        </div>
-        <button class="pc-btn pc-btn-out" disabled>Current Plan</button>
-      </div>
-      <div class="price-card hot">
-        <div class="hot-badge">🔥 Popular</div>
-        <div class="pc-name">Starter</div>
-        <div class="pc-price"><sup>₹</sup>199<sub>/mo</sub></div>
-        <div class="pc-tagline">Cancel anytime</div>
-        <div class="pc-feats">
-          <div class="pf">60 min AI practice/day</div>
-          <div class="pf">All 6 scenarios</div>
-          <div class="pf">Full 30-day course</div>
-          <div class="pf">Wingman Mode</div>
-          <div class="pf off">Voice calls</div>
-        </div>
-        <button class="pc-btn pc-btn-main" onclick="unlockDemo('starter')">Get Starter ⚡</button>
-      </div>
-      <div class="price-card">
-        <div class="pc-name">Pro</div>
-        <div class="pc-price"><sup>₹</sup>499<sub>/mo</sub></div>
-        <div class="pc-tagline">Full access</div>
-        <div class="pc-feats">
-          <div class="pf">Unlimited chat + voice</div>
-          <div class="pf">90-day course</div>
-          <div class="pf">Unlimited Wingman</div>
-          <div class="pf">Human coach Q&A</div>
-          <div class="pf">Profile review</div>
-        </div>
-        <button class="pc-btn pc-btn-main" onclick="unlockDemo('pro')">Get Pro 👑</button>
-      </div>
-    </div>`;
-}
-
-function unlockDemo(plan) {
-  state.plan = plan;
-  saveUserToSupabase();
-  buildApp();
-  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked! Sab scenarios open!`, 'success');
-  switchPanel($$('.app-nav-btn')[0], 'dashboard');
-}
-
-// ============ LANDING ============
-function switchFeature(el, idx) {
-  $$('.feat-tab').forEach(t => t.classList.remove('active'));
-  $$('.preview-card').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById(`prev-${idx}`)?.classList.add('active');
-}
-
-function toggleFaq(el) {
-  el.parentElement.classList.toggle('open');
-}
-
-// ============ KEYBOARD ============
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeAuthModal();
-});
-
-// ============ INIT ============
-initSupabase();
