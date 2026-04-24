@@ -1,221 +1,232 @@
 /**
- * RizzUp AI - app.js
- * AI Chat + 90-Day Course + Dashboard
+ * RizzUp AI — app.js
+ * No API key needed from user — works out of the box!
  */
 
-// ===== CONFIG =====
+// ============ CONFIG ============
 const CONFIG = {
-  ANTHROPIC_API: 'https://api.anthropic.com/v1/messages',
+  API_URL: 'https://api.anthropic.com/v1/messages',
   MODEL: 'claude-sonnet-4-20250514',
   MAX_TOKENS: 600,
+  MAX_CHARS: 500,
+  AUTO_SAVE_INTERVAL: 30000,
 };
 
-// ===== STATE =====
+// ============ DATA ============
+const SCENARIOS = {
+  first_date: {
+    name: 'Priya', av: '👩', emoji: '☕', label: 'First Date',
+    desc: 'Coffee meetup, break the ice', free: true,
+    system: `You are Priya, a 25-year-old Mumbai girl on a first coffee date with someone you matched with on a dating app. You're friendly but slightly guarded — you've been on enough bad dates to be cautious. Keep ALL responses to 1-3 short sentences max. React naturally, occasionally use Hinglish (mix of Hindi + English). Show genuine interest if they say something interesting. Never break character. Don't be too easy or too hard to talk to.`,
+    suggestions: ["Heyy! Tu actually apni photo jaisa hai 😄", "Okay first question — chai ya coffee?", "Honestly mujhe bhi first dates awkward lagte hain", "Sach bol — nervous hai kya tu? 😄"]
+  },
+  texting: {
+    name: 'Ananya', av: '💬', emoji: '💬', label: 'Texting',
+    desc: 'Dating app convo', free: true,
+    system: `You are Ananya, a girl the user just matched with on Hinge/Bumble. Casual 1-2 line texting style. Sometimes dry humor. Realistic reactions — if something is boring, say so subtly. Keep it very short like real texts.`,
+    suggestions: ["heyyy finally texted 😄", "okay one question — pizza ya biryani?", "tell me something surprising about you", "coffee date ya dinner? pick one"]
+  },
+  rejection: {
+    name: 'Simran', av: '💪', emoji: '💪', label: 'Rejection',
+    desc: 'Handle it gracefully', free: true,
+    system: `You are Simran letting someone down gently after 2 dates — you don't feel a romantic connection. React based on how gracefully or awkwardly they handle the rejection. Short realistic replies. If they handle it well, appreciate it. If they get weird, be firmer.`,
+    suggestions: ["Haha no worries, you're still cool! 😄", "Fair enough — I respect the honesty", "Can we still be friends?", "Thanks for being real about it!"]
+  },
+  flirting: {
+    name: 'Rhea', av: '😏', emoji: '😏', label: 'Flirting',
+    desc: 'Playful banter', free: false,
+    system: `You are Rhea, confident and playful. Make them earn your interest with wit and originality. Clever lines get appreciation and flirting back. Generic pickup lines get gentle teasing. Keep replies short, punchy.`,
+    suggestions: ["Okay I've been trying to think of a good line 😅", "You have a very distracting smile", "Who's funnier — you or me?"]
+  },
+  arranged: {
+    name: 'Pooja', av: '🌸', emoji: '💐', label: 'Arranged Meet',
+    desc: 'Family intro', free: false,
+    system: `You are Pooja at a first arranged meeting setup by families. Polite and well-mannered but quietly assessing for real compatibility beyond the awkward formality. Use realistic Indian arranged-marriage meeting context. Short replies.`,
+    suggestions: ["Yeh situation thoda awkward hai na? 😅", "Honestly what are you looking for?", "Tumne kya socha tha mere baare mein?"]
+  },
+  second_date: {
+    name: 'Megha', av: '🌙', emoji: '🌙', label: '2nd Date',
+    desc: 'Deepen connection', free: false,
+    system: `You are Megha on a second date. First date went okay but you're not sold yet — you want depth and real personality, not surface-level chat. Push back gently on boring topics. Reward genuine vulnerability and humor.`,
+    suggestions: ["Tell me something you didn't last time", "What's your most random skill?", "Okay honest question — nervous nahi tu?"]
+  }
+};
+
+const OPENING_MESSAGES = {
+  first_date: "Hiii! *nervously sips coffee* Sorry thoda late — Mumbai traffic 😅 Tum actually apni photo jaise ho, refreshing! So... tell me something interesting.",
+  texting: "heyyy so you actually texted 👀 what made you swipe?",
+  rejection: "Hey, I wanted to be upfront... I think you're sweet but I don't see this going romantically. Hope that's okay?",
+  flirting: "Oh so you said hi 😏 Bold move. Prove karo ki it was worth my time.",
+  arranged: "Hii! *awkward laugh* Yeh situation thoda weird hai for both of us? Haha. So... basically kya karte ho?",
+  second_date: "Hey! Glad you came 😄 Last time was nice but I feel like I don't actually know you. Tell me something real."
+};
+
+const COURSE_DAYS = [
+  { day: 1, title: "Why You're Getting Ignored", subtitle: "#1 mistake guys make", free: true, done: true },
+  { day: 2, title: "The Confidence Framework", subtitle: "Real inner confidence", free: true, cur: true },
+  { day: 3, title: "First Message Formula", subtitle: "Openers that work", free: true },
+  { day: 4, title: "Profile Optimization", subtitle: "Bio + photos", free: true },
+  { day: 5, title: "The Curiosity Loop", subtitle: "Make them want more", free: true },
+  { day: 6, title: "Texting Cadence", subtitle: "When to text, when to wait", free: true },
+  { day: 7, title: "Week 1 AI Practice", subtitle: "Full simulation", free: true },
+  { day: 8, title: "Conversation Depth", subtitle: "Beyond haha and lol", free: false },
+  { day: 9, title: "Humor Timing", subtitle: "When jokes land", free: false },
+  { day: 10, title: "The Push-Pull", subtitle: "Create real tension", free: false },
+  { day: 12, title: "The Date Ask", subtitle: "Without sounding desperate", free: false },
+  { day: 16, title: "First Date Script", subtitle: "What to actually say", free: false },
+  { day: 20, title: "Art of Flirting", subtitle: "Playful not cringe", free: false },
+  { day: 25, title: "Handle Rejection", subtitle: "Stay cool always", free: false },
+  { day: 30, title: "Graduation Day 🎓", subtitle: "You've leveled up!", free: false }
+];
+
+// ============ STATE ============
 let state = {
   user: null,
   plan: 'free',
   minsUsed: 0,
   totalMsgs: 0,
-  streak: 0,
+  sessions: 0,
   currentScenario: 'first_date',
   history: [],
-  loading: false,
-  courseProgress: {}
+  loading: false
 };
 
-// ===== SCENARIOS =====
-const SCENARIOS = {
-  first_date: {
-    name: 'Priya', av: '👩', emoji: '☕', label: 'First Date',
-    desc: 'Coffee meetup — break the ice', free: true,
-    system: `You are Priya, 25, Mumbai girl on a first coffee date. Friendly but slightly guarded. Keep responses 1-3 short sentences. Use Hinglish naturally. Show interest if they say something interesting. Never break character.`,
-    suggestions: ["Heyy! Tu actually apni photo jaisa hai 😄", "Okay first question — chai ya coffee?", "Honestly mujhe bhi first dates awkward lagte hain", "Sach bol — nervous hai kya tu? 😄"],
-    opening: "Hiii! *nervously sips coffee* Sorry thoda late — Mumbai traffic 😅 Tum actually apni photo jaise ho! So... tell me something interesting."
-  },
-  texting: {
-    name: 'Ananya', av: '💬', emoji: '📱', label: 'Texting Game',
-    desc: 'Dating app conversation', free: true,
-    system: `You are Ananya, a girl the user matched with on Hinge/Bumble. Casual 1-2 line texting style. Sometimes dry humor. Keep it very short like real texts. Hinglish.`,
-    suggestions: ["heyyy finally texted 😄", "okay one question — pizza ya biryani?", "tell me something surprising about you", "coffee date ya dinner? pick one"],
-    opening: "heyyy so you actually texted 👀 what made you swipe?"
-  },
-  rejection: {
-    name: 'Simran', av: '💪', emoji: '🛡️', label: 'Handle Rejection',
-    desc: 'Stay confident & graceful', free: true,
-    system: `You are Simran letting someone down gently after 2 dates. React based on how gracefully they handle it. Short realistic replies. Hinglish.`,
-    suggestions: ["Haha no worries, you're still cool! 😄", "Fair enough — I respect the honesty", "Can we still be friends?", "Thanks for being real about it!"],
-    opening: "Hey, I wanted to be upfront... I think you're sweet but I don't see this going romantically. Hope that's okay?"
-  },
-  flirting: {
-    name: 'Rhea', av: '😏', emoji: '🔥', label: 'Flirting',
-    desc: 'Playful banter & wit', free: false,
-    system: `You are Rhea, confident and playful. Make them earn your interest with wit. Clever lines get appreciation. Generic pickup lines get gentle teasing. Short, punchy. Hinglish.`,
-    suggestions: ["Okay I've been trying to think of a good line 😅", "You have a very distracting smile", "Who's funnier — you or me?"],
-    opening: "Oh so you said hi 😏 Bold move. Prove karo ki it was worth my time."
-  },
-  arranged: {
-    name: 'Pooja', av: '🌸', emoji: '💐', label: 'Arranged Meet',
-    desc: 'Family introduction setup', free: false,
-    system: `You are Pooja at a first arranged meeting. Polite, well-mannered, quietly assessing compatibility. Use realistic Indian arranged-marriage context. Short replies. Hinglish.`,
-    suggestions: ["Yeh situation thoda awkward hai na? 😅", "Honestly what are you looking for?", "Tumne kya socha tha mere baare mein?"],
-    opening: "Hii! *awkward laugh* Yeh situation thoda weird hai for both of us? Haha. So... basically kya karte ho?"
-  },
-  second_date: {
-    name: 'Megha', av: '🌙', emoji: '🌟', label: 'Second Date',
-    desc: 'Deepen the connection', free: false,
-    system: `You are Megha on a second date. First date went okay but you want depth and real personality. Push back gently on boring topics. Reward vulnerability and humor. Hinglish.`,
-    suggestions: ["Tell me something you didn't last time", "What's your most random skill?", "Okay honest question — nervous nahi tu?"],
-    opening: "Hey! Glad you came 😄 Last time was nice but I feel like I don't actually know you. Tell me something real."
-  }
-};
-
-// ===== 90-DAY COURSE =====
-const COURSE_DAYS = [
-  // WEEK 1-4: FREE
-  { day: 1, week: 1, title: "Why You're Getting Ignored", subtitle: "#1 mistake guys make", free: true },
-  { day: 2, week: 1, title: "The Confidence Framework", subtitle: "Real inner confidence", free: true },
-  { day: 3, week: 1, title: "First Message Formula", subtitle: "Openers that actually work", free: true },
-  { day: 4, week: 1, title: "Profile Optimization", subtitle: "Bio + photos that attract", free: true },
-  { day: 5, week: 1, title: "The Curiosity Loop", subtitle: "Make them want more", free: true },
-  { day: 6, week: 1, title: "Texting Cadence", subtitle: "When to text, when to wait", free: true },
-  { day: 7, week: 1, title: "Week 1 AI Practice", subtitle: "Full simulation", free: true },
-  { day: 8, week: 2, title: "Conversation Depth", subtitle: "Beyond haha and lol", free: true },
-  { day: 9, week: 2, title: "Humor Timing", subtitle: "When jokes actually land", free: true },
-  { day: 10, week: 2, title: "The Push-Pull", subtitle: "Create real tension", free: true },
-  { day: 11, week: 2, title: "Handling Silence", subtitle: "Comfortable pauses", free: true },
-  { day: 12, week: 2, title: "The Date Ask", subtitle: "Without sounding desperate", free: true },
-  { day: 13, week: 2, title: "Pre-Date Prep", subtitle: "Mindset & logistics", free: true },
-  { day: 14, week: 2, title: "Week 2 Review", subtitle: "Consolidate learning", free: true },
-  { day: 15, week: 3, title: "First Date Script", subtitle: "What to actually say", free: true },
-  { day: 16, week: 3, title: "Reading Signals", subtitle: "Is she interested?", free: true },
-  { day: 17, week: 3, title: "Storytelling", subtitle: "Be memorable", free: true },
-  { day: 18, week: 3, title: "Emotional Connection", subtitle: "Go beyond surface", free: true },
-  { day: 19, week: 3, title: "Physical Escalation", subtitle: "Respectful & confident", free: true },
-  { day: 20, week: 3, title: "The Goodbye", subtitle: "End on a high note", free: true },
-  { day: 21, week: 3, title: "Week 3 Review", subtitle: "You're leveling up!", free: true },
-  { day: 22, week: 4, title: "Post-Date Texting", subtitle: "Follow-up strategy", free: true },
-  { day: 23, week: 4, title: "Second Date Plan", subtitle: "Build momentum", free: true },
-  { day: 24, week: 4, title: "Exclusivity Talk", subtitle: "When & how", free: true },
-  { day: 25, week: 4, title: "Handling Uncertainty", subtitle: "Stay grounded", free: true },
-  { day: 26, week: 4, title: "Red Flags", subtitle: "Know when to walk", free: true },
-  { day: 27, week: 4, title: "Green Flags", subtitle: "Recognize good ones", free: true },
-  { day: 28, week: 4, title: "Week 4 Graduation", subtitle: "Foundation complete! 🎉", free: true },
-  // WEEK 5-8: STARTER+
-  { day: 29, week: 5, title: "Advanced Flirting", subtitle: "Next level charm", free: false },
-  { day: 30, week: 5, title: "Voice & Tone", subtitle: "Sound confident", free: false },
-  { day: 31, week: 5, title: "Body Language", subtitle: "Non-verbal mastery", free: false },
-  { day: 32, week: 5, title: "Handling Tests", subtitle: "She's testing you", free: false },
-  { day: 33, week: 5, title: "Frame Control", subtitle: "Lead the interaction", free: false },
-  { day: 34, week: 5, title: "Qualifying Her", subtitle: "Make her earn you", free: false },
-  { day: 35, week: 5, title: "Week 5 Review", subtitle: "Intermediate begins", free: false },
-  { day: 36, week: 6, title: "Multiple Dating", subtitle: "Ethical non-monogamy", free: false },
-  { day: 37, week: 6, title: "Jealousy Management", subtitle: "Yours and hers", free: false },
-  { day: 38, week: 6, title: "Long-Distance", subtitle: "Make it work", free: false },
-  { day: 39, week: 6, title: "Digital Dating", subtitle: "Apps strategy", free: false },
-  { day: 40, week: 6, title: "Instagram Game", subtitle: "DM to date", free: false },
-  { day: 41, week: 6, title: "Phone Calls", subtitle: "Old school works", free: false },
-  { day: 42, week: 6, title: "Week 6 Review", subtitle: "Keep going!", free: false },
-  { day: 43, week: 7, title: "Meeting Friends", subtitle: "Social proof", free: false },
-  { day: 44, week: 7, title: "Meeting Family", subtitle: "Indian context", free: false },
-  { day: 45, week: 7, title: "Gift Giving", subtitle: "Thoughtful not expensive", free: false },
-  { day: 46, week: 7, title: "Planning Dates", subtitle: "Creative ideas", free: false },
-  { day: 47, week: 7, title: "Handling Conflict", subtitle: "Fight fair", free: false },
-  { day: 48, week: 7, title: "Apology Art", subtitle: "Meaningful sorry", free: false },
-  { day: 49, week: 7, title: "Week 7 Review", subtitle: "Almost there!", free: false },
-  { day: 50, week: 8, title: "Intimacy Talk", subtitle: "Communication is key", free: false },
-  { day: 51, week: 8, title: "Boundaries", subtitle: "Healthy limits", free: false },
-  { day: 52, week: 8, title: "Expectations", subtitle: "Align them early", free: false },
-  { day: 53, week: 8, title: "Future Planning", subtitle: "Are you compatible?", free: false },
-  { day: 54, week: 8, title: "Commitment Talk", subtitle: "When to have it", free: false },
-  { day: 55, week: 8, title: "Week 8 Review", subtitle: "Intermediate done!", free: false },
-  // WEEK 9-12: PRO
-  { day: 56, week: 9, title: "Relationship Phases", subtitle: "Know the stages", free: false },
-  { day: 57, week: 9, title: "Love Languages", subtitle: "Speak her language", free: false },
-  { day: 58, week: 9, title: "Attachment Styles", subtitle: "Understand yourself", free: false },
-  { day: 59, week: 9, title: "Emotional Availability", subtitle: "Are you ready?", free: false },
-  { day: 60, week: 9, title: "Vulnerability", subtitle: "Strength not weakness", free: false },
-  { day: 61, week: 9, title: "Trust Building", subtitle: "Foundation of love", free: false },
-  { day: 62, week: 9, title: "Week 9 Review", subtitle: "Advanced begins!", free: false },
-  { day: 63, week: 10, title: "Keeping Spark Alive", subtitle: "Long-term attraction", free: false },
-  { day: 64, week: 10, title: "Surprise & Romance", subtitle: "Keep it fresh", free: false },
-  { day: 65, week: 10, title: "Sexual Communication", subtitle: "Talk about it", free: false },
-  { day: 66, week: 10, title: "Handling Insecurity", subtitle: "Yours and hers", free: false },
-  { day: 67, week: 10, title: "Supporting Her Goals", subtitle: "Be her biggest fan", free: false },
-  { day: 68, week: 10, title: "Work-Life Balance", subtitle: "Relationship priority", free: false },
-  { day: 69, week: 10, title: "Week 10 Review", subtitle: "You're a pro!", free: false },
-  { day: 70, week: 11, title: "Moving In Together", subtitle: "Big step guide", free: false },
-  { day: 71, week: 11, title: "Financial Talk", subtitle: "Money & relationships", free: false },
-  { day: 72, week: 11, title: "Meeting Parents", subtitle: "Indian family dynamics", free: false },
-  { day: 73, week: 11, title: "Marriage Conversation", subtitle: "When & how", free: false },
-  { day: 74, week: 11, title: "Handling Pressure", subtitle: "Family & society", free: false },
-  { day: 75, week: 11, title: "Pre-Engagement", subtitle: "Are you ready?", free: false },
-  { day: 76, week: 11, title: "Week 11 Review", subtitle: "Final stretch!", free: false },
-  { day: 77, week: 12, title: "Proposal Planning", subtitle: "Make it memorable", free: false },
-  { day: 78, week: 12, title: "Wedding Prep", subtitle: "Survive the chaos", free: false },
-  { day: 79, week: 12, title: "In-Law Relations", subtitle: "Navigate carefully", free: false },
-  { day: 80, week: 12, title: "Newlywed Phase", subtitle: "First year tips", free: false },
-  { day: 81, week: 12, title: "Long-Term Vision", subtitle: "Build together", free: false },
-  { day: 82, week: 12, title: "Continuous Growth", subtitle: "Never stop learning", free: false },
-  { day: 83, week: 12, title: "Giving Back", subtitle: "Help others", free: false },
-  { day: 84, week: 12, title: "GRADUATION DAY", subtitle: "You did it! 🎓🎉", free: false }
-];
-
-// ===== UTILS =====
+// ============ UTILITIES ============
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-function formatText(text) {
-  return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+function sanitize(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str.trim().slice(0, CONFIG.MAX_CHARS);
+  return div.innerHTML;
 }
 
-// ===== AUTH INIT =====
-function initUserFromAuth(name, email, userId) {
-  state.user = { id: userId, name, email };
-  
-  // Load from localStorage
-  const saved = localStorage.getItem(`rizzup_user_${userId}`);
-  if (saved) {
-    const data = JSON.parse(saved);
-    state.plan = data.plan || 'free';
-    state.minsUsed = data.minsUsed || 0;
-    state.totalMsgs = data.totalMsgs || 0;
-    state.streak = data.streak || 0;
-    state.courseProgress = data.courseProgress || {};
+function formatText(text) {
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\n/g,'<br>')
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+}
+
+function showToast(message, type = 'default') {
+  const existing = $('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.classList.add('show'), 10);
+  setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
+}
+
+// ============ LANDING PAGE ============
+
+// ✅ FIX: openAuthModal now uses both classList AND inline display style
+function openAuthModal() {
+  const modal = $('#authModal');
+  modal.classList.add('open');
+  modal.style.display = 'flex';
+}
+
+// ✅ FIX: closeAuthModal now removes display style too
+function closeAuthModal() {
+  const modal = $('#authModal');
+  modal.classList.remove('open');
+  modal.style.display = 'none';
+}
+
+// ✅ FIX: Wrapped in DOMContentLoaded so the element exists when this runs
+document.addEventListener('DOMContentLoaded', function () {
+  const authModal = $('#authModal');
+  if (authModal) {
+    // Close modal when clicking the dark overlay background
+    authModal.addEventListener('click', (e) => {
+      if (e.target === authModal) closeAuthModal();
+    });
+
+    // Make sure modal starts hidden
+    authModal.style.display = 'none';
   }
-  
-  // Check streak
-  const lastDate = localStorage.getItem(`rizzup_lastdate_${userId}`);
+});
+
+function switchFeature(el, idx) {
+  $$('.feat-tab').forEach(t => t.classList.remove('active'));
+  $$('.preview-card').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`prev-${idx}`).classList.add('active');
+}
+
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('open');
+}
+
+// ============ AUTH — NO API KEY NEEDED ============
+function doSignup() {
+  const name = $('#mName').value.trim() || 'User';
+  const email = $('#mEmail').value.trim() || 'user@rizzup.in';
+  initUser(name, email);
+}
+
+function quickSignup() {
+  initUser('Rahul', 'rahul@rizzup.in');
+}
+
+function initUser(name, email) {
+  state.user = { id: btoa(email).replace(/=/g,''), name, email };
+  loadUserData();
+
   const today = new Date().toDateString();
-  if (lastDate !== today) {
-    if (lastDate) {
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      if (lastDate === yesterday.toDateString()) {
-        state.streak++;
-      } else {
-        state.streak = 1;
-      }
-    } else {
-      state.streak = 1;
-    }
-    localStorage.setItem(`rizzup_lastdate_${userId}`, today);
+  if (localStorage.getItem(`rz_d_${state.user.id}`) !== today) {
+    state.minsUsed = 0;
+    localStorage.setItem(`rz_d_${state.user.id}`, today);
   }
-  
-  // Show app
+
+  closeAuthModal();
   $('#landingView').style.display = 'none';
   $('#appView').style.display = 'block';
-  
-  // Update UI
-  $('#appUserName').textContent = name;
-  $('#dashGreet').textContent = `Hey ${name.split(' ')[0]}! 👋`;
-  $('#appPlanBadge').textContent = state.plan === 'free' ? 'Free Plan' : state.plan === 'starter' ? 'Starter Plan' : 'Pro Plan';
-  
   buildApp();
-  showToast(`Welcome back, ${name.split(' ')[0]}! 🔥`, 'success');
+  showToast(`Welcome, ${name.split(' ')[0]}! 🚀 Let's gooo`, 'success');
 }
 
-// ===== BUILD APP =====
+function loadUserData() {
+  const saved = localStorage.getItem(`rz_${state.user.id}`);
+  if (saved) {
+    try {
+      const d = JSON.parse(saved);
+      state.plan = d.plan || 'free';
+      state.minsUsed = d.minsUsed || 0;
+      state.totalMsgs = d.totalMsgs || 0;
+      state.sessions = d.sessions || 0;
+    } catch(e) {}
+  }
+  const sc = localStorage.getItem(`rz_sc_${state.user.id}`);
+  if (sc && SCENARIOS[sc]) state.currentScenario = sc;
+}
+
+function saveUserData() {
+  if (!state.user) return;
+  localStorage.setItem(`rz_${state.user.id}`, JSON.stringify({
+    plan: state.plan, minsUsed: state.minsUsed,
+    totalMsgs: state.totalMsgs, sessions: state.sessions
+  }));
+  localStorage.setItem(`rz_sc_${state.user.id}`, state.currentScenario);
+}
+
+setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
+
+function doLogout() {
+  saveUserData();
+  state = { ...state, user: null, history: [] };
+  $('#appView').style.display = 'none';
+  $('#landingView').style.display = 'block';
+}
+
+// ============ APP BUILD ============
 function buildApp() {
+  const name = state.user.name.split(' ')[0];
+  $('#dashGreet').textContent = `Hey ${name}! 👋`;
+  $('#appPlanBadge').textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
   buildDashboardScenarios();
   buildChatSidebar();
   buildCourse();
@@ -225,57 +236,55 @@ function buildApp() {
   initChat();
 }
 
-function switchPanel(btn, panelId) {
+function switchPanel(btn, id) {
   $$('.app-nav-btn').forEach(b => b.classList.remove('active'));
   $$('.app-panel').forEach(p => p.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  $(`#panel-${panelId}`)?.classList.add('active');
+  document.getElementById(`panel-${id}`).classList.add('active');
 }
 
 function updateDashboard() {
   const max = state.plan === 'free' ? 20 : state.plan === 'starter' ? 60 : 9999;
-  $('#dashMins').textContent = Math.floor(state.minsUsed);
-  $('#dashMsgs').textContent = state.totalMsgs;
-  $('#dashStreak').textContent = state.streak;
-  $('#dashUsageText').textContent = state.plan === 'pro' ? 'Unlimited 🚀' : `${Math.floor(state.minsUsed)}/${max} min`;
-  
+  const pct = Math.min((state.minsUsed / max) * 100, 100);
+  const fill = $('#dashFill'); if (fill) fill.style.width = `${pct}%`;
+  const minsEl = $('#dashMins'); if (minsEl) minsEl.textContent = Math.floor(state.minsUsed);
+  const msgsEl = $('#dashMsgs'); if (msgsEl) msgsEl.textContent = state.totalMsgs;
+  const usageTxt = $('#dashUsageText');
+  if (usageTxt) usageTxt.textContent = state.plan === 'pro' ? 'Unlimited 🚀' : `${Math.floor(state.minsUsed)}/${max} min`;
   const notice = $('#limitNotice');
-  if (state.minsUsed >= max && state.plan === 'free') {
-    notice.classList.add('show');
-  } else {
-    notice.classList.remove('show');
-  }
+  if (notice) notice.classList.toggle('show', state.minsUsed >= max && state.plan === 'free');
 }
 
-// ===== SCENARIOS =====
+// ============ SCENARIOS ============
 function buildDashboardScenarios() {
-  const c = $('#dashScens');
-  if (!c) return;
+  const c = $('#dashScens'); if (!c) return;
   c.innerHTML = '';
   Object.entries(SCENARIOS).forEach(([key, sc]) => {
     const locked = !sc.free && state.plan === 'free';
     const el = document.createElement('div');
     el.className = `app-scen-card ${locked ? 'locked' : ''}`;
-    el.onclick = locked ? () => { showToast('Upgrade to unlock this scenario! 🚀', 'default'); switchPanel($$('.app-nav-btn')[3], 'pricing'); } : () => startScenario(key);
+    el.onclick = locked
+      ? () => switchPanel($$('.app-nav-btn')[3], 'upgrade')
+      : () => startScenario(key);
     el.innerHTML = `
-      <div class="scen-emoji">${sc.emoji}</div>
-      <div class="scen-name">${sc.label}</div>
-      <div class="scen-desc">${sc.desc}</div>
-      <span class="scen-tag">${sc.free ? 'Free' : '🔒 ' + (state.plan === 'free' ? 'Starter+' : 'Unlocked')}</span>
-    `;
+      <div class="asc-emoji">${sc.emoji}</div>
+      <div class="asc-name">${sc.label}</div>
+      <div class="asc-desc">${sc.desc}</div>
+      <span class="asc-badge ${sc.free ? 'asc-free' : 'asc-pro'}">${sc.free ? 'Free' : locked ? '🔒 Pro' : '✓ Unlocked'}</span>`;
     c.appendChild(el);
   });
 }
 
 function buildChatSidebar() {
-  const c = $('#chatSidebar');
-  if (!c) return;
-  c.innerHTML = '<div class="cs-title">Scenarios</div>';
+  const c = $('#chatSidebar'); if (!c) return;
+  c.innerHTML = '<div class="cs-label">Scenarios</div>';
   Object.entries(SCENARIOS).forEach(([key, sc]) => {
     const locked = !sc.free && state.plan === 'free';
     const el = document.createElement('div');
     el.className = `cs-scen ${key === state.currentScenario ? 'active' : ''} ${locked ? 'locked-s' : ''}`;
-    el.onclick = locked ? () => { showToast('Upgrade to unlock! 🚀', 'default'); } : () => switchScenario(key);
+    el.onclick = locked
+      ? () => switchPanel($$('.app-nav-btn')[3], 'upgrade')
+      : () => switchScenario(key);
     el.textContent = `${sc.emoji} ${sc.label}`;
     c.appendChild(el);
   });
@@ -296,80 +305,73 @@ function switchScenario(key) {
   initChat();
 }
 
-// ===== CHAT =====
+// ============ CHAT ============
 function initChat() {
   updateChatHeader();
-  const sc = SCENARIOS[state.currentScenario];
-  state.history = [{ role: 'assistant', content: sc.opening }];
-  addBubble('ai', sc.opening);
-  buildSuggestions();
+  const opening = OPENING_MESSAGES[state.currentScenario];
+  state.history = [{ role: 'assistant', content: opening }];
+  addBubble('ai', opening);
+
+  const sugs = SCENARIOS[state.currentScenario].suggestions || [];
+  const strip = $('#sugStrip');
+  if (strip) strip.innerHTML = sugs.map(s =>
+    `<button class="sug-chip" onclick="useSuggestion(this)">${s}</button>`
+  ).join('');
 }
 
 function resetChat() {
   state.history = [];
-  const area = $('#msgsArea');
-  if (area) area.innerHTML = '';
+  const area = $('#msgsArea'); if (area) area.innerHTML = '';
 }
 
 function updateChatHeader() {
   const sc = SCENARIOS[state.currentScenario];
-  $('#cpAv').textContent = sc.av;
-  $('#cpName').textContent = sc.name;
-}
-
-function buildSuggestions() {
-  const sc = SCENARIOS[state.currentScenario];
-  const strip = $('#sugStrip');
-  if (!strip) return;
-  strip.innerHTML = (sc.suggestions || []).map(s => `<span class="sug-chip" onclick="useSuggestion(this)">${s}</span>`).join('');
+  const av = $('#cpAv'); const nm = $('#cpName');
+  if (av) av.textContent = sc.av;
+  if (nm) nm.textContent = sc.name;
 }
 
 function addBubble(type, text) {
-  const area = $('#msgsArea');
-  if (!area) return;
+  const area = $('#msgsArea'); if (!area) return;
+  const sc = SCENARIOS[state.currentScenario];
   const row = document.createElement('div');
   row.className = `msg-row ${type === 'user' ? 'user' : ''}`;
-  row.innerHTML = `<div class="msg-bubble">${formatText(text)}</div>`;
+  row.innerHTML = `
+    <div class="m-av ${type}">${type === 'ai' ? sc.av : '🧑'}</div>
+    <div class="bubble ${type}">${formatText(text)}</div>`;
   area.appendChild(row);
-  area.scrollTop = area.scrollHeight;
+  requestAnimationFrame(() => { area.scrollTop = area.scrollHeight; });
 }
 
 function addCoachCard(html) {
-  const area = $('#msgsArea');
-  if (!area) return;
+  const area = $('#msgsArea'); if (!area) return;
   const card = document.createElement('div');
   card.className = 'coach-card';
-  card.innerHTML = `🎯 <strong>Dating Coach:</strong> ${formatText(html)}`;
+  card.innerHTML = `<div class="cc-hdr">🎯 Dating Coach</div>${html}`;
   area.appendChild(card);
   area.scrollTop = area.scrollHeight;
 }
 
 function showTyping() {
-  const area = $('#msgsArea');
-  if (!area) return;
+  const area = $('#msgsArea'); if (!area) return;
+  const sc = SCENARIOS[state.currentScenario];
   const row = document.createElement('div');
-  row.className = 'msg-row';
-  row.id = 'typingRow';
-  row.innerHTML = `<div class="msg-bubble" style="color:#888;">Typing...</div>`;
+  row.className = 'msg-row'; row.id = 'typingRow';
+  row.innerHTML = `<div class="m-av ai">${sc.av}</div><div class="typing-bub"><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div></div>`;
   area.appendChild(row);
   area.scrollTop = area.scrollHeight;
 }
 
 function hideTyping() {
-  const r = $('#typingRow');
-  if (r) r.remove();
+  const r = $('#typingRow'); if (r) r.remove();
 }
 
-// ===== CLAUDE API =====
+// ============ CLAUDE API CALL ============
 async function callClaude(messages, systemPrompt) {
-  // NOTE: In production, use a backend proxy for API key
-  const ANTHROPIC_KEY = 'YOUR_ANTHROPIC_API_KEY'; // ⚠️ Add your key here or use backend
-  
-  const response = await fetch(CONFIG.ANTHROPIC_API, {
+  const response = await fetch(CONFIG.API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
@@ -380,12 +382,10 @@ async function callClaude(messages, systemPrompt) {
       messages: messages
     })
   });
-  
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.error?.message || `HTTP ${response.status}`);
   }
-  
   const data = await response.json();
   return data.content?.[0]?.text || '';
 }
@@ -394,43 +394,49 @@ async function sendMessage() {
   const input = $('#chatInput');
   const sendBtn = $('#sendBtn');
   if (!input || state.loading) return;
-  
+
   const raw = input.value.trim();
-  if (!raw) return;
-  
+  if (!raw) { showToast('Kuch toh likho! 🤔', 'error'); return; }
+
   const max = state.plan === 'free' ? 20 : state.plan === 'starter' ? 60 : 9999;
   if (state.minsUsed >= max && state.plan === 'free') {
-    switchPanel($$('.app-nav-btn')[3], 'pricing');
-    showToast('Daily limit reached! Upgrade for more 🚀', 'error');
+    switchPanel($$('.app-nav-btn')[3], 'upgrade');
+    showToast('Limit ho gayi! Upgrade karo 🚀', 'error');
     return;
   }
-  
-  const text = raw.slice(0, 500);
+
+  const text = raw.slice(0, CONFIG.MAX_CHARS);
   input.value = '';
   input.style.height = 'auto';
   state.loading = true;
   if (sendBtn) sendBtn.disabled = true;
-  
+
   addBubble('user', text);
   state.history.push({ role: 'user', content: text });
   state.minsUsed += 0.5;
   state.totalMsgs++;
-  saveState();
+  if (state.totalMsgs % 5 === 1) state.sessions++;
   updateDashboard();
+
   showTyping();
-  
+
   try {
-    const sc = SCENARIOS[state.currentScenario];
-    const reply = await callClaude(state.history, sc.system);
+    const reply = await callClaude(
+      state.history,
+      SCENARIOS[state.currentScenario].system
+    );
     hideTyping();
     state.history.push({ role: 'assistant', content: reply });
     addBubble('ai', reply);
-  } catch (e) {
+  } catch(e) {
     hideTyping();
-    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast! ⏳' : 'Connection issue. Try again! 🔄';
+    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' :
+                'Connection issue. Try again! 🔄';
     addBubble('ai', msg);
+    showToast(msg, 'error');
   }
-  
+
+  saveUserData();
   state.loading = false;
   if (sendBtn) sendBtn.disabled = false;
   input.focus();
@@ -442,85 +448,50 @@ async function getCoach() {
     addCoachCard('Thoda aur chat karo pehle — phir feedback dunga! 😄');
     return;
   }
-  
   state.loading = true;
   showTyping();
-  
+
   const sc = SCENARIOS[state.currentScenario];
-  const convo = state.history.map(m => `${m.role === 'user' ? 'You' : sc.name}: ${m.content}`).join('\n');
+  const convo = state.history
+    .map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`)
+    .join('\n');
+
   const coachPrompt = `You are an expert Indian dating coach. Analyze this ${sc.label} conversation and give sharp, warm Hinglish feedback.
 
 Conversation:
 ${convo}
 
-Reply EXACTLY in this format (max 90 words):
+Reply EXACTLY in this format (max 90 words total):
 **Vibe Score:** X/10 — [one punchy line]
 **Kya kaam kiya:** [what worked — 1 line]
 **Improve karo:** [1-2 specific actionable tips]
-**Next bolna chahiye:** "[exact Hinglish line]"
+**Next bolna chahiye:** "[exact Hinglish line they should say next]"
 
-Be direct, fun, warm. Hinglish only.`;
-  
+Be direct, fun, warm. Hinglish only. No generic advice.`;
+
   try {
-    const reply = await callClaude([{ role: 'user', content: coachPrompt }], 'You are a sharp, warm Indian dating coach. Give advice in Hinglish.');
+    const reply = await callClaude(
+      [{ role: 'user', content: coachPrompt }],
+      'You are a sharp, warm Indian dating coach. Give advice in Hinglish. Always use the exact format asked.'
+    );
     hideTyping();
-    addCoachCard(reply);
-  } catch (e) {
+    addCoachCard(reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'));
+  } catch(e) {
     hideTyping();
-    addCoachCard('Coach unavailable. Try again! 🔄');
+    addCoachCard('Coach unavailable right now. Try again! 🔄');
   }
-  
+
   state.loading = false;
 }
 
-async function getWingmanReplies() {
-  const input = $('#wingmanInput');
-  const results = $('#wingmanResults');
-  if (!input || !input.value.trim()) {
-    showToast('Paste a conversation first!', 'error');
-    return;
-  }
-  
-  results.innerHTML = '<p style="text-align:center;color:#888;">Analyzing... 🤔</p>';
-  
-  const prompt = `You are an expert dating wingman. Based on this conversation, give 3 reply options ranked by success probability.
-
-Conversation:
-${input.value}
-
-Reply EXACTLY in this format:
-**Option 1 (🔥 Best):** [reply]
-Why: [1 line]
-
-**Option 2 (😊 Safe):** [reply]
-Why: [1 line]
-
-**Option 3 (😏 Bold):** [reply]
-Why: [1 line]
-
-Keep replies short, natural, Hinglish.`;
-  
-  try {
-    const reply = await callClaude([{ role: 'user', content: prompt }], 'You are a dating wingman. Give 3 reply options in Hinglish.');
-    results.innerHTML = `<div class="wingman-reply">${formatText(reply)}</div>`;
-  } catch (e) {
-    results.innerHTML = '<p style="color:var(--error);">Error. Try again!</p>';
-  }
-}
-
-function useSuggestion(chip) {
+function useSuggestion(btn) {
+  const text = btn.textContent;
   const input = $('#chatInput');
-  if (input) {
-    input.value = chip.textContent;
-    sendMessage();
-  }
+  if (input) { input.value = text; sendMessage(); }
 }
 
 function handleKeydown(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
 }
 
 function autoResize(el) {
@@ -528,94 +499,84 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 120) + 'px';
 }
 
-// ===== COURSE =====
+// ============ COURSE ============
 function buildCourse() {
-  const c = $('#courseList');
-  if (!c) return;
+  const c = $('#courseList'); if (!c) return;
   c.innerHTML = '';
-  
-  COURSE_DAYS.forEach(day => {
-    const locked = !day.free && state.plan === 'free';
-    const done = state.courseProgress[day.day];
-    const cls = done ? 'done' : locked ? 'locked' : '';
-    
-    const el = document.createElement('div');
-    el.className = `course-day ${cls}`;
-    el.onclick = locked ? () => { showToast('Upgrade to unlock this lesson! 🚀', 'default'); switchPanel($$('.app-nav-btn')[3], 'pricing'); } : () => openLesson(day);
-    el.innerHTML = `
-      <div class="day-num ${done ? 'done' : day.free ? 'free' : 'paid'}">${done ? '✓' : day.day}</div>
-      <div class="day-info">
-        <div class="day-title">Day ${day.day}: ${day.title}</div>
-        <div class="day-subtitle">${day.subtitle}</div>
-      </div>
-      <span class="day-tag ${day.free ? 'free' : 'locked'}">${day.free ? 'Free' : locked ? '🔒 Starter+' : 'Unlocked'}</span>
-    `;
-    c.appendChild(el);
+
+  const week1 = COURSE_DAYS.filter(d => d.free);
+  c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--pink);margin-bottom:12px;display:flex;align-items:center;gap:10px">WEEK 1 — FREE <span style="flex:1;height:1px;background:var(--pink-pale2);display:block"></span></div>`;
+  week1.forEach(day => {
+    const cls = day.done ? 'cd-done' : day.cur ? 'cd-cur' : 'cd-default';
+    const icon = day.done ? '✓' : day.day;
+    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:pointer" onclick="showToast('Day ${day.day}: ${day.title} — Coming soon! 📚')"><div class="cd-num ${cls}">${icon}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · Free</div></div></div>`;
+  });
+
+  const week2 = COURSE_DAYS.filter(d => !d.free);
+  c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:20px 0 12px;display:flex;align-items:center;gap:10px">WEEK 2–4 — STARTER+ <span style="flex:1;height:1px;background:var(--border);display:block"></span></div>`;
+  week2.forEach(day => {
+    const locked = state.plan === 'free';
+    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked?'not-allowed':'pointer'};opacity:${locked?'0.5':'1'}" onclick="${locked?`switchPanel($$('.app-nav-btn')[3],'upgrade')`:`showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked?'🔒':day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked?'Unlock Starter':'Unlocked'}</div></div></div>`;
   });
 }
 
-function openLesson(day) {
-  // In production, show lesson content in a modal
-  showToast(`Day ${day.day}: ${day.title} — Lesson content coming soon! 📚`, 'success');
-  state.courseProgress[day.day] = true;
-  saveState();
-  buildCourse();
-}
-
-// ===== PRICING =====
+// ============ PRICING ============
 function buildAppPlans() {
-  const c = $('#appPlans');
-  if (!c) return;
+  const c = $('#appPlans'); if (!c) return;
   c.innerHTML = `
-    <div class="pricing-grid">
-      <div class="pricing-card">
-        <div class="plan-name">Starter</div>
-        <div class="plan-price">₹199<span>/month</span></div>
-        <ul class="plan-features">
-          <li>✓ 60 min AI chat/day</li>
-          <li>✓ All 6+ scenarios</li>
-          <li>✓ Full 90-day course</li>
-          <li>✓ Wingman Mode (10/mo)</li>
-        </ul>
-        <button class="plan-btn btn-pink" onclick="unlockDemo('starter')">Get Starter ⚡</button>
+    <div class="pricing-grid upgrade-plans">
+      <div class="price-card">
+        <div class="pc-name">Free</div>
+        <div class="pc-price">₹0</div>
+        <div class="pc-tagline">Forever free</div>
+        <div class="pc-feats">
+          <div class="pf">20 min AI practice/day</div>
+          <div class="pf">3 free scenarios</div>
+          <div class="pf">Week 1 course</div>
+          <div class="pf off">All 6 scenarios</div>
+          <div class="pf off">Wingman Mode</div>
+        </div>
+        <button class="pc-btn pc-btn-out" disabled>Current Plan</button>
       </div>
-      <div class="pricing-card">
-        <div class="plan-name">Pro</div>
-        <div class="plan-price">₹499<span>/month</span></div>
-        <ul class="plan-features">
-          <li>✓ Unlimited everything</li>
-          <li>✓ Human coach Q&A</li>
-          <li>✓ Profile review</li>
-          <li>✓ Priority support</li>
-        </ul>
-        <button class="plan-btn" onclick="unlockDemo('pro')">Get Pro 👑</button>
+      <div class="price-card hot">
+        <div class="hot-badge">🔥 Popular</div>
+        <div class="pc-name">Starter</div>
+        <div class="pc-price"><sup>₹</sup>199<sub>/mo</sub></div>
+        <div class="pc-tagline">Cancel anytime</div>
+        <div class="pc-feats">
+          <div class="pf">60 min AI practice/day</div>
+          <div class="pf">All 6 scenarios</div>
+          <div class="pf">Full 30-day course</div>
+          <div class="pf">Wingman Mode</div>
+          <div class="pf off">Voice calls</div>
+        </div>
+        <button class="pc-btn pc-btn-main" onclick="unlockDemo('starter')">Get Starter ⚡</button>
       </div>
-    </div>
-  `;
+      <div class="price-card">
+        <div class="pc-name">Pro</div>
+        <div class="pc-price"><sup>₹</sup>499<sub>/mo</sub></div>
+        <div class="pc-tagline">Full access</div>
+        <div class="pc-feats">
+          <div class="pf">Unlimited chat + voice</div>
+          <div class="pf">90-day course</div>
+          <div class="pf">Unlimited Wingman</div>
+          <div class="pf">Human coach Q&A</div>
+          <div class="pf">Profile review</div>
+        </div>
+        <button class="pc-btn pc-btn-main" onclick="unlockDemo('pro')">Get Pro 👑</button>
+      </div>
+    </div>`;
 }
 
 function unlockDemo(plan) {
   state.plan = plan;
-  saveState();
+  saveUserData();
   buildApp();
-  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked! Demo mode.`, 'success');
+  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked! Sab scenarios open hai!`, 'success');
   switchPanel($$('.app-nav-btn')[0], 'dashboard');
 }
 
-// ===== SAVE STATE =====
-function saveState() {
-  if (!state.user) return;
-  localStorage.setItem(`rizzup_user_${state.user.id}`, JSON.stringify({
-    plan: state.plan,
-    minsUsed: state.minsUsed,
-    totalMsgs: state.totalMsgs,
-    streak: state.streak,
-    courseProgress: state.courseProgress
-  }));
-}
-
-// Auto-save every 30 seconds
-setInterval(saveState, 30000);
-
-// ===== INIT =====
-console.log('🔥 RizzUp AI Loaded!');
+// ============ KEYBOARD ============
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeAuthModal();
+});
