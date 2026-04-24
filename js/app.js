@@ -1,62 +1,64 @@
 /**
- * RizzUp AI — app.js (FIXED)
+ * RizzUp AI - Clean App JS
  */
 
+// ===== CONFIG =====
 const CONFIG = {
   API_URL: 'https://api.anthropic.com/v1/messages',
   MODEL: 'claude-sonnet-4-20250514',
   MAX_TOKENS: 600,
-  MAX_CHARS: 500,
 };
 
+// ===== SCENARIOS =====
 const SCENARIOS = {
   first_date: {
     name: 'Priya', av: '👩', emoji: '☕', label: 'First Date',
-    desc: 'Coffee meetup, break the ice', free: true,
-    system: `You are Priya, a 25-year-old Mumbai girl on a first coffee date. Keep responses 1-3 short sentences. Use Hinglish.`,
-    suggestions: ["Heyy! Tu actually apni photo jaisa hai 😄", "Okay first question — chai ya coffee?", "Honestly mujhe bhi first dates awkward lagte hain"]
+    desc: 'Coffee meetup', free: true,
+    system: 'You are Priya, 25, Mumbai girl on first date. Keep responses 1-3 short sentences. Use Hinglish.',
+    suggestions: ["Heyy! Tu actually apni photo jaisa hai 😄", "Chai ya coffee?", "Nervous hai kya? 😄"]
   },
   texting: {
     name: 'Ananya', av: '💬', emoji: '💬', label: 'Texting',
-    desc: 'Dating app convo', free: true,
-    system: `You are Ananya, casual texting style. Keep it very short like real texts.`,
-    suggestions: ["heyyy finally texted 😄", "okay one question — pizza ya biryani?"]
+    desc: 'Dating app chat', free: true,
+    system: 'You are Ananya, casual texting style. Very short realistic texts.',
+    suggestions: ["heyyy finally 😄", "Pizza ya biryani?", "Tell me something interesting"]
   },
   rejection: {
     name: 'Simran', av: '💪', emoji: '💪', label: 'Rejection',
-    desc: 'Handle it gracefully', free: true,
-    system: `You are Simran letting someone down gently. Short realistic replies.`,
-    suggestions: ["Haha no worries, you're still cool! 😄", "Fair enough — I respect the honesty"]
+    desc: 'Handle gracefully', free: true,
+    system: 'You are Simran letting someone down gently. Short replies.',
+    suggestions: ["No worries, you're cool! 😄", "I respect the honesty", "Can we be friends?"]
   },
   flirting: {
     name: 'Rhea', av: '😏', emoji: '😏', label: 'Flirting',
     desc: 'Playful banter', free: false,
-    system: `You are Rhea, confident and playful. Keep replies short, punchy.`,
-    suggestions: ["Okay I've been trying to think of a good line 😅", "You have a very distracting smile"]
+    system: 'You are Rhea, confident and playful. Short punchy replies.',
+    suggestions: ["Prove karo worth it tha 😏", "You're interesting", "Make me laugh"]
   },
   arranged: {
-    name: 'Pooja', av: '🌸', emoji: '💐', label: 'Arranged Meet',
+    name: 'Pooja', av: '🌸', emoji: '💐', label: 'Arranged',
     desc: 'Family intro', free: false,
-    system: `You are Pooja at a first arranged meeting. Polite but assessing compatibility.`,
-    suggestions: ["Yeh situation thoda awkward hai na? 😅", "Honestly what are you looking for?"]
+    system: 'You are Pooja at arranged meeting. Polite but assessing.',
+    suggestions: ["Yeh awkward hai na? 😅", "What are you looking for?", "Tell me about yourself"]
   },
   second_date: {
     name: 'Megha', av: '🌙', emoji: '🌙', label: '2nd Date',
     desc: 'Deepen connection', free: false,
-    system: `You are Megha on a second date. First date went okay but you want depth.`,
-    suggestions: ["Tell me something you didn't last time", "What's your most random skill?"]
+    system: 'You are Megha on second date. Want depth and personality.',
+    suggestions: ["Tell me something real", "What's your random skill?", "Nervous nahi tu?"]
   }
 };
 
 const OPENING_MESSAGES = {
-  first_date: "Hiii! *nervously sips coffee* Sorry thoda late — Mumbai traffic 😅",
-  texting: "heyyy so you actually texted 👀 what made you swipe?",
-  rejection: "Hey, I wanted to be upfront... I think you're sweet but I don't see this going romantically.",
-  flirting: "Oh so you said hi 😏 Bold move. Prove karo ki it was worth my time.",
-  arranged: "Hii! *awkward laugh* Yeh situation thoda weird hai for both of us?",
-  second_date: "Hey! Glad you came 😄 Last time was nice but I feel like I don't actually know you."
+  first_date: "Hiii! *sips coffee* Sorry thoda late — Mumbai traffic 😅",
+  texting: "heyyy so you actually texted 👀",
+  rejection: "Hey, I think you're sweet but I don't see this going romantically...",
+  flirting: "Oh so you said hi 😏 Bold move.",
+  arranged: "Hii! *awkward laugh* Yeh situation weird hai na?",
+  second_date: "Hey! Glad you came 😄 Tell me something real."
 };
 
+// ===== STATE =====
 let state = {
   user: null,
   plan: 'free',
@@ -68,24 +70,24 @@ let state = {
   loading: false
 };
 
+// ===== UTILS =====
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
 
-// ===== TOAST NOTIFICATION =====
-function showToast(message, type = 'default') {
-  const toast = document.getElementById('toast');
+function showToast(msg, type = 'default') {
+  const toast = $('#toast');
   if (!toast) return;
-  toast.textContent = message;
+  toast.textContent = msg;
   toast.className = `toast ${type} show`;
   setTimeout(() => toast.classList.remove('show'), 3500);
 }
 
-// ===== AUTH MODAL (FIXED) =====
+// ===== AUTH MODAL =====
 let currentAuthMode = 'signup';
 
 function openAuthModal(mode) {
   currentAuthMode = mode;
-  const modal = document.getElementById('authModal');
+  const modal = $('#authModal');
   if (modal) {
     modal.classList.add('open');
     modal.style.display = 'flex';
@@ -94,7 +96,7 @@ function openAuthModal(mode) {
 }
 
 function closeAuthModal() {
-  const modal = document.getElementById('authModal');
+  const modal = $('#authModal');
   if (modal) {
     modal.classList.remove('open');
     modal.style.display = 'none';
@@ -104,20 +106,21 @@ function closeAuthModal() {
 const GOOGLE_SVG = `<svg width="20" height="20" viewBox="0 0 20 20"><path fill="#4285F4" d="M10.001 3.333c-1.836 0-3.392.6-4.666 1.805l2.22 2.22c.717-.693 1.584-1.025 2.446-1.025 1.025 0 1.82.342 2.404.917l2.404-2.404C13.333 3.542 11.833 3.333 10.001 3.333z"/><path fill="#34A853" d="M18.979 10.205c0-.678-.063-1.323-.177-1.946H10v3.684h5.058c-.22 1.177-.884 2.177-1.884 2.846v2.334h3.008c1.763-1.625 2.792-4.021 2.792-6.918z"/><path fill="#FBBC05" d="M4.979 12.136A6.667 6.667 0 014.667 10c0-.763.113-1.496.312-2.136V5.53H1.979A9.996 9.996 0 0010 18.333c2.771 0 5.092-.917 6.804-2.48l-3.008-2.333c-.917.613-2.125.98-3.796.98-2.583 0-4.771-1.75-5.542-4.104z"/><path fill="#EA4335" d="M10 1.667c1.521 0 2.896.521 3.979 1.542l2.404-2.404C14.542.313 12.417 0 10 0 6.271 0 3.042 2.146 1.979 5.53l3.008 2.333C5.771 5.417 7.958 1.667 10 1.667z"/></svg>`;
 
 function renderAuthForm() {
-  const box = document.getElementById('authModalBox');
+  const box = $('#authModalBox');
   if (!box) return;
   
   if (currentAuthMode === 'signup') {
     box.innerHTML = `
       <button class="modal-close" onclick="closeAuthModal()">✕</button>
       <h2 class="modal-title">Join RizzUp AI 💘</h2>
-      <p class="modal-subtitle">Free forever. No credit card. 30 seconds.</p>
+      <p class="modal-subtitle">Free forever. No credit card.</p>
       <div class="auth-form">
         <input type="text" id="authName" placeholder="Your Name">
         <input type="email" id="authEmail" placeholder="Email">
         <input type="password" id="authPassword" placeholder="Password (6+ chars)">
-        <button class="btn btn-primary" onclick="doSignup()">Create Free Account 🚀</button>
-        <button class="btn btn-google" onclick="doGoogleLogin()">${GOOGLE_SVG} Continue with Google</button>
+        <button class="btn btn-primary btn-block" onclick="doSignup()">Create Free Account 🚀</button>
+        <div class="auth-divider">or</div>
+        <button class="btn btn-secondary btn-block" onclick="doGoogleLogin()">${GOOGLE_SVG} Continue with Google</button>
       </div>
       <p class="auth-switch">Already have account? <a onclick="openAuthModal('login')">Login here</a></p>
     `;
@@ -125,12 +128,13 @@ function renderAuthForm() {
     box.innerHTML = `
       <button class="modal-close" onclick="closeAuthModal()">✕</button>
       <h2 class="modal-title">Welcome Back! 👋</h2>
-      <p class="modal-subtitle">Login to continue your journey.</p>
+      <p class="modal-subtitle">Login to continue</p>
       <div class="auth-form">
         <input type="email" id="loginEmail" placeholder="Email">
         <input type="password" id="loginPassword" placeholder="Password">
-        <button class="btn btn-primary" onclick="doLogin()">Login →</button>
-        <button class="btn btn-google" onclick="doGoogleLogin()">${GOOGLE_SVG} Continue with Google</button>
+        <button class="btn btn-primary btn-block" onclick="doLogin()">Login →</button>
+        <div class="auth-divider">or</div>
+        <button class="btn btn-secondary btn-block" onclick="doGoogleLogin()">${GOOGLE_SVG} Continue with Google</button>
       </div>
       <p class="auth-switch">Don't have account? <a onclick="openAuthModal('signup')">Sign Up Free</a></p>
     `;
@@ -139,9 +143,9 @@ function renderAuthForm() {
 
 // ===== SUPABASE AUTH =====
 async function doSignup() {
-  const name = document.getElementById('authName')?.value.trim();
-  const email = document.getElementById('authEmail')?.value.trim();
-  const password = document.getElementById('authPassword')?.value;
+  const name = $('#authName')?.value.trim();
+  const email = $('#authEmail')?.value.trim();
+  const password = $('#authPassword')?.value;
   
   if (!name || !email || !password) {
     showToast('Please fill all fields', 'error');
@@ -161,15 +165,15 @@ async function doSignup() {
   if (error) {
     showToast(error.message, 'error');
   } else {
-    showToast('🎉 Account created! Check email to verify', 'success');
+    showToast('🎉 Account created! Check email', 'success');
     closeAuthModal();
     setTimeout(() => openAuthModal('login'), 2000);
   }
 }
 
 async function doLogin() {
-  const email = document.getElementById('loginEmail')?.value.trim();
-  const password = document.getElementById('loginPassword')?.value;
+  const email = $('#loginEmail')?.value.trim();
+  const password = $('#loginPassword')?.value;
   
   if (!email || !password) {
     showToast('Please fill all fields', 'error');
@@ -193,10 +197,10 @@ async function doGoogleLogin() {
 
 async function doLogout() {
   await window.supabase.auth.signOut();
-  showToast('Logged out! See you soon 👋', 'default');
+  showToast('Logged out! 👋', 'default');
 }
 
-// ===== AUTH STATE LISTENER =====
+// ===== AUTH STATE =====
 if (window.supabase) {
   window.supabase.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session) {
@@ -208,14 +212,13 @@ if (window.supabase) {
     }
     if (event === 'SIGNED_OUT') {
       state.user = null;
-      document.getElementById('appView').style.display = 'none';
-      document.getElementById('landingView').style.display = 'block';
+      $('#appView').style.display = 'none';
+      $('#landingView').style.display = 'block';
     }
   });
 
-  // Check existing session on load
   window.supabase.auth.getSession().then(({ data }) => {
-    if (data.session) {
+    if (data?.session) {
       const name = data.session.user.user_metadata?.full_name || 
                    data.session.user.user_metadata?.name || 
                    data.session.user.email.split('@')[0];
@@ -224,7 +227,7 @@ if (window.supabase) {
   });
 }
 
-// ===== APP INITIALIZATION =====
+// ===== APP INIT =====
 function initUserFromAuth(name, email, uid) {
   state.user = { id: uid, name, email };
   loadUserData();
@@ -235,8 +238,8 @@ function initUserFromAuth(name, email, uid) {
     localStorage.setItem(`rz_d_${state.user.id}`, today);
   }
 
-  document.getElementById('landingView').style.display = 'none';
-  document.getElementById('appView').style.display = 'block';
+  $('#landingView').style.display = 'none';
+  $('#appView').style.display = 'block';
   
   buildApp();
   showToast(`Welcome, ${name.split(' ')[0]}! 🚀`, 'success');
@@ -272,13 +275,13 @@ function saveUserData() {
 function buildApp() {
   const name = state.user.name.split(' ')[0];
   
-  const greet = document.getElementById('dashGreet');
+  const greet = $('#dashGreet');
   if (greet) greet.textContent = `Hey ${name}! 👋`;
 
-  const badge = document.getElementById('appPlanBadge');
-  if (badge) badge.textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
+  const badge = $('#appPlanBadge');
+  if (badge) badge.textContent = { free: 'Free Plan', starter: 'Starter', pro: 'Pro Plan' }[state.plan];
 
-  const userNameEl = document.getElementById('appUserName');
+  const userNameEl = $('#appUserName');
   if (userNameEl) userNameEl.textContent = name;
 
   buildDashboardScenarios();
@@ -288,20 +291,15 @@ function buildApp() {
 
 function updateDashboard() {
   const max = state.plan === 'free' ? 20 : state.plan === 'starter' ? 60 : 9999;
-  const pct = Math.min((state.minsUsed / max) * 100, 100);
-
-  const minsEl = document.getElementById('dashMins');
-  if (minsEl) minsEl.textContent = Math.floor(state.minsUsed);
-
-  const msgsEl = document.getElementById('dashMsgs');
-  if (msgsEl) msgsEl.textContent = state.totalMsgs;
-
-  const streakEl = document.getElementById('dashStreak');
-  if (streakEl) streakEl.textContent = state.sessions || 0;
+  
+  $('#dashMins').textContent = Math.floor(state.minsUsed);
+  $('#dashMsgs').textContent = state.totalMsgs;
+  $('#dashStreak').textContent = state.sessions || 0;
+  $('#dashUsageText').textContent = state.plan === 'pro' ? 'Unlimited 🚀' : `${Math.floor(state.minsUsed)}/${max} min`;
 }
 
 function buildDashboardScenarios() {
-  const c = document.getElementById('dashScens');
+  const c = $('#dashScens');
   if (!c) return;
   c.innerHTML = '';
   
@@ -324,8 +322,8 @@ function buildDashboardScenarios() {
 
 function startScenario(key) {
   state.currentScenario = key;
-  document.querySelectorAll('.app-panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-practice').classList.add('active');
+  $$('.app-panel').forEach(p => p.classList.remove('active'));
+  $('#panel-practice').classList.add('active');
   initChat();
 }
 
@@ -339,37 +337,37 @@ function initChat() {
   addBubble('ai', opening);
 
   const sugs = SCENARIOS[state.currentScenario].suggestions || [];
-  const strip = document.getElementById('sugStrip');
+  const strip = $('#sugStrip');
   if (strip) {
     strip.innerHTML = sugs.map(s => 
-      `<button class="btn btn-outline" style="font-size:12px;padding:8px 12px" onclick="useSuggestion('${s.replace(/'/g, "\\'")}')">${s}</button>`
+      `<button class="btn btn-outline btn-sm" onclick="useSuggestion('${s.replace(/'/g, "\\'")}')">${s}</button>`
     ).join('');
   }
 }
 
 function resetChat() {
   state.history = [];
-  const area = document.getElementById('msgsArea');
+  const area = $('#msgsArea');
   if (area) area.innerHTML = '';
 }
 
 function updateChatHeader() {
   const sc = SCENARIOS[state.currentScenario];
-  const av = document.getElementById('cpAv');
-  const nm = document.getElementById('cpName');
+  const av = $('#cpAv');
+  const nm = $('#cpName');
   if (av) av.textContent = sc.av;
   if (nm) nm.textContent = sc.name;
 }
 
 function addBubble(type, text) {
-  const area = document.getElementById('msgsArea');
+  const area = $('#msgsArea');
   if (!area) return;
   
   const sc = SCENARIOS[state.currentScenario];
   const row = document.createElement('div');
   row.className = `msg-row ${type === 'user' ? 'user' : ''}`;
   row.innerHTML = `
-    <div style="font-size:24px">${type === 'ai' ? sc.av : '🧑'}</div>
+    <div class="msg-avatar">${type === 'ai' ? sc.av : '🧑'}</div>
     <div class="msg-bubble">${text}</div>
   `;
   area.appendChild(row);
@@ -377,13 +375,13 @@ function addBubble(type, text) {
 }
 
 function useSuggestion(text) {
-  document.getElementById('chatInput').value = text;
+  $('#chatInput').value = text;
   sendMessage();
 }
 
 async function sendMessage() {
-  const input = document.getElementById('chatInput');
-  const sendBtn = document.getElementById('sendBtn');
+  const input = $('#chatInput');
+  const sendBtn = $('#sendBtn');
   if (!input || state.loading) return;
 
   const raw = input.value.trim();
@@ -391,27 +389,25 @@ async function sendMessage() {
 
   const max = state.plan === 'free' ? 20 : state.plan === 'starter' ? 60 : 9999;
   if (state.minsUsed >= max && state.plan === 'free') {
-    showToast('Daily limit reached! Upgrade 🚀', 'error');
+    showToast('Daily limit! Upgrade 🚀', 'error');
     return;
   }
 
-  const text = raw.slice(0, CONFIG.MAX_CHARS);
   input.value = '';
   state.loading = true;
   if (sendBtn) sendBtn.disabled = true;
 
-  addBubble('user', text);
-  state.history.push({ role: 'user', content: text });
+  addBubble('user', raw);
+  state.history.push({ role: 'user', content: raw });
   state.minsUsed += 0.5;
   state.totalMsgs++;
   updateDashboard();
 
-  // Show typing indicator
-  const area = document.getElementById('msgsArea');
+  const area = $('#msgsArea');
   const typing = document.createElement('div');
   typing.className = 'msg-row';
   typing.id = 'typingRow';
-  typing.innerHTML = `<div style="font-size:24px">${SCENARIOS[state.currentScenario].av}</div><div class="msg-bubble">...</div>`;
+  typing.innerHTML = `<div class="msg-avatar">${SCENARIOS[state.currentScenario].av}</div><div class="msg-bubble">...</div>`;
   area.appendChild(typing);
 
   try {
@@ -422,7 +418,7 @@ async function sendMessage() {
   } catch(e) {
     typing.remove();
     addBubble('ai', 'Connection issue. Try again! 🔄');
-    showToast('Connection issue. Try again! 🔄', 'error');
+    showToast('Connection issue! 🔄', 'error');
   }
 
   saveUserData();
@@ -432,13 +428,16 @@ async function sendMessage() {
 }
 
 async function callClaude(messages, systemPrompt) {
+  // ⚠️ ADD YOUR ANTHROPIC API KEY BELOW
+  const API_KEY = 'YOUR_ANTHROPIC_API_KEY';
+  
   const response = await fetch(CONFIG.API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
-      'x-api-key': 'YOUR_ANTHROPIC_API_KEY' // ⚠️ ADD YOUR API KEY HERE
+      'x-api-key': API_KEY
     },
     body: JSON.stringify({
       model: CONFIG.MODEL,
@@ -458,18 +457,22 @@ async function callClaude(messages, systemPrompt) {
 }
 
 // ===== NAVIGATION =====
-function switchPanel(panelId) {
-  document.querySelectorAll('.app-nav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.app-panel').forEach(p => p.classList.remove('active'));
+function switchPanel(btn, panelId) {
+  $$('.app-nav-btn').forEach(b => b.classList.remove('active'));
+  $$('.app-panel').forEach(p => p.classList.remove('active'));
   
-  const btn = document.querySelector(`[data-panel="${panelId}"]`);
   if (btn) btn.classList.add('active');
   
-  const panel = document.getElementById(`panel-${panelId}`);
+  const panel = $(`#panel-${panelId}`);
   if (panel) panel.classList.add('active');
 }
 
-// Make functions global
+// ===== FAQ =====
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('active');
+}
+
+// ===== GLOBAL EXPOSE =====
 window.openAuthModal = openAuthModal;
 window.closeAuthModal = closeAuthModal;
 window.doSignup = doSignup;
@@ -480,3 +483,4 @@ window.showToast = showToast;
 window.sendMessage = sendMessage;
 window.useSuggestion = useSuggestion;
 window.switchPanel = switchPanel;
+window.toggleFaq = toggleFaq;
