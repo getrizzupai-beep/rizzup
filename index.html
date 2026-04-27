@@ -24,8 +24,8 @@
       <li><a href="#faq">FAQ</a></li>
     </ul>
     <div class="nav-right">
-      <span class="nav-login" onclick="openAuthModal()">Login</span>
-      <button class="nav-cta" onclick="openAuthModal()">Try Free →</button>
+      <span class="nav-login" onclick="openSignInModal()">Sign In</span>
+      <button class="nav-cta" onclick="openSignUpModal()">Sign Up →</button>
     </div>
   </div>
 </nav>
@@ -37,7 +37,7 @@
     <h1>Your personal<br><span class="pink">AI dating coach</span><br>for <span class="underline">real results.</span></h1>
     <p class="hero-sub">Practice real conversations, get live coaching, and master the art of dating — all in Hinglish. India ka pehla AI dating coach.</p>
     <div class="hero-actions">
-      <button class="btn-primary" onclick="openAuthModal()">Start Free — No Card Needed</button>
+      <button class="btn-primary" onclick="openSignUpModal()">Start Free — No Card Needed</button>
       <button class="btn-secondary" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">See How It Works</button>
     </div>
     <div class="hero-trust">
@@ -193,12 +193,12 @@
     <h2 class="sec-title">Every Indian dating situation — covered</h2>
     <p class="sec-sub">6+ realistic scenarios built for how Indians actually date.</p>
     <div class="scen-grid">
-      <div class="scen-card" onclick="openAuthModal()"><span class="sc-emoji">☕</span><div class="sc-name">First Date</div><div class="sc-desc">Coffee meetup — make a great first impression.</div><span class="sc-badge sc-free">Free</span></div>
-      <div class="scen-card" onclick="openAuthModal()"><span class="sc-emoji">💬</span><div class="sc-name">Texting Game</div><div class="sc-desc">Keep the convo interesting after matching on a dating app.</div><span class="sc-badge sc-free">Free</span></div>
-      <div class="scen-card" onclick="openAuthModal()"><span class="sc-emoji">💪</span><div class="sc-name">Handle Rejection</div><div class="sc-desc">Stay confident and graceful when things don't go your way.</div><span class="sc-badge sc-free">Free</span></div>
-      <div class="scen-card locked" onclick="openAuthModal()"><div class="sc-lock">🔒</div><span class="sc-emoji">😏</span><div class="sc-name">Flirting Practice</div><div class="sc-desc">Playful banter, wit, and charm — practice until it's natural.</div><span class="sc-badge sc-pro">Starter+</span></div>
-      <div class="scen-card locked" onclick="openAuthModal()"><div class="sc-lock">🔒</div><span class="sc-emoji">💐</span><div class="sc-name">Arranged Meet</div><div class="sc-desc">Navigate the Indian arranged meeting setup with confidence.</div><span class="sc-badge sc-pro">Starter+</span></div>
-      <div class="scen-card locked" onclick="openAuthModal()"><div class="sc-lock">🔒</div><span class="sc-emoji">🌙</span><div class="sc-name">Second Date</div><div class="sc-desc">Deepen the connection — go beyond small talk.</div><span class="sc-badge sc-pro">Starter+</span></div>
+      <div class="scen-card" onclick="openSignUpModal()"><span class="sc-emoji">☕</span><div class="sc-name">First Date</div><div class="sc-desc">Coffee meetup — make a great first impression.</div><span class="sc-badge sc-free">Free</span></div>
+      <div class="scen-card" onclick="openSignUpModal()"><span class="sc-emoji">💬</span><div class="sc-name">Texting Game</div><div class="sc-desc">Keep the convo interesting after matching on a dating app.</div><span class="sc-badge sc-free">Free</span></div>
+      <div class="scen-card" onclick="openSignUpModal()"><span class="sc-emoji">💪</span><div class="sc-name">Handle Rejection</div><div class="sc-desc">Stay confident and graceful when things don't go your way.</div><span class="sc-badge sc-free">Free</span></div>
+      <div class="scen-card locked" onclick="openSignUpModal()"><div class="sc-lock">🔒</div><span class="sc-emoji">😏</span><div class="sc-name">Flirting Practice</div><div class="sc-desc">Playful banter, wit, and charm — practice until it's natural.</div><span class="sc-badge sc-pro">Starter+</span></div>
+      <div class="scen-card locked" onclick="openSignUpModal()"><div class="sc-lock">🔒</div><span class="sc-emoji">💐</span><div class="sc-name">Arranged Meet</div><div class="sc-desc">Navigate the Indian arranged meeting setup with confidence.</div><span class="sc-badge sc-pro">Starter+</span></div>
+      <div class="scen-card locked" onclick="openSignUpModal()"><div class="sc-lock">🔒</div><span class="sc-emoji">🌙</span><div class="sc-name">Second Date</div><div class="sc-desc">Deepen the connection — go beyond small talk.</div><span class="sc-badge sc-pro">Starter+</span></div>
     </div>
   </div>
 </section>
@@ -229,7 +229,7 @@
         <div class="pc-price">₹0</div>
         <div class="pc-tagline">Forever free, no card needed</div>
         <div class="pc-feats"><div class="pf">20 min AI practice/day</div><div class="pf">3 free scenarios</div><div class="pf">Week 1 of 30-day course</div><div class="pf off">Voice call practice</div><div class="pf off">All 6 scenarios</div><div class="pf off">Wingman Mode</div></div>
-        <button class="pc-btn pc-btn-out" onclick="openAuthModal()">Get Started Free</button>
+        <button class="pc-btn pc-btn-out" onclick="openSignUpModal()">Get Started Free</button>
       </div>
       <div class="price-card hot">
         <div class="hot-badge">🔥 Most Popular</div>
@@ -237,14 +237,14 @@
         <div class="pc-price"><sup>₹</sup>199<sub>/mo</sub></div>
         <div class="pc-tagline">Perfect for getting serious</div>
         <div class="pc-feats"><div class="pf">60 min AI practice/day</div><div class="pf">All 6+ scenarios</div><div class="pf">Full 30-day course</div><div class="pf">Live coaching feedback</div><div class="pf">Wingman Mode (10/mo)</div><div class="pf off">Voice calls</div></div>
-        <button class="pc-btn pc-btn-main" onclick="openAuthModal()">Get Starter ⚡</button>
+        <button class="pc-btn pc-btn-main" onclick="openSignUpModal()">Get Starter ⚡</button>
       </div>
       <div class="price-card">
         <div class="pc-name">Pro</div>
         <div class="pc-price"><sup>₹</sup>499<sub>/mo</sub></div>
         <div class="pc-tagline">Full transformation mode</div>
         <div class="pc-feats"><div class="pf">Unlimited voice + chat</div><div class="pf">Complete 90-day course</div><div class="pf">Unlimited Wingman Mode</div><div class="pf">Human coach Q&A (2x/mo)</div><div class="pf">Profile & bio review</div></div>
-        <button class="pc-btn pc-btn-main" onclick="openAuthModal()">Get Pro 👑</button>
+        <button class="pc-btn pc-btn-main" onclick="openSignUpModal()">Get Pro 👑</button>
       </div>
     </div>
     <div class="pricing-footer">🔒 Secure payments via Razorpay · UPI · Debit/Credit Cards · NetBanking · 7-day money back guarantee</div>
@@ -284,7 +284,7 @@
     <h2 class="cta-title">Ready to level up your dating game?</h2>
     <p class="cta-sub">Join 5,000+ Indians already practicing with RizzUp. Start free today — no excuses.</p>
     <div class="cta-actions">
-      <button class="btn-white-solid" onclick="openAuthModal()">Start Free Now 🚀</button>
+      <button class="btn-white-solid" onclick="openSignUpModal()">Start Free Now 🚀</button>
       <button class="btn-white-ghost" onclick="document.getElementById('scenarios').scrollIntoView({behavior:'smooth'})">See Scenarios →</button>
     </div>
     <div class="cta-trust">
@@ -312,16 +312,50 @@
 
 </div><!-- end landingView -->
 
-<!-- ===== AUTH MODAL ===== -->
-<div class="modal-overlay" id="authModal">
+<!-- ===== SIGN UP MODAL ===== -->
+<div class="modal-overlay" id="signUpModal">
   <div class="modal-box">
+    <button class="modal-close" onclick="closeSignUpModal()">✕</button>
     <div style="text-align:center;font-size:36px;margin-bottom:8px">💘</div>
-    <h3>Join RizzUp AI</h3>
-    <div class="form-group"><label class="form-label">Your Name</label><input id="mName" class="form-input" placeholder="Rahul Kumar" type="text"></div>
-    <div class="form-group"><label class="form-label">Email</label><input id="mEmail" class="form-input" placeholder="rahul@gmail.com" type="email"></div>
-    <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">Start Practicing Free →</button>
-    <div class="modal-divider"><span>or</span></div>
-    <button class="btn-google-modal" onclick="quickSignup()">⚡ Quick Start</button>
+    <h3>Create Account</h3>
+    <p>Join 5,000+ Indians mastering dating — free!</p>
+
+    <!-- Google Sign Up -->
+    <button class="btn-google-modal" onclick="googleAuth('signup')">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="modal-divider"><span>or sign up with email</span></div>
+
+    <div class="form-group"><label class="form-label">Full Name</label><input id="suName" class="form-input" placeholder="Rahul Kumar" type="text"></div>
+    <div class="form-group"><label class="form-label">Email</label><input id="suEmail" class="form-input" placeholder="rahul@gmail.com" type="email"></div>
+    <div class="form-group"><label class="form-label">Password</label><input id="suPassword" class="form-input" placeholder="Create a password" type="password"></div>
+    <button class="btn-primary" style="width:100%;margin-bottom:16px" onclick="doSignup()">Create Account →</button>
+    <div style="text-align:center;font-size:13px;color:var(--muted)">Already have an account? <span style="color:var(--pink);font-weight:700;cursor:pointer" onclick="switchToSignIn()">Sign In</span></div>
+  </div>
+</div>
+
+<!-- ===== SIGN IN MODAL ===== -->
+<div class="modal-overlay" id="signInModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeSignInModal()">✕</button>
+    <div style="text-align:center;font-size:36px;margin-bottom:8px">👋</div>
+    <h3>Welcome Back!</h3>
+    <p>Sign in to continue your practice</p>
+
+    <!-- Google Sign In -->
+    <button class="btn-google-modal" onclick="googleAuth('signin')">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.3z"/></svg>
+      Continue with Google
+    </button>
+
+    <div class="modal-divider"><span>or sign in with email</span></div>
+
+    <div class="form-group"><label class="form-label">Email</label><input id="siEmail" class="form-input" placeholder="rahul@gmail.com" type="email"></div>
+    <div class="form-group"><label class="form-label">Password</label><input id="siPassword" class="form-input" placeholder="Your password" type="password"></div>
+    <button class="btn-primary" style="width:100%;margin-bottom:16px" onclick="doSignIn()">Sign In →</button>
+    <div style="text-align:center;font-size:13px;color:var(--muted)">Don't have an account? <span style="color:var(--pink);font-weight:700;cursor:pointer" onclick="switchToSignUp()">Sign Up Free</span></div>
   </div>
 </div>
 
@@ -364,6 +398,15 @@
       </div>
       <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:14px">Pick a Scenario to Practice</div>
       <div class="app-scen-grid" id="dashScens"></div>
+
+      <!-- Course Preview in Dashboard -->
+      <div style="margin-top:32px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div style="font-size:14px;font-weight:800;color:var(--text)">📚 Your Course Progress</div>
+          <span style="font-size:13px;color:var(--pink);font-weight:700;cursor:pointer" onclick="switchPanel(document.querySelectorAll('.app-nav-btn')[2],'course')">View All →</span>
+        </div>
+        <div id="dashCoursePreview"></div>
+      </div>
     </div>
 
     <!-- PRACTICE / CHAT -->
@@ -382,7 +425,7 @@
           <div class="messages-area" id="msgsArea"></div>
           <div class="limit-notice" id="limitNotice">
             ⚠️ Daily limit reached! Upgrade to keep practicing.
-            <button onclick="switchPanel($$('.app-nav-btn')[3],'upgrade')">Upgrade Now</button>
+            <button onclick="switchPanel(document.querySelectorAll('.app-nav-btn')[3],'upgrade')">Upgrade Now</button>
           </div>
           <div class="sug-strip" id="sugStrip"></div>
           <div class="input-row">
