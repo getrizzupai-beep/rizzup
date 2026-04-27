@@ -1,6 +1,9 @@
 /**
- * RizzUp AI — app.js
- * Uses Claude API directly via Anthropic JS SDK (browser-compatible fetch)
+ * RizzUp AI — app.js (Fixed)
+ * - Sign Up modal with Name, Email, Password + Google
+ * - Sign In modal with Email, Password + Google
+ * - No API key required
+ * - Dashboard shows course preview
  */
 
 // ============ CONFIG ============
@@ -83,7 +86,6 @@ const COURSE_DAYS = [
 let state = {
   user: null,
   plan: 'free',
-  apiKey: '',
   minsUsed: 0,
   totalMsgs: 0,
   sessions: 0,
@@ -112,7 +114,7 @@ function formatText(text) {
 
 function showToast(message, type = 'default') {
   const existing = $('.toast');
-  if (existing) existing.remove();
+  if (existing) { existing.classList.remove('show'); }
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
@@ -121,47 +123,101 @@ function showToast(message, type = 'default') {
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-// ============ LANDING PAGE ============
-function openAuthModal() {
-  $('#authModal').classList.add('open');
+// ============ MODAL CONTROLS ============
+function openSignUpModal() {
+  $('#signUpModal').classList.add('open');
+  $('#signInModal').classList.remove('open');
 }
-function closeAuthModal() {
-  $('#authModal').classList.remove('open');
+function closeSignUpModal() {
+  $('#signUpModal').classList.remove('open');
+}
+function openSignInModal() {
+  $('#signInModal').classList.add('open');
+  $('#signUpModal').classList.remove('open');
+}
+function closeSignInModal() {
+  $('#signInModal').classList.remove('open');
+}
+function switchToSignIn() {
+  closeSignUpModal();
+  openSignInModal();
+}
+function switchToSignUp() {
+  closeSignInModal();
+  openSignUpModal();
 }
 
-$('#authModal').addEventListener('click', (e) => {
-  if (e.target === $('#authModal')) closeAuthModal();
+// Close modals on overlay click
+$('#signUpModal').addEventListener('click', (e) => {
+  if (e.target === $('#signUpModal')) closeSignUpModal();
+});
+$('#signInModal').addEventListener('click', (e) => {
+  if (e.target === $('#signInModal')) closeSignInModal();
 });
 
-function switchFeature(el, idx) {
-  $$('.feat-tab').forEach(t => t.classList.remove('active'));
-  $$('.preview-card').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById(`prev-${idx}`).classList.add('active');
+// Keep old openAuthModal working (just opens sign up)
+function openAuthModal() { openSignUpModal(); }
+function closeAuthModal() { closeSignUpModal(); closeSignInModal(); }
+
+// ============ GOOGLE AUTH ============
+function googleAuth(mode) {
+  // Simulate Google login — replace with real Firebase/Google OAuth later
+  const googleName = 'Google User';
+  const googleEmail = 'user@gmail.com';
+
+  if (mode === 'signup') {
+    closeSignUpModal();
+    showToast('Google se connect ho raha hai... 🔄');
+    setTimeout(() => initUser(googleName, googleEmail), 800);
+  } else {
+    const saved = localStorage.getItem(`rz_accounts`);
+    closeSignInModal();
+    showToast('Google se sign in ho raha hai... 🔄');
+    setTimeout(() => initUser(googleName, googleEmail), 800);
+  }
 }
 
-function toggleFaq(el) {
-  el.parentElement.classList.toggle('open');
-}
-
-// ============ AUTH ============
+// ============ SIGN UP ============
 function doSignup() {
-  const name = $('#mName').value.trim() || 'User';
-  const email = $('#mEmail').value.trim() || 'user@rizzup.in';
-  const key = $('#mApiKey').value.trim();
-  if (!key) { showToast('API key daalo pehle! 🔑', 'error'); return; }
-  initUser(name, email, key);
+  const name = $('#suName') ? $('#suName').value.trim() : '';
+  const email = $('#suEmail') ? $('#suEmail').value.trim() : '';
+  const password = $('#suPassword') ? $('#suPassword').value.trim() : '';
+
+  if (!name) { showToast('Apna naam toh daalo! 😅', 'error'); return; }
+  if (!email || !email.includes('@')) { showToast('Valid email chahiye! 📧', 'error'); return; }
+  if (!password || password.length < 6) { showToast('Password kam se kam 6 characters ka hona chahiye!', 'error'); return; }
+
+  // Save account
+  const accounts = JSON.parse(localStorage.getItem('rz_accounts') || '{}');
+  if (accounts[email]) { showToast('Ye email already registered hai! Sign In karo.', 'error'); return; }
+  accounts[email] = { name, password: btoa(password) };
+  localStorage.setItem('rz_accounts', JSON.stringify(accounts));
+
+  closeSignUpModal();
+  initUser(name, email);
 }
 
-function quickSignup() {
-  const key = $('#mApiKey').value.trim();
-  if (!key) { showToast('API key daalo pehle! 🔑', 'error'); return; }
-  initUser('Rahul', 'rahul@rizzup.in', key);
+// ============ SIGN IN ============
+function doSignIn() {
+  const email = $('#siEmail') ? $('#siEmail').value.trim() : '';
+  const password = $('#siPassword') ? $('#siPassword').value.trim() : '';
+
+  if (!email) { showToast('Email daalo! 📧', 'error'); return; }
+  if (!password) { showToast('Password daalo!', 'error'); return; }
+
+  const accounts = JSON.parse(localStorage.getItem('rz_accounts') || '{}');
+  const account = accounts[email];
+
+  if (!account) { showToast('Account nahi mila. Pehle Sign Up karo!', 'error'); return; }
+  if (account.password !== btoa(password)) { showToast('Password galat hai! 🔒', 'error'); return; }
+
+  closeSignInModal();
+  initUser(account.name, email);
 }
 
-function initUser(name, email, apiKey) {
-  state.user = { id: btoa(email).replace(/=/g,''), name, email };
-  state.apiKey = apiKey;
+// ============ INIT USER ============
+function initUser(name, email) {
+  state.user = { id: btoa(email).replace(/[^a-zA-Z0-9]/g,''), name, email };
   loadUserData();
 
   const today = new Date().toDateString();
@@ -170,7 +226,6 @@ function initUser(name, email, apiKey) {
     localStorage.setItem(`rz_d_${state.user.id}`, today);
   }
 
-  closeAuthModal();
   $('#landingView').style.display = 'none';
   $('#appView').style.display = 'block';
   buildApp();
@@ -205,7 +260,7 @@ setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
 
 function doLogout() {
   saveUserData();
-  state = { ...state, user: null, apiKey: '', history: [] };
+  state = { user: null, plan: 'free', minsUsed: 0, totalMsgs: 0, sessions: 0, currentScenario: 'first_date', history: [], loading: false };
   $('#appView').style.display = 'none';
   $('#landingView').style.display = 'block';
 }
@@ -216,6 +271,7 @@ function buildApp() {
   $('#dashGreet').textContent = `Hey ${name}! 👋`;
   $('#appPlanBadge').textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
   buildDashboardScenarios();
+  buildDashboardCoursePreview();
   buildChatSidebar();
   buildCourse();
   buildAppPlans();
@@ -261,6 +317,24 @@ function buildDashboardScenarios() {
       <span class="asc-badge ${sc.free ? 'asc-free' : 'asc-pro'}">${sc.free ? 'Free' : locked ? '🔒 Pro' : '✓ Unlocked'}</span>`;
     c.appendChild(el);
   });
+}
+
+function buildDashboardCoursePreview() {
+  const c = $('#dashCoursePreview'); if (!c) return;
+  const previewDays = COURSE_DAYS.slice(0, 3);
+  c.innerHTML = previewDays.map(day => {
+    const cls = day.done ? 'cd-done' : day.cur ? 'cd-cur' : 'cd-default';
+    const icon = day.done ? '✓' : day.day;
+    const locked = !day.free && state.plan === 'free';
+    return `<div class="cd-row" style="margin-bottom:8px;cursor:pointer;background:white;border:1px solid var(--border);border-radius:12px;padding:14px 16px" onclick="switchPanel(document.querySelectorAll('.app-nav-btn')[2],'course')">
+      <div class="cd-num ${cls}">${locked ? '🔒' : icon}</div>
+      <div class="cd-info">
+        <div class="cd-t">${day.title}</div>
+        <div class="cd-s">${day.subtitle} · ${day.free ? 'Free' : 'Starter+'}</div>
+      </div>
+      <div style="margin-left:auto;font-size:12px;color:var(--pink);font-weight:700">${day.cur ? '▶ Continue' : day.done ? '✓ Done' : 'Start'}</div>
+    </div>`;
+  }).join('');
 }
 
 function buildChatSidebar() {
@@ -360,7 +434,6 @@ async function callClaude(messages, systemPrompt) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': state.apiKey,
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true'
     },
@@ -419,8 +492,7 @@ async function sendMessage() {
     addBubble('ai', reply);
   } catch(e) {
     hideTyping();
-    const msg = e.message.includes('401') ? 'Invalid API key! Check karo 🔑' :
-                e.message.includes('429') ? 'Rate limit! Thoda ruko ⏳' :
+    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' :
                 'Connection issue. Try again! 🔄';
     addBubble('ai', msg);
     showToast(msg, 'error');
@@ -506,7 +578,7 @@ function buildCourse() {
   c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:20px 0 12px;display:flex;align-items:center;gap:10px">WEEK 2–4 — STARTER+ <span style="flex:1;height:1px;background:var(--border);display:block"></span></div>`;
   week2.forEach(day => {
     const locked = state.plan === 'free';
-    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked?'not-allowed':'pointer'};opacity:${locked?'0.5':'1'}" onclick="${locked?`switchPanel($$('.app-nav-btn')[3],'upgrade')`:`showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked?'🔒':day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked?'Unlock Starter':'Unlocked'}</div></div></div>`;
+    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked?'not-allowed':'pointer'};opacity:${locked?'0.5':'1'}" onclick="${locked?`switchPanel(document.querySelectorAll('.app-nav-btn')[3],'upgrade')`:`showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked?'🔒':day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked?'Unlock Starter':'Unlocked'}</div></div></div>`;
   });
 }
 
@@ -566,7 +638,19 @@ function unlockDemo(plan) {
   switchPanel($$('.app-nav-btn')[0], 'dashboard');
 }
 
+// ============ LANDING PAGE ============
+function switchFeature(el, idx) {
+  $$('.feat-tab').forEach(t => t.classList.remove('active'));
+  $$('.preview-card').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`prev-${idx}`).classList.add('active');
+}
+
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('open');
+}
+
 // ============ KEYBOARD ============
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeAuthModal();
+  if (e.key === 'Escape') { closeSignUpModal(); closeSignInModal(); }
 });
