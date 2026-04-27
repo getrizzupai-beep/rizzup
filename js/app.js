@@ -1,10 +1,15 @@
 /**
- * RizzUp AI — app.js (Fixed)
- * - Sign Up modal with Name, Email, Password + Google
- * - Sign In modal with Email, Password + Google
- * - No API key required
- * - Dashboard shows course preview
+ * RizzUp AI — app.js
+ * Full Supabase Auth: Email/Password + Google OAuth
  */
+
+// ============ SUPABASE INIT ============
+const SUPABASE_URL = 'https://xzdjxvitqktsfeuzshik.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW';
+
+// Load Supabase from CDN (added in index.html <head>)
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============ CONFIG ============
 const CONFIG = {
@@ -114,7 +119,7 @@ function formatText(text) {
 
 function showToast(message, type = 'default') {
   const existing = $('.toast');
-  if (existing) { existing.classList.remove('show'); }
+  if (existing) existing.remove();
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
   toast.textContent = message;
@@ -123,146 +128,304 @@ function showToast(message, type = 'default') {
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-// ============ MODAL CONTROLS ============
-function openSignUpModal() {
-  $('#signUpModal').classList.add('open');
-  $('#signInModal').classList.remove('open');
-}
-function closeSignUpModal() {
-  $('#signUpModal').classList.remove('open');
-}
-function openSignInModal() {
-  $('#signInModal').classList.add('open');
-  $('#signUpModal').classList.remove('open');
-}
-function closeSignInModal() {
-  $('#signInModal').classList.remove('open');
-}
-function switchToSignIn() {
-  closeSignUpModal();
-  openSignInModal();
-}
-function switchToSignUp() {
-  closeSignInModal();
-  openSignUpModal();
+// ============ AUTH MODAL ============
+let authMode = 'signup'; // 'signup' | 'login' | 'otp'
+
+function openAuthModal(mode = 'signup') {
+  authMode = mode;
+  renderAuthModal();
+  $('#authModal').classList.add('open');
 }
 
-// Close modals on overlay click
-$('#signUpModal').addEventListener('click', (e) => {
-  if (e.target === $('#signUpModal')) closeSignUpModal();
-});
-$('#signInModal').addEventListener('click', (e) => {
-  if (e.target === $('#signInModal')) closeSignInModal();
+function closeAuthModal() {
+  $('#authModal').classList.remove('open');
+}
+
+$('#authModal').addEventListener('click', (e) => {
+  if (e.target === $('#authModal')) closeAuthModal();
 });
 
-// Keep old openAuthModal working (just opens sign up)
-function openAuthModal() { openSignUpModal(); }
-function closeAuthModal() { closeSignUpModal(); closeSignInModal(); }
+function renderAuthModal() {
+  const box = $('#authModalBox');
+  if (!box) return;
 
-// ============ GOOGLE AUTH ============
-function googleAuth(mode) {
-  // Simulate Google login — replace with real Firebase/Google OAuth later
-  const googleName = 'Google User';
-  const googleEmail = 'user@gmail.com';
+  if (authMode === 'signup') {
+    box.innerHTML = `
+      <div style="text-align:center;font-size:36px;margin-bottom:8px">💘</div>
+      <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px">Create Account</h3>
+      <p style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px">Join 5,000+ Indians mastering dating — free!</p>
 
-  if (mode === 'signup') {
-    closeSignUpModal();
-    showToast('Google se connect ho raha hai... 🔄');
-    setTimeout(() => initUser(googleName, googleEmail), 800);
-  } else {
-    const saved = localStorage.getItem(`rz_accounts`);
-    closeSignInModal();
-    showToast('Google se sign in ho raha hai... 🔄');
-    setTimeout(() => initUser(googleName, googleEmail), 800);
+      <button class="btn-google-modal" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px;flex-shrink:0"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
+
+      <div class="modal-divider"><span>or sign up with email</span></div>
+
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input id="mName" class="form-input" placeholder="Rahul Kumar" type="text">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="mEmail" class="form-input" placeholder="rahul@gmail.com" type="email">
+      </div>
+      <div class="form-group" style="position:relative">
+        <label class="form-label">Password</label>
+        <input id="mPass" class="form-input" placeholder="Min 6 characters" type="password" style="padding-right:44px">
+        <span onclick="togglePass('mPass',this)" style="position:absolute;right:14px;top:38px;cursor:pointer;color:var(--muted);font-size:16px">👁</span>
+      </div>
+
+      <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">Create Account →</button>
+      <p style="text-align:center;font-size:13px;color:var(--muted)">Already have an account? <a href="#" onclick="openAuthModal('login')" style="color:var(--pink);font-weight:700;text-decoration:none">Sign In</a></p>
+    `;
+  } else if (authMode === 'login') {
+    box.innerHTML = `
+      <div style="text-align:center;font-size:36px;margin-bottom:8px">👋</div>
+      <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px">Welcome Back!</h3>
+      <p style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px">Sign in to continue your practice</p>
+
+      <button class="btn-google-modal" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px;flex-shrink:0"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
+
+      <div class="modal-divider"><span>or sign in with email</span></div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="mEmail" class="form-input" placeholder="rahul@gmail.com" type="email">
+      </div>
+      <div class="form-group" style="position:relative">
+        <label class="form-label">Password</label>
+        <input id="mPass" class="form-input" placeholder="Your password" type="password" style="padding-right:44px">
+        <span onclick="togglePass('mPass',this)" style="position:absolute;right:14px;top:38px;cursor:pointer;color:var(--muted);font-size:16px">👁</span>
+      </div>
+
+      <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doLogin()">Sign In →</button>
+      <p style="text-align:center;font-size:13px;color:var(--muted)">Don't have an account? <a href="#" onclick="openAuthModal('signup')" style="color:var(--pink);font-weight:700;text-decoration:none">Sign Up Free</a></p>
+    `;
   }
 }
 
-// ============ SIGN UP ============
-function doSignup() {
-  const name = $('#suName') ? $('#suName').value.trim() : '';
-  const email = $('#suEmail') ? $('#suEmail').value.trim() : '';
-  const password = $('#suPassword') ? $('#suPassword').value.trim() : '';
-
-  if (!name) { showToast('Apna naam toh daalo! 😅', 'error'); return; }
-  if (!email || !email.includes('@')) { showToast('Valid email chahiye! 📧', 'error'); return; }
-  if (!password || password.length < 6) { showToast('Password kam se kam 6 characters ka hona chahiye!', 'error'); return; }
-
-  // Save account
-  const accounts = JSON.parse(localStorage.getItem('rz_accounts') || '{}');
-  if (accounts[email]) { showToast('Ye email already registered hai! Sign In karo.', 'error'); return; }
-  accounts[email] = { name, password: btoa(password) };
-  localStorage.setItem('rz_accounts', JSON.stringify(accounts));
-
-  closeSignUpModal();
-  initUser(name, email);
+function togglePass(id, icon) {
+  const inp = $(`#${id}`);
+  if (inp.type === 'password') { inp.type = 'text'; icon.textContent = '🙈'; }
+  else { inp.type = 'password'; icon.textContent = '👁'; }
 }
 
-// ============ SIGN IN ============
-function doSignIn() {
-  const email = $('#siEmail') ? $('#siEmail').value.trim() : '';
-  const password = $('#siPassword') ? $('#siPassword').value.trim() : '';
-
-  if (!email) { showToast('Email daalo! 📧', 'error'); return; }
-  if (!password) { showToast('Password daalo!', 'error'); return; }
-
-  const accounts = JSON.parse(localStorage.getItem('rz_accounts') || '{}');
-  const account = accounts[email];
-
-  if (!account) { showToast('Account nahi mila. Pehle Sign Up karo!', 'error'); return; }
-  if (account.password !== btoa(password)) { showToast('Password galat hai! 🔒', 'error'); return; }
-
-  closeSignInModal();
-  initUser(account.name, email);
+function setAuthLoading(btn, loading, text) {
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.textContent = loading ? '...' : text;
 }
 
-// ============ INIT USER ============
-function initUser(name, email) {
-  state.user = { id: btoa(email).replace(/[^a-zA-Z0-9]/g,''), name, email };
-  loadUserData();
+// ============ SUPABASE AUTH FUNCTIONS ============
 
-  const today = new Date().toDateString();
-  if (localStorage.getItem(`rz_d_${state.user.id}`) !== today) {
-    state.minsUsed = 0;
-    localStorage.setItem(`rz_d_${state.user.id}`, today);
+async function signInWithGoogle() {
+  try {
+    const { error } = await sb.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+    if (error) { showToast('Google sign-in failed: ' + error.message, 'error'); }
+  } catch(e) {
+    showToast('Google sign-in error. Try again!', 'error');
   }
+}
 
+async function doSignup() {
+  const name = $('#mName')?.value.trim();
+  const email = $('#mEmail')?.value.trim();
+  const pass = $('#mPass')?.value;
+
+  if (!name) { showToast('Naam toh bolo! 😄', 'error'); return; }
+  if (!email || !email.includes('@')) { showToast('Valid email chahiye!', 'error'); return; }
+  if (!pass || pass.length < 6) { showToast('Password kam se kam 6 characters ka ho!', 'error'); return; }
+
+  const btn = document.querySelector('#authModalBox .btn-primary');
+  setAuthLoading(btn, true, 'Creating Account →');
+
+  try {
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password: pass,
+      options: { data: { name } }
+    });
+
+    if (error) {
+      showToast(error.message, 'error');
+      setAuthLoading(btn, false, 'Create Account →');
+      return;
+    }
+
+    if (data.user && !data.session) {
+      // Email confirmation required
+      $('#authModalBox').innerHTML = `
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:48px;margin-bottom:16px">📧</div>
+          <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px">Check Your Email!</h3>
+          <p style="color:var(--muted);font-size:14px;line-height:1.6">Confirmation link bhej diya <strong>${email}</strong> pe.<br>Link click karo aur login karo!</p>
+          <button class="btn-primary" style="width:100%;margin-top:20px" onclick="openAuthModal('login')">Go to Sign In</button>
+        </div>`;
+    } else if (data.session) {
+      // Auto-confirmed
+      await onUserLoggedIn(data.user, name);
+    }
+  } catch(e) {
+    showToast('Signup error. Try again!', 'error');
+    setAuthLoading(btn, false, 'Create Account →');
+  }
+}
+
+async function doLogin() {
+  const email = $('#mEmail')?.value.trim();
+  const pass = $('#mPass')?.value;
+
+  if (!email) { showToast('Email daalo!', 'error'); return; }
+  if (!pass) { showToast('Password daalo!', 'error'); return; }
+
+  const btn = document.querySelector('#authModalBox .btn-primary');
+  setAuthLoading(btn, true, 'Signing In →');
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+
+    if (error) {
+      const msg = error.message.includes('Invalid') ? 'Wrong email ya password!' : error.message;
+      showToast(msg, 'error');
+      setAuthLoading(btn, false, 'Sign In →');
+      return;
+    }
+
+    await onUserLoggedIn(data.user);
+  } catch(e) {
+    showToast('Login error. Try again!', 'error');
+    setAuthLoading(btn, false, 'Sign In →');
+  }
+}
+
+async function onUserLoggedIn(authUser, fallbackName = null) {
+  const name = authUser.user_metadata?.name ||
+               authUser.user_metadata?.full_name ||
+               fallbackName ||
+               authUser.email?.split('@')[0] ||
+               'User';
+
+  state.user = {
+    id: authUser.id,
+    name,
+    email: authUser.email
+  };
+
+  // Upsert user in DB
+  await sb.from('users').upsert({
+    id: authUser.id,
+    email: authUser.email,
+    name,
+    plan: 'free',
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'id', ignoreDuplicates: true });
+
+  // Load saved data
+  await loadUserDataFromDB();
+
+  closeAuthModal();
   $('#landingView').style.display = 'none';
   $('#appView').style.display = 'block';
   buildApp();
   showToast(`Welcome, ${name.split(' ')[0]}! 🚀 Let's gooo`, 'success');
 }
 
-function loadUserData() {
-  const saved = localStorage.getItem(`rz_${state.user.id}`);
-  if (saved) {
-    try {
-      const d = JSON.parse(saved);
-      state.plan = d.plan || 'free';
-      state.minsUsed = d.minsUsed || 0;
-      state.totalMsgs = d.totalMsgs || 0;
-      state.sessions = d.sessions || 0;
-    } catch(e) {}
+async function loadUserDataFromDB() {
+  if (!state.user) return;
+  try {
+    const { data } = await sb.from('users').select('*').eq('id', state.user.id).single();
+    if (data) {
+      state.plan = data.plan || 'free';
+      state.minsUsed = data.mins_used || 0;
+      state.totalMsgs = data.total_msgs || 0;
+      state.sessions = data.sessions || 0;
+    }
+  } catch(e) {
+    // Fallback to localStorage
+    const saved = localStorage.getItem(`rz_${state.user.id}`);
+    if (saved) {
+      try {
+        const d = JSON.parse(saved);
+        state.plan = d.plan || 'free';
+        state.minsUsed = d.minsUsed || 0;
+        state.totalMsgs = d.totalMsgs || 0;
+        state.sessions = d.sessions || 0;
+      } catch(e2) {}
+    }
   }
+
   const sc = localStorage.getItem(`rz_sc_${state.user.id}`);
   if (sc && SCENARIOS[sc]) state.currentScenario = sc;
 }
 
-function saveUserData() {
+async function saveUserData() {
   if (!state.user) return;
+  // Save to localStorage always
   localStorage.setItem(`rz_${state.user.id}`, JSON.stringify({
     plan: state.plan, minsUsed: state.minsUsed,
     totalMsgs: state.totalMsgs, sessions: state.sessions
   }));
   localStorage.setItem(`rz_sc_${state.user.id}`, state.currentScenario);
+  // Also try DB
+  try {
+    await sb.from('users').update({
+      plan: state.plan,
+      mins_used: Math.floor(state.minsUsed),
+      total_msgs: state.totalMsgs,
+      sessions: state.sessions,
+      updated_at: new Date().toISOString()
+    }).eq('id', state.user.id);
+  } catch(e) {}
+}
+
+async function doLogout() {
+  await saveUserData();
+  await sb.auth.signOut();
+  state = { ...state, user: null, history: [], plan: 'free', minsUsed: 0, totalMsgs: 0, sessions: 0 };
+  $('#appView').style.display = 'none';
+  $('#landingView').style.display = 'block';
+  showToast('Logged out! Phir milenge 👋');
 }
 
 setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
 
-function doLogout() {
-  saveUserData();
-  state = { user: null, plan: 'free', minsUsed: 0, totalMsgs: 0, sessions: 0, currentScenario: 'first_date', history: [], loading: false };
-  $('#appView').style.display = 'none';
-  $('#landingView').style.display = 'block';
+// ============ SESSION RESTORE on page load ============
+(async function initAuth() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    await onUserLoggedIn(session.user);
+  }
+
+  // Listen for auth changes (Google OAuth callback lands here)
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user && !state.user) {
+      await onUserLoggedIn(session.user);
+    }
+    if (event === 'SIGNED_OUT') {
+      state.user = null;
+    }
+  });
+})();
+
+// ============ LANDING PAGE ============
+function switchFeature(el, idx) {
+  $$('.feat-tab').forEach(t => t.classList.remove('active'));
+  $$('.preview-card').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById(`prev-${idx}`).classList.add('active');
+}
+
+function toggleFaq(el) {
+  el.parentElement.classList.toggle('open');
 }
 
 // ============ APP BUILD ============
@@ -271,7 +434,6 @@ function buildApp() {
   $('#dashGreet').textContent = `Hey ${name}! 👋`;
   $('#appPlanBadge').textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
   buildDashboardScenarios();
-  buildDashboardCoursePreview();
   buildChatSidebar();
   buildCourse();
   buildAppPlans();
@@ -317,24 +479,6 @@ function buildDashboardScenarios() {
       <span class="asc-badge ${sc.free ? 'asc-free' : 'asc-pro'}">${sc.free ? 'Free' : locked ? '🔒 Pro' : '✓ Unlocked'}</span>`;
     c.appendChild(el);
   });
-}
-
-function buildDashboardCoursePreview() {
-  const c = $('#dashCoursePreview'); if (!c) return;
-  const previewDays = COURSE_DAYS.slice(0, 3);
-  c.innerHTML = previewDays.map(day => {
-    const cls = day.done ? 'cd-done' : day.cur ? 'cd-cur' : 'cd-default';
-    const icon = day.done ? '✓' : day.day;
-    const locked = !day.free && state.plan === 'free';
-    return `<div class="cd-row" style="margin-bottom:8px;cursor:pointer;background:white;border:1px solid var(--border);border-radius:12px;padding:14px 16px" onclick="switchPanel(document.querySelectorAll('.app-nav-btn')[2],'course')">
-      <div class="cd-num ${cls}">${locked ? '🔒' : icon}</div>
-      <div class="cd-info">
-        <div class="cd-t">${day.title}</div>
-        <div class="cd-s">${day.subtitle} · ${day.free ? 'Free' : 'Starter+'}</div>
-      </div>
-      <div style="margin-left:auto;font-size:12px;color:var(--pink);font-weight:700">${day.cur ? '▶ Continue' : day.done ? '✓ Done' : 'Start'}</div>
-    </div>`;
-  }).join('');
 }
 
 function buildChatSidebar() {
@@ -428,7 +572,7 @@ function hideTyping() {
   const r = $('#typingRow'); if (r) r.remove();
 }
 
-// ============ CLAUDE API CALL ============
+// ============ CLAUDE API ============
 async function callClaude(messages, systemPrompt) {
   const response = await fetch(CONFIG.API_URL, {
     method: 'POST',
@@ -441,7 +585,7 @@ async function callClaude(messages, systemPrompt) {
       model: CONFIG.MODEL,
       max_tokens: CONFIG.MAX_TOKENS,
       system: systemPrompt,
-      messages: messages
+      messages
     })
   });
   if (!response.ok) {
@@ -483,17 +627,13 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const reply = await callClaude(
-      state.history,
-      SCENARIOS[state.currentScenario].system
-    );
+    const reply = await callClaude(state.history, SCENARIOS[state.currentScenario].system);
     hideTyping();
     state.history.push({ role: 'assistant', content: reply });
     addBubble('ai', reply);
   } catch(e) {
     hideTyping();
-    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' :
-                'Connection issue. Try again! 🔄';
+    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' : 'Connection issue. Try again! 🔄';
     addBubble('ai', msg);
     showToast(msg, 'error');
   }
@@ -514,9 +654,7 @@ async function getCoach() {
   showTyping();
 
   const sc = SCENARIOS[state.currentScenario];
-  const convo = state.history
-    .map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`)
-    .join('\n');
+  const convo = state.history.map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`).join('\n');
 
   const coachPrompt = `You are an expert Indian dating coach. Analyze this ${sc.label} conversation and give sharp, warm Hinglish feedback.
 
@@ -542,7 +680,6 @@ Be direct, fun, warm. Hinglish only. No generic advice.`;
     hideTyping();
     addCoachCard('Coach unavailable right now. Try again! 🔄');
   }
-
   state.loading = false;
 }
 
@@ -578,7 +715,7 @@ function buildCourse() {
   c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:20px 0 12px;display:flex;align-items:center;gap:10px">WEEK 2–4 — STARTER+ <span style="flex:1;height:1px;background:var(--border);display:block"></span></div>`;
   week2.forEach(day => {
     const locked = state.plan === 'free';
-    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked?'not-allowed':'pointer'};opacity:${locked?'0.5':'1'}" onclick="${locked?`switchPanel(document.querySelectorAll('.app-nav-btn')[3],'upgrade')`:`showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked?'🔒':day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked?'Unlock Starter':'Unlocked'}</div></div></div>`;
+    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked?'not-allowed':'pointer'};opacity:${locked?'0.5':'1'}" onclick="${locked?`switchPanel($$('.app-nav-btn')[3],'upgrade')`:`showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked?'🔒':day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked?'Unlock Starter':'Unlocked'}</div></div></div>`;
   });
 }
 
@@ -634,23 +771,11 @@ function unlockDemo(plan) {
   state.plan = plan;
   saveUserData();
   buildApp();
-  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked! Sab scenarios open hai!`, 'success');
+  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked!`, 'success');
   switchPanel($$('.app-nav-btn')[0], 'dashboard');
-}
-
-// ============ LANDING PAGE ============
-function switchFeature(el, idx) {
-  $$('.feat-tab').forEach(t => t.classList.remove('active'));
-  $$('.preview-card').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById(`prev-${idx}`).classList.add('active');
-}
-
-function toggleFaq(el) {
-  el.parentElement.classList.toggle('open');
 }
 
 // ============ KEYBOARD ============
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { closeSignUpModal(); closeSignInModal(); }
+  if (e.key === 'Escape') closeAuthModal();
 });
