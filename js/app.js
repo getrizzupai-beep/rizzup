@@ -13,9 +13,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============ CONFIG ============
 const CONFIG = {
-  API_URL: 'https://api.anthropic.com/v1/messages',
-  MODEL: 'claude-sonnet-4-20250514',
-  MAX_TOKENS: 600,
+  GEMINI_API_KEY: 'AIzaSyCMY0Vqg2t7Q_ZFgp0Eb9tpJ9mINME4XK4',
+  GEMINI_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
   MAX_CHARS: 500,
   AUTO_SAVE_INTERVAL: 30000,
 };
@@ -515,7 +514,7 @@ function switchScenario(key) {
 function initChat() {
   updateChatHeader();
   const opening = OPENING_MESSAGES[state.currentScenario];
-  state.history = [{ role: 'assistant', content: opening }];
+  state.history = [{ role: 'model', content: opening }];
   addBubble('ai', opening);
 
   const sugs = SCENARIOS[state.currentScenario].suggestions || [];
@@ -627,9 +626,9 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const reply = await callClaude(state.history, SCENARIOS[state.currentScenario].system);
+    const reply = await callGemini(state.history, SCENARIOS[state.currentScenario].system);
     hideTyping();
-    state.history.push({ role: 'assistant', content: reply });
+    state.history.push({ role: 'model', content: reply });
     addBubble('ai', reply);
   } catch(e) {
     hideTyping();
@@ -670,7 +669,7 @@ Reply EXACTLY in this format (max 90 words total):
 Be direct, fun, warm. Hinglish only. No generic advice.`;
 
   try {
-    const reply = await callClaude(
+    const reply = await callGemini(
       [{ role: 'user', content: coachPrompt }],
       'You are a sharp, warm Indian dating coach. Give advice in Hinglish. Always use the exact format asked.'
     );
