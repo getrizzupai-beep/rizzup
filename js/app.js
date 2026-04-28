@@ -13,8 +13,9 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============ CONFIG ============
 const CONFIG = {
-  GEMINI_API_KEY: 'AIzaSyBbTbBv2eJG8rOdyOLeIT9hiit0XqCIsPA',
-  GEMINI_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+  GROQ_API_KEY: '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',
+  GROQ_URL: 'https://api.groq.com/openai/v1/chat/completions',
+  GROQ_MODEL: 'llama-3.1-8b-instant',
   MAX_CHARS: 500,
   AUTO_SAVE_INTERVAL: 30000,
 };
@@ -626,7 +627,7 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const reply = await callGemini(state.history, SCENARIOS[state.currentScenario].system);
+    const reply = await callGroq(state.history, SCENARIOS[state.currentScenario].system);
     hideTyping();
     state.history.push({ role: 'model', content: reply });
     addBubble('ai', reply);
@@ -669,7 +670,7 @@ Reply EXACTLY in this format (max 90 words total):
 Be direct, fun, warm. Hinglish only. No generic advice.`;
 
   try {
-    const reply = await callGemini(
+    const reply = await callGroq(
       [{ role: 'user', content: coachPrompt }],
       'You are a sharp, warm Indian dating coach. Give advice in Hinglish. Always use the exact format asked.'
     );
