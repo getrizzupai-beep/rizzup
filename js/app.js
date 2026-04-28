@@ -13,7 +13,7 @@ const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============ CONFIG ============
 const CONFIG = {
-  GEMINI_API_KEY: 'AIzaSyCMY0Vqg2t7Q_ZFgp0Eb9tpJ9mINME4XK4',
+  GEMINI_API_KEY: 'AIzaSyBbTbBv2eJG8rOdyOLeIT9hiit0XqCIsPA',
   GEMINI_URL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
   MAX_CHARS: 500,
   AUTO_SAVE_INTERVAL: 30000,
