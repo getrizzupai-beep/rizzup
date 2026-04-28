@@ -573,27 +573,22 @@ function hideTyping() {
 }
 
 // ============ CLAUDE API ============
-async function callClaude(messages, systemPrompt) {
-  const response = await fetch(CONFIG.API_URL, {
+async function callGroq(history, systemPrompt) {
+  const messages = history.map(m => ({
+    role: (m.role === 'model' || m.role === 'assistant') ? 'assistant' : 'user',
+    content: m.content
+  }));
+  const response = await fetch('/api/chat', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: CONFIG.MODEL,
-      max_tokens: CONFIG.MAX_TOKENS,
-      system: systemPrompt,
-      messages
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, system: systemPrompt })
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error(err.error?.message || `HTTP ${response.status}`);
   }
   const data = await response.json();
-  return data.content?.[0]?.text || '';
+  return data.choices?.[0]?.message?.content || '';
 }
 
 async function sendMessage() {
