@@ -1,21 +1,11 @@
 /**
  * RizzUp AI — app.js
- * Full Supabase Auth: Email/Password + Google OAuth
+ * Fixed: Uses /api/chat proxy (Groq) instead of direct Anthropic call
  */
-
-// ============ SUPABASE INIT ============
-const SUPABASE_URL = 'https://xzdjxvitqktsfeuzshik.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW';
-
-// Load Supabase from CDN (added in index.html <head>)
-const { createClient } = supabase;
-const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============ CONFIG ============
 const CONFIG = {
-  GROQ_API_KEY: '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',
-  GROQ_URL: 'https://api.groq.com/openai/v1/chat/completions',
-  GROQ_MODEL: 'llama-3.1-8b-instant',
+  MAX_TOKENS: 600,
   MAX_CHARS: 500,
   AUTO_SAVE_INTERVAL: 30000,
 };
@@ -128,15 +118,10 @@ function showToast(message, type = 'default') {
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-// ============ AUTH MODAL ============
-let authMode = 'signup'; // 'signup' | 'login' | 'otp'
-
-function openAuthModal(mode = 'signup') {
-  authMode = mode;
-  renderAuthModal();
+// ============ LANDING PAGE ============
+function openAuthModal() {
   $('#authModal').classList.add('open');
 }
-
 function closeAuthModal() {
   $('#authModal').classList.remove('open');
 }
@@ -145,278 +130,6 @@ $('#authModal').addEventListener('click', (e) => {
   if (e.target === $('#authModal')) closeAuthModal();
 });
 
-function renderAuthModal() {
-  const box = $('#authModalBox');
-  if (!box) return;
-
-  if (authMode === 'signup') {
-    box.innerHTML = `
-      <div style="text-align:center;font-size:36px;margin-bottom:8px">💘</div>
-      <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px">Create Account</h3>
-      <p style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px">Join 5,000+ Indians mastering dating — free!</p>
-
-      <button class="btn-google-modal" onclick="signInWithGoogle()">
-        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px;flex-shrink:0"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-        Continue with Google
-      </button>
-
-      <div class="modal-divider"><span>or sign up with email</span></div>
-
-      <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input id="mName" class="form-input" placeholder="Rahul Kumar" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="mEmail" class="form-input" placeholder="rahul@gmail.com" type="email">
-      </div>
-      <div class="form-group" style="position:relative">
-        <label class="form-label">Password</label>
-        <input id="mPass" class="form-input" placeholder="Min 6 characters" type="password" style="padding-right:44px">
-        <span onclick="togglePass('mPass',this)" style="position:absolute;right:14px;top:38px;cursor:pointer;color:var(--muted);font-size:16px">👁</span>
-      </div>
-
-      <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">Create Account →</button>
-      <p style="text-align:center;font-size:13px;color:var(--muted)">Already have an account? <a href="#" onclick="openAuthModal('login')" style="color:var(--pink);font-weight:700;text-decoration:none">Sign In</a></p>
-    `;
-  } else if (authMode === 'login') {
-    box.innerHTML = `
-      <div style="text-align:center;font-size:36px;margin-bottom:8px">👋</div>
-      <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:22px;font-weight:800;text-align:center;margin-bottom:4px">Welcome Back!</h3>
-      <p style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px">Sign in to continue your practice</p>
-
-      <button class="btn-google-modal" onclick="signInWithGoogle()">
-        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px;flex-shrink:0"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z"/><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-        Continue with Google
-      </button>
-
-      <div class="modal-divider"><span>or sign in with email</span></div>
-
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="mEmail" class="form-input" placeholder="rahul@gmail.com" type="email">
-      </div>
-      <div class="form-group" style="position:relative">
-        <label class="form-label">Password</label>
-        <input id="mPass" class="form-input" placeholder="Your password" type="password" style="padding-right:44px">
-        <span onclick="togglePass('mPass',this)" style="position:absolute;right:14px;top:38px;cursor:pointer;color:var(--muted);font-size:16px">👁</span>
-      </div>
-
-      <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doLogin()">Sign In →</button>
-      <p style="text-align:center;font-size:13px;color:var(--muted)">Don't have an account? <a href="#" onclick="openAuthModal('signup')" style="color:var(--pink);font-weight:700;text-decoration:none">Sign Up Free</a></p>
-    `;
-  }
-}
-
-function togglePass(id, icon) {
-  const inp = $(`#${id}`);
-  if (inp.type === 'password') { inp.type = 'text'; icon.textContent = '🙈'; }
-  else { inp.type = 'password'; icon.textContent = '👁'; }
-}
-
-function setAuthLoading(btn, loading, text) {
-  if (!btn) return;
-  btn.disabled = loading;
-  btn.textContent = loading ? '...' : text;
-}
-
-// ============ SUPABASE AUTH FUNCTIONS ============
-
-async function signInWithGoogle() {
-  try {
-    const { error } = await sb.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
-    if (error) { showToast('Google sign-in failed: ' + error.message, 'error'); }
-  } catch(e) {
-    showToast('Google sign-in error. Try again!', 'error');
-  }
-}
-
-async function doSignup() {
-  const name = $('#mName')?.value.trim();
-  const email = $('#mEmail')?.value.trim();
-  const pass = $('#mPass')?.value;
-
-  if (!name) { showToast('Naam toh bolo! 😄', 'error'); return; }
-  if (!email || !email.includes('@')) { showToast('Valid email chahiye!', 'error'); return; }
-  if (!pass || pass.length < 6) { showToast('Password kam se kam 6 characters ka ho!', 'error'); return; }
-
-  const btn = document.querySelector('#authModalBox .btn-primary');
-  setAuthLoading(btn, true, 'Creating Account →');
-
-  try {
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password: pass,
-      options: { data: { name } }
-    });
-
-    if (error) {
-      showToast(error.message, 'error');
-      setAuthLoading(btn, false, 'Create Account →');
-      return;
-    }
-
-    if (data.user && !data.session) {
-      // Email confirmation required
-      $('#authModalBox').innerHTML = `
-        <div style="text-align:center;padding:20px 0">
-          <div style="font-size:48px;margin-bottom:16px">📧</div>
-          <h3 style="font-family:'Bricolage Grotesque',sans-serif;font-size:20px;font-weight:800;margin-bottom:8px">Check Your Email!</h3>
-          <p style="color:var(--muted);font-size:14px;line-height:1.6">Confirmation link bhej diya <strong>${email}</strong> pe.<br>Link click karo aur login karo!</p>
-          <button class="btn-primary" style="width:100%;margin-top:20px" onclick="openAuthModal('login')">Go to Sign In</button>
-        </div>`;
-    } else if (data.session) {
-      // Auto-confirmed
-      await onUserLoggedIn(data.user, name);
-    }
-  } catch(e) {
-    showToast('Signup error. Try again!', 'error');
-    setAuthLoading(btn, false, 'Create Account →');
-  }
-}
-
-async function doLogin() {
-  const email = $('#mEmail')?.value.trim();
-  const pass = $('#mPass')?.value;
-
-  if (!email) { showToast('Email daalo!', 'error'); return; }
-  if (!pass) { showToast('Password daalo!', 'error'); return; }
-
-  const btn = document.querySelector('#authModalBox .btn-primary');
-  setAuthLoading(btn, true, 'Signing In →');
-
-  try {
-    const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
-
-    if (error) {
-      const msg = error.message.includes('Invalid') ? 'Wrong email ya password!' : error.message;
-      showToast(msg, 'error');
-      setAuthLoading(btn, false, 'Sign In →');
-      return;
-    }
-
-    await onUserLoggedIn(data.user);
-  } catch(e) {
-    showToast('Login error. Try again!', 'error');
-    setAuthLoading(btn, false, 'Sign In →');
-  }
-}
-
-async function onUserLoggedIn(authUser, fallbackName = null) {
-  const name = authUser.user_metadata?.name ||
-               authUser.user_metadata?.full_name ||
-               fallbackName ||
-               authUser.email?.split('@')[0] ||
-               'User';
-
-  state.user = {
-    id: authUser.id,
-    name,
-    email: authUser.email
-  };
-
-  // Upsert user in DB
-  await sb.from('users').upsert({
-    id: authUser.id,
-    email: authUser.email,
-    name,
-    plan: 'free',
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'id', ignoreDuplicates: true });
-
-  // Load saved data
-  await loadUserDataFromDB();
-
-  closeAuthModal();
-  $('#landingView').style.display = 'none';
-  $('#appView').style.display = 'block';
-  buildApp();
-  showToast(`Welcome, ${name.split(' ')[0]}! 🚀 Let's gooo`, 'success');
-}
-
-async function loadUserDataFromDB() {
-  if (!state.user) return;
-  try {
-    const { data } = await sb.from('users').select('*').eq('id', state.user.id).single();
-    if (data) {
-      state.plan = data.plan || 'free';
-      state.minsUsed = data.mins_used || 0;
-      state.totalMsgs = data.total_msgs || 0;
-      state.sessions = data.sessions || 0;
-    }
-  } catch(e) {
-    // Fallback to localStorage
-    const saved = localStorage.getItem(`rz_${state.user.id}`);
-    if (saved) {
-      try {
-        const d = JSON.parse(saved);
-        state.plan = d.plan || 'free';
-        state.minsUsed = d.minsUsed || 0;
-        state.totalMsgs = d.totalMsgs || 0;
-        state.sessions = d.sessions || 0;
-      } catch(e2) {}
-    }
-  }
-
-  const sc = localStorage.getItem(`rz_sc_${state.user.id}`);
-  if (sc && SCENARIOS[sc]) state.currentScenario = sc;
-}
-
-async function saveUserData() {
-  if (!state.user) return;
-  // Save to localStorage always
-  localStorage.setItem(`rz_${state.user.id}`, JSON.stringify({
-    plan: state.plan, minsUsed: state.minsUsed,
-    totalMsgs: state.totalMsgs, sessions: state.sessions
-  }));
-  localStorage.setItem(`rz_sc_${state.user.id}`, state.currentScenario);
-  // Also try DB
-  try {
-    await sb.from('users').update({
-      plan: state.plan,
-      mins_used: Math.floor(state.minsUsed),
-      total_msgs: state.totalMsgs,
-      sessions: state.sessions,
-      updated_at: new Date().toISOString()
-    }).eq('id', state.user.id);
-  } catch(e) {}
-}
-
-async function doLogout() {
-  await saveUserData();
-  await sb.auth.signOut();
-  state = { ...state, user: null, history: [], plan: 'free', minsUsed: 0, totalMsgs: 0, sessions: 0 };
-  $('#appView').style.display = 'none';
-  $('#landingView').style.display = 'block';
-  showToast('Logged out! Phir milenge 👋');
-}
-
-setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
-
-// ============ SESSION RESTORE on page load ============
-(async function initAuth() {
-  const { data: { session } } = await sb.auth.getSession();
-  if (session?.user) {
-    await onUserLoggedIn(session.user);
-  }
-
-  // Listen for auth changes (Google OAuth callback lands here)
-  sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session?.user && !state.user) {
-      await onUserLoggedIn(session.user);
-    }
-    if (event === 'SIGNED_OUT') {
-      state.user = null;
-    }
-  });
-})();
-
-// ============ LANDING PAGE ============
 function switchFeature(el, idx) {
   $$('.feat-tab').forEach(t => t.classList.remove('active'));
   $$('.preview-card').forEach(p => p.classList.remove('active'));
@@ -426,6 +139,67 @@ function switchFeature(el, idx) {
 
 function toggleFaq(el) {
   el.parentElement.classList.toggle('open');
+}
+
+// ============ AUTH ============
+function doSignup() {
+  const name = $('#mName').value.trim() || 'User';
+  const email = $('#mEmail').value.trim() || 'user@rizzup.in';
+  initUser(name, email);
+}
+
+function quickSignup() {
+  initUser('Rahul', 'rahul@rizzup.in');
+}
+
+function initUser(name, email) {
+  state.user = { id: btoa(email).replace(/=/g,''), name, email };
+  loadUserData();
+
+  const today = new Date().toDateString();
+  if (localStorage.getItem(`rz_d_${state.user.id}`) !== today) {
+    state.minsUsed = 0;
+    localStorage.setItem(`rz_d_${state.user.id}`, today);
+  }
+
+  closeAuthModal();
+  $('#landingView').style.display = 'none';
+  $('#appView').style.display = 'block';
+  buildApp();
+  showToast(`Welcome, ${name.split(' ')[0]}! 🚀 Let's gooo`, 'success');
+}
+
+function loadUserData() {
+  const saved = localStorage.getItem(`rz_${state.user.id}`);
+  if (saved) {
+    try {
+      const d = JSON.parse(saved);
+      state.plan = d.plan || 'free';
+      state.minsUsed = d.minsUsed || 0;
+      state.totalMsgs = d.totalMsgs || 0;
+      state.sessions = d.sessions || 0;
+    } catch(e) {}
+  }
+  const sc = localStorage.getItem(`rz_sc_${state.user.id}`);
+  if (sc && SCENARIOS[sc]) state.currentScenario = sc;
+}
+
+function saveUserData() {
+  if (!state.user) return;
+  localStorage.setItem(`rz_${state.user.id}`, JSON.stringify({
+    plan: state.plan, minsUsed: state.minsUsed,
+    totalMsgs: state.totalMsgs, sessions: state.sessions
+  }));
+  localStorage.setItem(`rz_sc_${state.user.id}`, state.currentScenario);
+}
+
+setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
+
+function doLogout() {
+  saveUserData();
+  state = { ...state, user: null, history: [] };
+  $('#appView').style.display = 'none';
+  $('#landingView').style.display = 'block';
 }
 
 // ============ APP BUILD ============
@@ -515,7 +289,7 @@ function switchScenario(key) {
 function initChat() {
   updateChatHeader();
   const opening = OPENING_MESSAGES[state.currentScenario];
-  state.history = [{ role: 'model', content: opening }];
+  state.history = [{ role: 'assistant', content: opening }];
   addBubble('ai', opening);
 
   const sugs = SCENARIOS[state.currentScenario].suggestions || [];
@@ -572,7 +346,7 @@ function hideTyping() {
   const r = $('#typingRow'); if (r) r.remove();
 }
 
-// ============ CLAUDE API CALL ============
+// ============ API CALL (via /api/chat proxy) ============
 async function callClaude(messages, systemPrompt) {
   const response = await fetch('/api/chat', {
     method: 'POST',
@@ -586,22 +360,11 @@ async function callClaude(messages, systemPrompt) {
   }
 
   const data = await response.json();
-  // Groq/OpenAI format: choices[0].message.content
-  return data.choices?.[0]?.message?.content || '';
-}
-  const response = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, system: systemPrompt })
-  });
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({}));
-    throw new Error(err.error?.message || `HTTP ${response.status}`);
-  }
-  const data = await response.json();
+  // Groq returns OpenAI format: choices[0].message.content
   return data.choices?.[0]?.message?.content || '';
 }
 
+// ============ SEND MESSAGE ============
 async function sendMessage() {
   const input = $('#chatInput');
   const sendBtn = $('#sendBtn');
@@ -633,13 +396,25 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const reply = await callGroq(state.history, SCENARIOS[state.currentScenario].system);
+    const reply = await callClaude(
+      state.history,
+      SCENARIOS[state.currentScenario].system
+    );
     hideTyping();
-    state.history.push({ role: 'model', content: reply });
-    addBubble('ai', reply);
+    if (reply) {
+      state.history.push({ role: 'assistant', content: reply });
+      addBubble('ai', reply);
+    } else {
+      addBubble('ai', 'Hmm kuch hua... dobara try karo! 🔄');
+    }
   } catch(e) {
     hideTyping();
-    const msg = e.message.includes('429') ? 'Thoda ruko, bahut fast messages! ⏳' : 'Connection issue. Try again! 🔄';
+    console.error('Chat error:', e);
+    const msg = e.message.includes('429')
+      ? 'Thoda ruko, bahut fast messages! ⏳'
+      : e.message.includes('401') || e.message.includes('403')
+      ? 'API key issue — admin ko batao! 🔑'
+      : 'Connection issue. Try again! 🔄';
     addBubble('ai', msg);
     showToast(msg, 'error');
   }
@@ -650,6 +425,7 @@ async function sendMessage() {
   input.focus();
 }
 
+// ============ COACH ============
 async function getCoach() {
   if (state.loading) return;
   if (state.history.length < 3) {
@@ -660,7 +436,9 @@ async function getCoach() {
   showTyping();
 
   const sc = SCENARIOS[state.currentScenario];
-  const convo = state.history.map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`).join('\n');
+  const convo = state.history
+    .map(m => `${m.role === 'user' ? 'User' : sc.name}: ${m.content}`)
+    .join('\n');
 
   const coachPrompt = `You are an expert Indian dating coach. Analyze this ${sc.label} conversation and give sharp, warm Hinglish feedback.
 
@@ -676,7 +454,7 @@ Reply EXACTLY in this format (max 90 words total):
 Be direct, fun, warm. Hinglish only. No generic advice.`;
 
   try {
-    const reply = await callGroq(
+    const reply = await callClaude(
       [{ role: 'user', content: coachPrompt }],
       'You are a sharp, warm Indian dating coach. Give advice in Hinglish. Always use the exact format asked.'
     );
@@ -684,11 +462,14 @@ Be direct, fun, warm. Hinglish only. No generic advice.`;
     addCoachCard(reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'));
   } catch(e) {
     hideTyping();
+    console.error('Coach error:', e);
     addCoachCard('Coach unavailable right now. Try again! 🔄');
   }
+
   state.loading = false;
 }
 
+// ============ SUGGESTIONS ============
 function useSuggestion(btn) {
   const text = btn.textContent;
   const input = $('#chatInput');
@@ -777,7 +558,7 @@ function unlockDemo(plan) {
   state.plan = plan;
   saveUserData();
   buildApp();
-  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked!`, 'success');
+  showToast(`🎉 ${plan === 'pro' ? 'Pro' : 'Starter'} unlocked! Sab scenarios open hai!`, 'success');
   switchPanel($$('.app-nav-btn')[0], 'dashboard');
 }
 
