@@ -126,8 +126,14 @@ function closeAuthModal() {
   $('#authModal').classList.remove('open');
 }
 
-$('#authModal').addEventListener('click', (e) => {
-  if (e.target === $('#authModal')) closeAuthModal();
+// Safe event listener — wrapped in DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('authModal');
+  if (modal) {
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeAuthModal();
+    });
+  }
 });
 
 function switchFeature(el, idx) {
