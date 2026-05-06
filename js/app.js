@@ -1,6 +1,6 @@
 /**
  * RizzUp AI — app.js
- * Fixed: Uses /api/chat proxy (Groq) instead of direct Anthropic call
+ * Fixed: Auth modal renders form, proxy API call, all bugs fixed
  */
 
 // ============ CONFIG ============
@@ -102,9 +102,9 @@ function sanitize(str) {
 
 function formatText(text) {
   return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/\n/g,'<br>')
-    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 }
 
 function showToast(message, type = 'default') {
@@ -118,15 +118,68 @@ function showToast(message, type = 'default') {
   setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-// ============ LANDING PAGE ============
-function openAuthModal() {
-  $('#authModal').classList.add('open');
-}
-function closeAuthModal() {
-  $('#authModal').classList.remove('open');
+// ============ AUTH MODAL ============
+function openAuthModal(mode) {
+  const modal = $('#authModal');
+  const box = $('#authModalBox');
+  if (!modal || !box) return;
+
+  // Render the correct form based on mode
+  if (mode === 'signup') {
+    box.innerHTML = `
+      <h3>Create your account 🚀</h3>
+      <p>Join 5,000+ Indians already practicing with RizzUp. Free forever.</p>
+      <div class="form-group">
+        <label class="form-label">Your Name</label>
+        <input id="mName" class="form-input" type="text" placeholder="e.g. Rahul" autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="mEmail" class="form-input" type="email" placeholder="you@gmail.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input id="mPass" class="form-input" type="password" placeholder="Min 6 characters" autocomplete="new-password">
+      </div>
+      <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doSignup()">Create Account →</button>
+      <div class="modal-divider"><span>or</span></div>
+      <button class="btn-google-modal" onclick="doQuickAccess()">⚡ Quick Access (Demo)</button>
+      <p style="margin-top:16px;margin-bottom:0;font-size:13px">Already have an account? <span style="color:var(--pink);cursor:pointer;font-weight:700" onclick="openAuthModal('login')">Sign In</span></p>
+    `;
+  } else if (mode === 'login') {
+    box.innerHTML = `
+      <h3>Welcome back! 👋</h3>
+      <p>Sign in to continue your practice streak.</p>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="mEmail" class="form-input" type="email" placeholder="you@gmail.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input id="mPass" class="form-input" type="password" placeholder="Your password" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" style="width:100%;margin-bottom:12px" onclick="doLogin()">Sign In →</button>
+      <div class="modal-divider"><span>or</span></div>
+      <button class="btn-google-modal" onclick="doQuickAccess()">⚡ Quick Access (Demo)</button>
+      <p style="margin-top:16px;margin-bottom:0;font-size:13px">New here? <span style="color:var(--pink);cursor:pointer;font-weight:700" onclick="openAuthModal('signup')">Sign Up Free</span></p>
+    `;
+  }
+
+  modal.classList.add('open');
+
+  // Focus first input after render
+  setTimeout(() => {
+    const first = box.querySelector('input');
+    if (first) first.focus();
+  }, 100);
 }
 
-// Safe event listener — wrapped in DOMContentLoaded
+function closeAuthModal() {
+  const modal = $('#authModal');
+  if (modal) modal.classList.remove('open');
+}
+
+// Close on backdrop click
 document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('authModal');
   if (modal) {
@@ -140,26 +193,51 @@ function switchFeature(el, idx) {
   $$('.feat-tab').forEach(t => t.classList.remove('active'));
   $$('.preview-card').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById(`prev-${idx}`).classList.add('active');
+  const prev = document.getElementById(`prev-${idx}`);
+  if (prev) prev.classList.add('active');
 }
 
 function toggleFaq(el) {
   el.parentElement.classList.toggle('open');
 }
 
-// ============ AUTH ============
+// ============ AUTH ACTIONS ============
 function doSignup() {
-  const name = $('#mName').value.trim() || 'User';
-  const email = $('#mEmail').value.trim() || 'user@rizzup.in';
+  const name = ($('#mName') && $('#mName').value.trim()) ? $('#mName').value.trim() : 'User';
+  const email = ($('#mEmail') && $('#mEmail').value.trim()) ? $('#mEmail').value.trim() : '';
+  const pass = ($('#mPass') && $('#mPass').value.trim()) ? $('#mPass').value.trim() : '';
+
+  if (!email || !email.includes('@')) {
+    showToast('Valid email daalo! 📧', 'error'); return;
+  }
+  if (!pass || pass.length < 6) {
+    showToast('Password min 6 characters hona chahiye!', 'error'); return;
+  }
+
   initUser(name, email);
 }
 
-function quickSignup() {
-  initUser('Rahul', 'rahul@rizzup.in');
+function doLogin() {
+  const email = ($('#mEmail') && $('#mEmail').value.trim()) ? $('#mEmail').value.trim() : '';
+  const pass = ($('#mPass') && $('#mPass').value.trim()) ? $('#mPass').value.trim() : '';
+
+  if (!email || !email.includes('@')) {
+    showToast('Valid email daalo! 📧', 'error'); return;
+  }
+  if (!pass) {
+    showToast('Password daalo!', 'error'); return;
+  }
+
+  // Load from localStorage if user exists, else create
+  initUser(email.split('@')[0], email);
+}
+
+function doQuickAccess() {
+  initUser('Demo User', 'demo@rizzup.in');
 }
 
 function initUser(name, email) {
-  state.user = { id: btoa(email).replace(/=/g,''), name, email };
+  state.user = { id: btoa(email).replace(/=/g, ''), name, email };
   loadUserData();
 
   const today = new Date().toDateString();
@@ -169,8 +247,13 @@ function initUser(name, email) {
   }
 
   closeAuthModal();
-  $('#landingView').style.display = 'none';
-  $('#appView').style.display = 'block';
+
+  // Show app, hide landing — NO white screen
+  const landing = document.getElementById('landingView');
+  const app = document.getElementById('appView');
+  if (landing) landing.style.display = 'none';
+  if (app) app.style.display = 'flex';
+
   buildApp();
   showToast(`Welcome, ${name.split(' ')[0]}! 🚀 Let's gooo`, 'success');
 }
@@ -184,7 +267,7 @@ function loadUserData() {
       state.minsUsed = d.minsUsed || 0;
       state.totalMsgs = d.totalMsgs || 0;
       state.sessions = d.sessions || 0;
-    } catch(e) {}
+    } catch (e) { }
   }
   const sc = localStorage.getItem(`rz_sc_${state.user.id}`);
   if (sc && SCENARIOS[sc]) state.currentScenario = sc;
@@ -203,21 +286,35 @@ setInterval(saveUserData, CONFIG.AUTO_SAVE_INTERVAL);
 
 function doLogout() {
   saveUserData();
-  state = { ...state, user: null, history: [] };
-  $('#appView').style.display = 'none';
-  $('#landingView').style.display = 'block';
+  state = { user: null, plan: 'free', minsUsed: 0, totalMsgs: 0, sessions: 0, currentScenario: 'first_date', history: [], loading: false };
+  const app = document.getElementById('appView');
+  const landing = document.getElementById('landingView');
+  if (app) app.style.display = 'none';
+  if (landing) landing.style.display = 'block';
 }
 
 // ============ APP BUILD ============
 function buildApp() {
   const name = state.user.name.split(' ')[0];
-  $('#dashGreet').textContent = `Hey ${name}! 👋`;
-  $('#appPlanBadge').textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan];
+  const greet = document.getElementById('dashGreet');
+  const planBadge = document.getElementById('appPlanBadge');
+  if (greet) greet.textContent = `Hey ${name}! 👋`;
+  if (planBadge) planBadge.textContent = { free: 'Free Plan', starter: 'Starter Plan', pro: 'Pro Plan' }[state.plan] || 'Free Plan';
+
   buildDashboardScenarios();
   buildChatSidebar();
   buildCourse();
   buildAppPlans();
   updateDashboard();
+
+  // Show dashboard by default
+  $$('.app-panel').forEach(p => p.classList.remove('active'));
+  $$('.app-nav-btn').forEach(b => b.classList.remove('active'));
+  const dash = document.getElementById('panel-dashboard');
+  const firstBtn = document.querySelector('.app-nav-btn');
+  if (dash) dash.classList.add('active');
+  if (firstBtn) firstBtn.classList.add('active');
+
   resetChat();
   initChat();
 }
@@ -226,7 +323,8 @@ function switchPanel(btn, id) {
   $$('.app-nav-btn').forEach(b => b.classList.remove('active'));
   $$('.app-panel').forEach(p => p.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  document.getElementById(`panel-${id}`).classList.add('active');
+  const panel = document.getElementById(`panel-${id}`);
+  if (panel) panel.classList.add('active');
 }
 
 function updateDashboard() {
@@ -352,7 +450,7 @@ function hideTyping() {
   const r = $('#typingRow'); if (r) r.remove();
 }
 
-// ============ API CALL (via /api/chat proxy) ============
+// ============ API CALL — via /api/chat proxy (Groq) ============
 async function callClaude(messages, systemPrompt) {
   const response = await fetch('/api/chat', {
     method: 'POST',
@@ -366,7 +464,7 @@ async function callClaude(messages, systemPrompt) {
   }
 
   const data = await response.json();
-  // Groq returns OpenAI format: choices[0].message.content
+  // Groq returns OpenAI format
   return data.choices?.[0]?.message?.content || '';
 }
 
@@ -402,10 +500,7 @@ async function sendMessage() {
   showTyping();
 
   try {
-    const reply = await callClaude(
-      state.history,
-      SCENARIOS[state.currentScenario].system
-    );
+    const reply = await callClaude(state.history, SCENARIOS[state.currentScenario].system);
     hideTyping();
     if (reply) {
       state.history.push({ role: 'assistant', content: reply });
@@ -413,14 +508,14 @@ async function sendMessage() {
     } else {
       addBubble('ai', 'Hmm kuch hua... dobara try karo! 🔄');
     }
-  } catch(e) {
+  } catch (e) {
     hideTyping();
     console.error('Chat error:', e);
     const msg = e.message.includes('429')
       ? 'Thoda ruko, bahut fast messages! ⏳'
       : e.message.includes('401') || e.message.includes('403')
-      ? 'API key issue — admin ko batao! 🔑'
-      : 'Connection issue. Try again! 🔄';
+        ? 'API key issue — admin ko batao! 🔑'
+        : 'Connection issue. Try again! 🔄';
     addBubble('ai', msg);
     showToast(msg, 'error');
   }
@@ -466,7 +561,7 @@ Be direct, fun, warm. Hinglish only. No generic advice.`;
     );
     hideTyping();
     addCoachCard(reply.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'));
-  } catch(e) {
+  } catch (e) {
     hideTyping();
     console.error('Coach error:', e);
     addCoachCard('Coach unavailable right now. Try again! 🔄');
@@ -508,7 +603,7 @@ function buildCourse() {
   c.innerHTML += `<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:20px 0 12px;display:flex;align-items:center;gap:10px">WEEK 2–4 — STARTER+ <span style="flex:1;height:1px;background:var(--border);display:block"></span></div>`;
   week2.forEach(day => {
     const locked = state.plan === 'free';
-    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked?'not-allowed':'pointer'};opacity:${locked?'0.5':'1'}" onclick="${locked?`switchPanel($$('.app-nav-btn')[3],'upgrade')`:`showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked?'🔒':day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked?'Unlock Starter':'Unlocked'}</div></div></div>`;
+    c.innerHTML += `<div class="cd-row" style="margin-bottom:8px;cursor:${locked ? 'not-allowed' : 'pointer'};opacity:${locked ? '0.5' : '1'}" onclick="${locked ? `switchPanel(document.querySelectorAll('.app-nav-btn')[3],'upgrade')` : `showToast('Day ${day.day}: ${day.title} — Coming soon!')`}"><div class="cd-num cd-lock">${locked ? '🔒' : day.day}</div><div class="cd-info"><div class="cd-t">${day.title}</div><div class="cd-s">${day.subtitle} · ${locked ? 'Unlock Starter' : 'Unlocked'}</div></div></div>`;
   });
 }
 
