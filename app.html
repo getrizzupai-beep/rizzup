@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RizzUp AI — Practice</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Razorpay (payment ke liye) -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <!-- Our JS -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/dashboard.js"></script>
+
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+  <!-- ─── TOP NAV ──────────────────────────────────────────────── -->
+  <nav class="app-nav">
+    <div class="app-nav-inner">
+      <a href="index.html" class="nav-logo">RizzUp 💘</a>
+      <div class="nav-right">
+        <span class="plan-badge" id="nav-plan-badge">FREE</span>
+        <span class="nav-user" id="nav-user-name">User</span>
+        <button class="btn-ghost-small" id="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── MAIN LAYOUT ───────────────────────────────────────────── -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+      <button class="tab-btn active" data-tab="dashboard">🏠 Dashboard</button>
+      <button class="tab-btn" data-tab="chat">💬 Practice</button>
+      <button class="tab-btn" data-tab="course">📚 Course</button>
+      <button class="tab-btn" data-tab="upgrade">⚡ Upgrade</button>
+    </aside>
+
+    <!-- Content -->
+    <main class="app-content">
+
+      <!-- ─── DASHBOARD TAB ─────────────────────────────────────── -->
+      <div data-tab-panel="dashboard">
+        <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
+        <p class="tab-subtitle">Ready to practice today?</p>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-value"><span id="stat-mins-used">0</span>/<span id="stat-mins-limit">20</span></div>
+            <div class="stat-label">mins used today</div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="mins-progress-bar" style="width:0%"></div>
+            </div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-total-msgs">0</div>
+            <div class="stat-label">total messages</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-sessions">0</div>
+            <div class="stat-label">sessions done</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-plan">FREE</div>
+            <div class="stat-label">current plan</div>
+          </div>
+        </div>
+
+        <!-- Limit Warning -->
+        <div class="limit-warning" id="limit-warning" style="display:none;">
+          ⚠️ Daily limit reached! <button class="link-btn" onclick="Dashboard.showUpgradePrompt()">Upgrade to keep practicing →</button>
+        </div>
+
+        <!-- Scenarios -->
+        <h3 class="section-heading">Pick a Scenario</h3>
+        <div class="scenarios-grid" id="scenarios-grid">
+          <!-- JS se render hoga -->
+          <div class="loading-scenarios">Loading scenarios...</div>
+        </div>
+      </div>
+
+      <!-- ─── CHAT TAB ──────────────────────────────────────────── -->
+      <div data-tab-panel="chat" style="display:none;">
+        <!-- Chat Header -->
+        <div class="chat-header">
+          <div class="chat-persona-avatar">👩</div>
+          <div class="chat-persona-info">
+            <div class="chat-persona-name" id="chat-persona-name">Priya</div>
+            <div class="chat-persona-status" id="chat-status">Select a scenario to start</div>
+          </div>
+          <button class="btn-coach" id="btn-coach-feedback">🎯 Coach Feedback</button>
+        </div>
+
+        <!-- No scenario selected state -->
+        <div class="no-scenario-state" id="no-scenario-state">
+          <div class="no-scenario-icon">💬</div>
+          <h3>Koi scenario select karo</h3>
+          <p>Dashboard pe jaao aur ek scenario choose karo practice ke liye.</p>
+          <button class="btn-primary" data-tab="dashboard" onclick="document.querySelector('[data-tab=dashboard]').click()">
+            Go to Dashboard →
+          </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area">
+          <textarea 
+            id="chat-input" 
+            placeholder="Apna message type karo... (Enter = send, Shift+Enter = new line)"
+            rows="1"
+          ></textarea>
+          <button class="btn-send" id="btn-send">➤</button>
+        </div>
+      </div>
+
+      <!-- ─── COURSE TAB ─────────────────────────────────────────── -->
+      <div data-tab-panel="course" style="display:none;">
+        <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
+        <p class="tab-subtitle">Daily lessons to go from nervous to confident. Week 1 is free!</p>
+        <div class="course-list" id="course-list">
+          <!-- JS se render hoga -->
+        </div>
+      </div>
+
+      <!-- ─── UPGRADE TAB ────────────────────────────────────────── -->
+      <div data-tab-panel="upgrade" style="display:none;">
+        <h2 class="tab-title">Unlock Everything ⚡</h2>
+        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
+        
+        <div class="upgrade-pricing-grid">
+          <div class="upgrade-price-card popular">
+            <div class="popular-label">🔥 Most Popular</div>
+            <div class="price-name">Starter</div>
+            <div class="price-amount">₹199<span class="price-per">/mo</span></div>
+            <ul class="price-features">
+              <li>✓ 60 min AI practice/day</li>
+              <li>✓ All 6+ scenarios</li>
+              <li>✓ Full 30-day course</li>
+              <li>✓ Live coaching feedback</li>
+              <li>✓ Wingman Mode (10/mo)</li>
+            </ul>
+            <button class="btn-primary full-width" onclick="initiatePayment('starter')">Get Starter ⚡</button>
+          </div>
+          <div class="upgrade-price-card">
+            <div class="price-name">Pro</div>
+            <div class="price-amount">₹499<span class="price-per">/mo</span></div>
+            <ul class="price-features">
+              <li>✓ Unlimited voice + chat</li>
+              <li>✓ Complete 90-day course</li>
+              <li>✓ Unlimited Wingman Mode</li>
+              <li>✓ Human coach Q&A (2x/mo)</li>
+              <li>✓ Profile & bio review</li>
+            </ul>
+            <button class="btn-outline full-width" onclick="initiatePayment('pro')">Get Pro 👑</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ─── UPGRADE MODAL ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="upgrade-modal" style="display:none;">
+    <div class="modal-box">
+      <button class="modal-close" id="upgrade-modal-close">✕</button>
+      <div class="upgrade-modal-content">
+        <div class="upgrade-modal-icon">🔒</div>
+        <h3>Upgrade to Unlock</h3>
+        <p>Yeh scenario Starter plan ke liye available hai. Upgrade karke sab 6 scenarios, full course, aur Wingman Mode unlock karo!</p>
+        <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
+          Get Starter — ₹199/mo ⚡
+        </button>
+        <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">
+          Maybe later
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main JS (last mein) -->
+  <script src="js/main.js"></script>
+</body>
+</html>
