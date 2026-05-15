@@ -4,6 +4,133 @@
 // Chat events → UI update
 // Koi business logic yahan nahi hai
 
+// ─── FREE TIER RATE LIMITING ──────────────────────────────────────
+// Free users ke liye: 10 messages per 10 min, phir 10 min cooldown
+const RateLimit = (() => {
+  const STORAGE_KEY = 'rizzup_msg_window';
+
+  function _getWindow() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch { return null; }
+  }
+
+  function _saveWindow(data) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }
+
+  // Check if user can send a message. Returns { allowed: bool, cooldownSecsLeft: number }
+  function check(userPlan) {
+    // Paid users — always allowed
+    if (userPlan && userPlan !== 'free') return { allowed: true, cooldownSecsLeft: 0 };
+
+    const now = Date.now();
+    const limit = CONFIG.FREE_RATE_LIMIT;
+    let win = _getWindow();
+
+    // No window yet — create one
+    if (!win) {
+      win = { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
+    }
+
+    // Currently in cooldown?
+    if (win.coolingDown) {
+      if (now < win.cooldownEnd) {
+        const secsLeft = Math.ceil((win.cooldownEnd - now) / 1000);
+        return { allowed: false, cooldownSecsLeft: secsLeft };
+      } else {
+        // Cooldown over — reset window
+        win = { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
+      }
+    }
+
+    // Window expired? Reset
+    const windowMs = limit.windowMinutes * 60 * 1000;
+    if (now - win.windowStart > windowMs) {
+      win = { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
+    }
+
+    // Limit hit?
+    if (win.count >= limit.messagesPerWindow) {
+      // Start cooldown
+      win.coolingDown = true;
+      win.cooldownEnd = now + (limit.cooldownMinutes * 60 * 1000);
+      _saveWindow(win);
+      const secsLeft = Math.ceil((win.cooldownEnd - now) / 1000);
+      return { allowed: false, cooldownSecsLeft: secsLeft };
+    }
+
+    return { allowed: true, cooldownSecsLeft: 0, currentCount: win.count, maxCount: limit.messagesPerWindow };
+  }
+
+  // Record that a message was sent
+  function recordMessage(userPlan) {
+    if (userPlan && userPlan !== 'free') return;
+    const now = Date.now();
+    let win = _getWindow() || { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
+    win.count = (win.count || 0) + 1;
+    _saveWindow(win);
+  }
+
+  return { check, recordMessage };
+})();
+
+// ─── COOLDOWN TIMER UI ────────────────────────────────────────────
+let _cooldownInterval = null;
+
+function _startCooldownTimer(secsLeft) {
+  // Clear any existing timer
+  if (_cooldownInterval) clearInterval(_cooldownInterval);
+
+  const inputArea = document.querySelector('.chat-input-area');
+  const sendBtn = document.getElementById('btn-send');
+  const chatInput = document.getElementById('chat-input');
+
+  // Show cooldown bar
+  let existing = document.getElementById('cooldown-notice');
+  if (!existing) {
+    existing = document.createElement('div');
+    existing.id = 'cooldown-notice';
+    existing.style.cssText = `
+      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+      border: 1px solid #ffcc80;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin: 8px 16px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: #e65100;
+    `;
+    if (inputArea) inputArea.parentNode.insertBefore(existing, inputArea);
+  }
+
+  if (sendBtn) sendBtn.disabled = true;
+  if (chatInput) chatInput.disabled = true;
+
+  let remaining = secsLeft;
+
+  const update = () => {
+    const mins = Math.floor(remaining / 60);
+    const secs = remaining % 60;
+    const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    existing.innerHTML = `⏳ Free limit reached! Next ${CONFIG.FREE_RATE_LIMIT.messagesPerWindow} messages available in <strong>${timeStr}</strong> · <a href="#" onclick="document.querySelector('[data-tab=upgrade]').click(); return false;" style="color:#e84393">Upgrade for unlimited →</a>`;
+
+    remaining--;
+    if (remaining < 0) {
+      clearInterval(_cooldownInterval);
+      existing.remove();
+      if (sendBtn) sendBtn.disabled = false;
+      if (chatInput) chatInput.disabled = false;
+    }
+  };
+
+  update();
+  _cooldownInterval = setInterval(update, 1000);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
 
   // ─── 1. AUTH INIT ───────────────────────────────────────────────
@@ -128,18 +255,21 @@ function _initLandingPage() {
 
 // ─── SCENARIO SELECT ──────────────────────────────────────────────
 function _handleScenarioSelect(scenarioId) {
-  // Limit check
-  if (Dashboard.hasReachedLimit()) {
-    Dashboard.showUpgradePrompt();
-    return;
-  }
-
   // Chat tab pe switch karo
   _switchTab('chat');
 
   // Scenario start karo
   const scenario = Chat.startScenario(scenarioId);
   if (!scenario) return;
+
+  // "No scenario" state hide karo, chat show karo
+  const noScenarioState = document.getElementById('no-scenario-state');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInputArea = document.querySelector('.chat-input-area');
+
+  if (noScenarioState) noScenarioState.style.display = 'none';
+  if (chatMessages) chatMessages.style.display = 'flex';
+  if (chatInputArea) chatInputArea.style.display = 'flex';
 
   // Chat header update karo
   const chatPersona = document.getElementById('chat-persona-name');
@@ -150,24 +280,25 @@ function _handleScenarioSelect(scenarioId) {
   // Chat clear karke greeting dikhao
   Dashboard.clearChat(scenario.greeting);
 
-  // Session timer start karo
-  Dashboard.startSessionTimer(async (minsElapsed) => {
-    const profile = Dashboard.getProfile();
-    if (!profile) return;
-    
-    const newMinsUsed = (profile.mins_used || 0) + 1;
-    profile.mins_used = newMinsUsed;
-    Dashboard.renderStats();
-    
-    // DB mein save karo
-    await Auth.updateUserStats(profile.id, { mins_used: newMinsUsed });
-    
-    // Limit check
-    if (Dashboard.hasReachedLimit()) {
-      Dashboard.stopSessionTimer();
-      Dashboard.showUpgradePrompt();
+  // Any existing cooldown timer clear karo
+  if (_cooldownInterval) {
+    clearInterval(_cooldownInterval);
+    const notice = document.getElementById('cooldown-notice');
+    if (notice) notice.remove();
+    const sendBtn = document.getElementById('btn-send');
+    const chatInput = document.getElementById('chat-input');
+    if (sendBtn) sendBtn.disabled = false;
+    if (chatInput) chatInput.disabled = false;
+  }
+
+  // Check rate limit status for free users
+  const profile = Dashboard.getProfile();
+  if (profile?.plan === 'free' || !profile?.plan) {
+    const status = RateLimit.check(profile?.plan || 'free');
+    if (!status.allowed) {
+      _startCooldownTimer(status.cooldownSecsLeft);
     }
-  });
+  }
 }
 
 // ─── CHAT INPUT SETUP ─────────────────────────────────────────────
@@ -198,23 +329,41 @@ async function _sendChatMessage() {
 
   // Chat nahi shuru hua toh
   if (!Chat.getCurrentScenario()) {
-    _showToast('Pehle koi scenario select karo! 👆', 'warning');
+    _showToast('First select a scenario from Dashboard! 👆', 'warning');
     return;
   }
 
   if (Chat.isTyping()) return;
+
+  // Rate limit check for free users
+  const profile = Dashboard.getProfile();
+  const userPlan = profile?.plan || 'free';
+  const limitStatus = RateLimit.check(userPlan);
+  
+  if (!limitStatus.allowed) {
+    _startCooldownTimer(limitStatus.cooldownSecsLeft);
+    return;
+  }
 
   // UI update — user message dikhao + input clear karo
   Dashboard.appendMessage('user', message);
   chatInput.value = '';
   chatInput.style.height = 'auto';
 
+  // Record this message for rate limiting
+  RateLimit.recordMessage(userPlan);
+
   // Stats update
-  const profile = Dashboard.getProfile();
   if (profile) {
     profile.total_msgs = (profile.total_msgs || 0) + 1;
     Dashboard.renderStats();
     Auth.updateUserStats(profile.id, { total_msgs: profile.total_msgs });
+  }
+
+  // Check if we just hit the limit
+  const newStatus = RateLimit.check(userPlan);
+  if (!newStatus.allowed) {
+    // Will show after AI replies
   }
 
   // Typing indicator
@@ -224,10 +373,16 @@ async function _sendChatMessage() {
     const reply = await Chat.sendMessage(message);
     Dashboard.showTypingIndicator(false);
     Dashboard.appendMessage('assistant', reply);
+
+    // Show cooldown AFTER AI reply if limit hit
+    const postStatus = RateLimit.check(userPlan);
+    if (!postStatus.allowed) {
+      _startCooldownTimer(postStatus.cooldownSecsLeft);
+    }
   } catch (error) {
     Dashboard.showTypingIndicator(false);
     console.error('Chat error:', error);
-    _showToast('Message send nahi hua. Try again! 🙏', 'error');
+    _showToast('Message send failed. Try again! 🙏', 'error');
   }
 }
 
@@ -256,7 +411,7 @@ async function _handleCoachFeedback() {
     }
   } catch (error) {
     Dashboard.showTypingIndicator(false);
-    _showToast('Coach feedback abhi available nahi. Try again!', 'error');
+    _showToast('Coach feedback unavailable right now. Try again!', 'error');
   } finally {
     if (coachBtn) coachBtn.disabled = false;
   }
@@ -279,11 +434,9 @@ function _setupAuthTabs() {
 }
 
 function _switchAuthTab(tab) {
-  // Tab buttons
   document.querySelectorAll('[data-auth-tab]').forEach(t => {
     t.classList.toggle('active', t.dataset.authTab === tab);
   });
-  // Tab panels
   document.querySelectorAll('[data-auth-panel]').forEach(p => {
     p.style.display = p.dataset.authPanel === tab ? 'block' : 'none';
   });
@@ -305,7 +458,7 @@ function _setupAuthForms() {
 
       try {
         await Auth.signUp(name, email, password);
-        _showToast('Account ban gaya! 🎉 Email verify karo.', 'success');
+        _showToast('Account created! 🎉 Check your email to verify.', 'success');
         document.getElementById('auth-modal').style.display = 'none';
       } catch (error) {
         _showToast(error.message || 'Signup failed. Try again!', 'error');
@@ -353,7 +506,7 @@ function _setupAuthForms() {
 
       try {
         await Auth.signInWithOtp(email);
-        _showToast('Magic link bhej diya! 📧 Email check karo.', 'success');
+        _showToast('Magic link sent! 📧 Check your email.', 'success');
       } catch (error) {
         _showToast(error.message || 'OTP send failed!', 'error');
       } finally {
@@ -384,11 +537,9 @@ function _setupTabs() {
 }
 
 function _switchTab(tabName) {
-  // Tab nav buttons
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
-  // Tab panels
   document.querySelectorAll('[data-tab-panel]').forEach(panel => {
     panel.style.display = panel.dataset.tabPanel === tabName ? 'block' : 'none';
   });
@@ -426,10 +577,7 @@ function _showToast(message, type = 'info') {
   toast.textContent = message;
   document.body.appendChild(toast);
 
-  // Show
   setTimeout(() => toast.classList.add('show'), 10);
-  
-  // Auto hide
   setTimeout(() => {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 300);
@@ -447,7 +595,6 @@ function initiatePayment(planKey) {
     return;
   }
 
-  // Razorpay key placeholder — real key add karo
   if (CONFIG.RAZORPAY_KEY === 'rzp_test_placeholder') {
     _showToast('Payments coming soon! 🚀', 'info');
     return;
@@ -455,18 +602,17 @@ function initiatePayment(planKey) {
 
   const options = {
     key: CONFIG.RAZORPAY_KEY,
-    amount: plan.price * 100, // paise mein
+    amount: plan.price * 100,
     currency: 'INR',
     name: 'RizzUp AI',
     description: `${plan.name} Plan - Monthly`,
     handler: async (response) => {
-      // Payment success — plan update karo
       await Auth.updateUserStats(profile.id, { plan: planKey });
       profile.plan = planKey;
       Dashboard.setProfile(profile);
       Dashboard.renderStats();
       Dashboard.renderScenarios(_handleScenarioSelect);
-      _showToast(`${plan.name} plan active ho gaya! 🎉`, 'success');
+      _showToast(`${plan.name} plan activated! 🎉`, 'success');
       
       const upgradeModal = document.getElementById('upgrade-modal');
       if (upgradeModal) upgradeModal.style.display = 'none';
