@@ -4,8 +4,6 @@
 
 const Dashboard = (() => {
   let _userProfile = null;
-  let _sessionStartTime = null;
-  let _sessionMinsTimer = null;
 
   // Profile set karo
   function setProfile(profile) {
@@ -22,31 +20,24 @@ const Dashboard = (() => {
     if (!_userProfile) return;
 
     const plan = CONFIG.PLANS[_userProfile.plan] || CONFIG.PLANS.free;
-    const minsUsed = _userProfile.mins_used || 0;
-    const minsLimit = plan.dailyMinutes;
-    const minsLeft = Math.max(0, minsLimit - minsUsed);
-    const percentage = Math.min(100, (minsUsed / minsLimit) * 100);
+    const totalMsgs = _userProfile.total_msgs || 0;
+    const sessions = _userProfile.sessions || 0;
 
-    // Stats update karo
-    _setText('stat-mins-used', minsUsed);
-    _setText('stat-mins-limit', minsLimit === 999 ? '∞' : minsLimit);
-    _setText('stat-total-msgs', _userProfile.total_msgs || 0);
-    _setText('stat-sessions', _userProfile.sessions || 0);
-    _setText('stat-plan', _userProfile.plan?.toUpperCase() || 'FREE');
+    _setText('stat-total-msgs', totalMsgs);
+    _setText('stat-sessions', sessions);
+    _setText('stat-plan', (_userProfile.plan || 'free').toUpperCase());
 
-    // Progress bar
-    const progressBar = document.getElementById('mins-progress-bar');
-    if (progressBar) {
-      progressBar.style.width = percentage + '%';
-      progressBar.style.background = percentage > 80
-        ? 'linear-gradient(90deg, #ff6b6b, #ee5a24)'
-        : 'linear-gradient(90deg, #fd79a8, #e84393)';
-    }
-
-    // Limit reached warning
-    const limitWarning = document.getElementById('limit-warning');
-    if (limitWarning) {
-      limitWarning.style.display = minsLeft === 0 ? 'block' : 'none';
+    // For free plan show message window info
+    if (!_userProfile.plan || _userProfile.plan === 'free') {
+      _setText('stat-mins-used', totalMsgs);
+      _setText('stat-mins-limit', '∞');
+      const progressBar = document.getElementById('mins-progress-bar');
+      if (progressBar) progressBar.style.width = '0%';
+    } else {
+      _setText('stat-mins-used', '∞');
+      _setText('stat-mins-limit', '∞');
+      const progressBar = document.getElementById('mins-progress-bar');
+      if (progressBar) progressBar.style.width = '100%';
     }
   }
 
@@ -72,7 +63,7 @@ const Dashboard = (() => {
             <div class="scenario-desc">${scenario.description}</div>
           </div>
           <div class="scenario-tag ${isLocked ? 'tag-paid' : 'tag-free'}">
-            ${isLocked ? (userPlan === 'free' ? 'Starter+' : 'Pro+') : 'Free'}
+            ${isLocked ? 'Starter+' : 'Free'}
           </div>
         </div>
       `;
@@ -94,40 +85,6 @@ const Dashboard = (() => {
     if (modal) modal.style.display = 'flex';
   }
 
-  // Daily limit check
-  function hasReachedLimit() {
-    if (!_userProfile) return false;
-    const plan = CONFIG.PLANS[_userProfile.plan] || CONFIG.PLANS.free;
-    if (plan.dailyMinutes === 999) return false; // unlimited
-    return (_userProfile.mins_used || 0) >= plan.dailyMinutes;
-  }
-
-  // Session timer shuru karo
-  function startSessionTimer(onMinuteTick) {
-    _sessionStartTime = Date.now();
-    
-    // Har minute check karo
-    _sessionMinsTimer = setInterval(() => {
-      const minsElapsed = Math.floor((Date.now() - _sessionStartTime) / 60000);
-      if (onMinuteTick) onMinuteTick(minsElapsed);
-    }, 60000); // 1 minute
-  }
-
-  // Session timer rok do
-  function stopSessionTimer() {
-    if (_sessionMinsTimer) {
-      clearInterval(_sessionMinsTimer);
-      _sessionMinsTimer = null;
-    }
-    
-    if (_sessionStartTime) {
-      const minsElapsed = Math.ceil((Date.now() - _sessionStartTime) / 60000);
-      _sessionStartTime = null;
-      return minsElapsed;
-    }
-    return 0;
-  }
-
   // Chat messages render karo
   function appendMessage(role, content) {
     const chatMessages = document.getElementById('chat-messages');
@@ -136,15 +93,12 @@ const Dashboard = (() => {
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
     
-    // Markdown bold support (*text* → bold)
     const formattedContent = content
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\n/g, '<br>');
     
     msgDiv.innerHTML = `<div class="message-bubble">${formattedContent}</div>`;
     chatMessages.appendChild(msgDiv);
-    
-    // Scroll to bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
@@ -172,7 +126,7 @@ const Dashboard = (() => {
   }
 
   // Chat clear karo
-  function clearChat(scenarioGreeting, scenarioPersona) {
+  function clearChat(scenarioGreeting) {
     const chatMessages = document.getElementById('chat-messages');
     if (chatMessages) chatMessages.innerHTML = '';
     
@@ -181,43 +135,100 @@ const Dashboard = (() => {
     }
   }
 
-  // Helper: element text set karo safely
+  // Helper
   function _setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
   }
 
-  // Course lessons render karo
+  // Course lessons render karo — REAL CONTENT
   function renderCourse() {
     const userPlan = _userProfile?.plan || 'free';
     const allowedWeeks = CONFIG.PLANS[userPlan]?.courseWeeks || 1;
-    
+
     const lessons = [
-      { week: 1, day: 1, title: 'Why You\'re Getting Ignored', free: true, done: true },
-      { week: 1, day: 2, title: 'The Confidence Framework', free: true, done: false, today: true },
-      { week: 1, day: 3, title: 'First Message Formula', free: false },
-      { week: 1, day: 4, title: 'Reading Her Signals', free: false },
-      { week: 1, day: 5, title: 'The Art of Banter', free: false },
-      { week: 2, day: 8, title: 'Date Planning 101', free: false },
-      { week: 2, day: 9, title: 'Conversation Depth', free: false },
+      // WEEK 1 — FREE
+      { week: 1, day: 1, title: 'Why You Get Ignored (And How to Fix It)', desc: 'Understand the #1 reason your messages go unanswered — and the simple shift that changes everything.', free: true, done: false },
+      { week: 1, day: 2, title: 'The Confidence Framework', desc: 'Confidence isn\'t about looks or money. Learn the 3-part framework that makes anyone attractive.', free: true, done: false },
+      { week: 1, day: 3, title: 'How to Start a Conversation (First Message Formula)', desc: 'The exact formula for opening messages that get replies every time. No more "Hey, how are you?"', free: true, done: false },
+      { week: 1, day: 4, title: 'Reading Her Signals', desc: 'Learn to spot green flags, red flags, and "keep going" signs in any conversation.', free: true, done: false },
+      { week: 1, day: 5, title: 'The Art of Banter — Wit Without Trying Hard', desc: 'Playful conversation is a skill, not a personality trait. Practice the banter loop.', free: true, done: false },
+      { week: 1, day: 6, title: 'When and How to Ask for a Date', desc: 'Stop waiting for "the right moment." Here\'s exactly when and how to ask — without rejection fear.', free: true, done: false },
+      { week: 1, day: 7, title: 'Week 1 Review + Practice Session', desc: 'Consolidate everything from Week 1 with a guided practice session with Priya.', free: true, done: false },
+
+      // WEEK 2 — STARTER+
+      { week: 2, day: 8, title: 'Date Planning 101 — Impress Without Overspending', desc: 'How to plan a date that\'s fun, low-pressure, and memorable. No fancy restaurants needed.', free: false },
+      { week: 2, day: 9, title: 'First Date Mastery — From Nervous to Natural', desc: 'The complete guide to first dates — what to say, what to avoid, how to create real connection.', free: false },
+      { week: 2, day: 10, title: 'Deep Conversation Techniques', desc: 'Move beyond small talk. Learn the "question ladder" to build genuine emotional connection fast.', free: false },
+      { week: 2, day: 11, title: 'Handling Awkward Silences Like a Pro', desc: 'Silence doesn\'t have to be awkward. Turn it into connection with these 3 techniques.', free: false },
+      { week: 2, day: 12, title: 'Physical Escalation — Reading Comfort Levels', desc: 'Understand consent, comfort, and how to naturally progress physical connection respectfully.', free: false },
+      { week: 2, day: 13, title: 'Texting Between Dates — Keep the Spark Alive', desc: 'Don\'t lose momentum between dates. The texting strategy that keeps her thinking about you.', free: false },
+      { week: 2, day: 14, title: 'Week 2 Review + Second Date Practice', desc: 'Full second date simulation with Megha + personalized coaching report.', free: false },
+
+      // WEEK 3 — STARTER+
+      { week: 3, day: 15, title: 'Rejection Recovery — Bounce Back Like a Champion', desc: 'Rejection is data, not failure. The mindset shift that makes rejection your best teacher.', free: false },
+      { week: 3, day: 16, title: 'The Arranged Meeting Masterclass', desc: 'Navigate India\'s unique arranged meeting culture with confidence, respect, and genuine connection.', free: false },
+      { week: 3, day: 17, title: 'Online Dating Profile Optimization', desc: 'Craft a profile that gets 3x more matches. Photos, bio, prompts — all covered.', free: false },
+      { week: 3, day: 18, title: 'Flirting Without Crossing Lines', desc: 'Playful, fun, confident flirting that feels natural — not creepy. The line and how to stay on the right side.', free: false },
+      { week: 3, day: 19, title: 'Building Genuine Attraction vs Performance', desc: 'Why "trying to impress" kills attraction — and what actually works instead.', free: false },
+      { week: 3, day: 20, title: 'The Mid-Conversation Reset', desc: 'Conversation going sideways? Here\'s how to gracefully steer back without making it awkward.', free: false },
+      { week: 3, day: 21, title: 'Week 3 Review + Full Scenario Challenge', desc: 'Complete all 6 scenarios in one session + get a comprehensive vibe score report.', free: false },
+
+      // WEEK 4 — STARTER+
+      { week: 4, day: 22, title: 'Long-Term Attraction — From Dating to Relationship', desc: 'How to transition naturally from casual dating to something deeper without ruining it.', free: false },
+      { week: 4, day: 23, title: 'Communication Styles — Know Your Type', desc: 'Discover your communication style and how to adapt to hers for effortless connection.', free: false },
+      { week: 4, day: 24, title: 'Handling the "What Are We?" Conversation', desc: 'The most feared conversation — made simple. How to handle it with confidence and clarity.', free: false },
+      { week: 4, day: 25, title: 'Social Circle Dating — Meeting People IRL', desc: 'Beyond apps — how to meet and attract people through your existing social circle.', free: false },
+      { week: 4, day: 26, title: 'The Vulnerability Advantage', desc: 'Why showing real emotion makes you more attractive — and how to do it without oversharing.', free: false },
+      { week: 4, day: 27, title: 'Your Dating Values Audit', desc: 'Clarify what you actually want in a partner. Most people skip this — it\'s why they keep dating the wrong people.', free: false },
+      { week: 4, day: 28, title: '30-Day Challenge Final Review', desc: 'Your full transformation review. Compare Day 1 vs Day 28. Celebrate how far you\'ve come! 🎉', free: false },
     ];
 
     const container = document.getElementById('course-list');
     if (!container) return;
 
-    container.innerHTML = lessons.map(lesson => {
-      const isLocked = lesson.week > allowedWeeks && !lesson.free;
+    // Group by week
+    const weeks = {};
+    lessons.forEach(l => {
+      if (!weeks[l.week]) weeks[l.week] = [];
+      weeks[l.week].push(l);
+    });
+
+    const weekNames = {
+      1: 'Week 1 — Foundation',
+      2: 'Week 2 — First Date Mastery',
+      3: 'Week 3 — Advanced Skills',
+      4: 'Week 4 — Long-Term Success',
+    };
+
+    container.innerHTML = Object.entries(weeks).map(([week, weekLessons]) => {
+      const weekNum = parseInt(week);
+      const isWeekLocked = weekNum > allowedWeeks;
+      
       return `
-        <div class="lesson-item ${lesson.done ? 'done' : ''} ${lesson.today ? 'today' : ''} ${isLocked ? 'locked' : ''}">
-          <div class="lesson-indicator">
-            ${lesson.done ? '✓' : isLocked ? '🔒' : lesson.day}
+        <div class="week-section">
+          <div class="week-header">
+            <h3 class="week-title">${weekNames[weekNum] || `Week ${weekNum}`}</h3>
+            ${isWeekLocked ? '<span class="week-lock-badge">🔒 Starter+</span>' : '<span class="week-free-badge">✓ Free</span>'}
           </div>
-          <div class="lesson-info">
-            <div class="lesson-title">${lesson.title}</div>
-            <div class="lesson-meta">
-              Week ${lesson.week} · ${lesson.free ? 'Free' : 'Starter+'}
-              ${lesson.today ? ' · <strong>Today\'s lesson</strong>' : ''}
-            </div>
+          <div class="week-lessons">
+            ${weekLessons.map(lesson => {
+              const isLocked = isWeekLocked;
+              return `
+                <div class="lesson-item ${lesson.done ? 'done' : ''} ${isLocked ? 'locked' : ''}">
+                  <div class="lesson-indicator">
+                    ${lesson.done ? '✓' : isLocked ? '🔒' : lesson.day}
+                  </div>
+                  <div class="lesson-info">
+                    <div class="lesson-title">${lesson.title}</div>
+                    <div class="lesson-desc">${lesson.desc}</div>
+                    <div class="lesson-meta">
+                      Week ${lesson.week} · Day ${lesson.day} · ${isLocked ? '<a href="#" onclick="document.querySelector(\'[data-tab=upgrade]\').click(); return false;" style="color:#e84393">Unlock with Starter →</a>' : 'Free'}
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -232,9 +243,6 @@ const Dashboard = (() => {
     renderScenarios,
     handleScenarioClick,
     showUpgradePrompt,
-    hasReachedLimit,
-    startSessionTimer,
-    stopSessionTimer,
     appendMessage,
     showTypingIndicator,
     clearChat,
