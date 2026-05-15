@@ -13,7 +13,7 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Razorpay (payment ke liye) -->
+  <!-- Razorpay -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
   <!-- Our JS -->
@@ -23,10 +23,141 @@
   <script src="js/dashboard.js"></script>
 
   <link rel="stylesheet" href="css/app.css" />
+
+  <style>
+    /* Course week sections */
+    .week-section { margin-bottom: 32px; }
+    .week-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    .week-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin: 0;
+      font-family: 'Bricolage Grotesque', sans-serif;
+    }
+    .week-lock-badge {
+      font-size: 11px;
+      font-weight: 700;
+      background: #fff3e0;
+      color: #e65100;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid #ffcc80;
+    }
+    .week-free-badge {
+      font-size: 11px;
+      font-weight: 700;
+      background: #e8f5e9;
+      color: #2e7d32;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid #a5d6a7;
+    }
+    .week-lessons { display: flex; flex-direction: column; gap: 8px; }
+    .lesson-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid #f0f0f0;
+      border-radius: 12px;
+      transition: all 0.2s;
+    }
+    .lesson-item:hover:not(.locked) { border-color: #fdb8d5; background: #fff8fb; }
+    .lesson-item.locked { opacity: 0.65; }
+    .lesson-indicator {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fd79a8, #e84393);
+      color: white;
+      font-size: 12px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .lesson-item.locked .lesson-indicator {
+      background: #f0f0f0;
+    }
+    .lesson-item.done .lesson-indicator {
+      background: linear-gradient(135deg, #00b894, #00cec9);
+    }
+    .lesson-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 3px;
+    }
+    .lesson-desc {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+      line-height: 1.5;
+    }
+    .lesson-meta {
+      font-size: 11px;
+      color: #999;
+      font-weight: 600;
+    }
+
+    /* Upgrade pricing grid */
+    .yearly-badge {
+      background: linear-gradient(135deg, #fd79a8, #e84393);
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-left: 8px;
+    }
+    .price-toggle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+    .toggle-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: #666;
+      cursor: pointer;
+    }
+    .toggle-label.active { color: #e84393; }
+    .toggle-switch {
+      width: 44px;
+      height: 24px;
+      background: linear-gradient(135deg, #fd79a8, #e84393);
+      border-radius: 12px;
+      position: relative;
+      cursor: pointer;
+    }
+    .toggle-knob {
+      width: 18px;
+      height: 18px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      transition: left 0.2s;
+    }
+    .toggle-switch.yearly .toggle-knob { left: 23px; }
+  </style>
 </head>
 <body>
 
-  <!-- ─── TOP NAV ──────────────────────────────────────────────── -->
+  <!-- ─── TOP NAV ──────────────────────────────────────────────────── -->
   <nav class="app-nav">
     <div class="app-nav-inner">
       <a href="index.html" class="nav-logo">RizzUp 💘</a>
@@ -38,7 +169,7 @@
     </div>
   </nav>
 
-  <!-- ─── MAIN LAYOUT ───────────────────────────────────────────── -->
+  <!-- ─── MAIN LAYOUT ───────────────────────────────────────────────── -->
   <div class="app-layout">
     <!-- Sidebar -->
     <aside class="app-sidebar">
@@ -54,20 +185,13 @@
       <!-- ─── DASHBOARD TAB ─────────────────────────────────────── -->
       <div data-tab-panel="dashboard">
         <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
-        <p class="tab-subtitle">Ready to practice today?</p>
+        <p class="tab-subtitle">Ready to practice today? Pick a scenario below.</p>
 
         <!-- Stats Row -->
         <div class="stats-row">
           <div class="stat-box">
-            <div class="stat-value"><span id="stat-mins-used">0</span>/<span id="stat-mins-limit">20</span></div>
-            <div class="stat-label">mins used today</div>
-            <div class="progress-bar">
-              <div class="progress-fill" id="mins-progress-bar" style="width:0%"></div>
-            </div>
-          </div>
-          <div class="stat-box">
             <div class="stat-value" id="stat-total-msgs">0</div>
-            <div class="stat-label">total messages</div>
+            <div class="stat-label">messages sent</div>
           </div>
           <div class="stat-box">
             <div class="stat-value" id="stat-sessions">0</div>
@@ -79,15 +203,9 @@
           </div>
         </div>
 
-        <!-- Limit Warning -->
-        <div class="limit-warning" id="limit-warning" style="display:none;">
-          ⚠️ Daily limit reached! <button class="link-btn" onclick="Dashboard.showUpgradePrompt()">Upgrade to keep practicing →</button>
-        </div>
-
         <!-- Scenarios -->
-        <h3 class="section-heading">Pick a Scenario</h3>
+        <h3 class="section-heading">Pick a Scenario to Practice</h3>
         <div class="scenarios-grid" id="scenarios-grid">
-          <!-- JS se render hoga -->
           <div class="loading-scenarios">Loading scenarios...</div>
         </div>
       </div>
@@ -96,7 +214,7 @@
       <div data-tab-panel="chat" style="display:none;">
         <!-- Chat Header -->
         <div class="chat-header">
-          <div class="chat-persona-avatar">👩</div>
+          <div class="chat-persona-avatar" id="chat-persona-avatar">👩</div>
           <div class="chat-persona-info">
             <div class="chat-persona-name" id="chat-persona-name">Priya</div>
             <div class="chat-persona-status" id="chat-status">Select a scenario to start</div>
@@ -107,21 +225,21 @@
         <!-- No scenario selected state -->
         <div class="no-scenario-state" id="no-scenario-state">
           <div class="no-scenario-icon">💬</div>
-          <h3>Koi scenario select karo</h3>
-          <p>Dashboard pe jaao aur ek scenario choose karo practice ke liye.</p>
-          <button class="btn-primary" data-tab="dashboard" onclick="document.querySelector('[data-tab=dashboard]').click()">
+          <h3>No scenario selected</h3>
+          <p>Go to Dashboard and choose a scenario to start practicing.</p>
+          <button class="btn-primary" onclick="document.querySelector('[data-tab=dashboard]').click()">
             Go to Dashboard →
           </button>
         </div>
 
-        <!-- Chat Messages -->
-        <div class="chat-messages" id="chat-messages"></div>
+        <!-- Chat Messages (hidden until scenario selected) -->
+        <div class="chat-messages" id="chat-messages" style="display:none;"></div>
 
-        <!-- Chat Input -->
-        <div class="chat-input-area">
+        <!-- Chat Input (hidden until scenario selected) -->
+        <div class="chat-input-area" style="display:none;">
           <textarea 
             id="chat-input" 
-            placeholder="Apna message type karo... (Enter = send, Shift+Enter = new line)"
+            placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
             rows="1"
           ></textarea>
           <button class="btn-send" id="btn-send">➤</button>
@@ -131,7 +249,7 @@
       <!-- ─── COURSE TAB ─────────────────────────────────────────── -->
       <div data-tab-panel="course" style="display:none;">
         <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
-        <p class="tab-subtitle">Daily lessons to go from nervous to confident. Week 1 is free!</p>
+        <p class="tab-subtitle">Daily lessons to go from nervous to confident. <strong>Week 1 is completely free!</strong></p>
         <div class="course-list" id="course-list">
           <!-- JS se render hoga -->
         </div>
@@ -140,35 +258,51 @@
       <!-- ─── UPGRADE TAB ────────────────────────────────────────── -->
       <div data-tab-panel="upgrade" style="display:none;">
         <h2 class="tab-title">Unlock Everything ⚡</h2>
-        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
-        
+        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more. Cancel anytime.</p>
+
+        <!-- Monthly / Yearly toggle -->
+        <div class="price-toggle" id="price-toggle">
+          <span class="toggle-label active" id="toggle-monthly">Monthly</span>
+          <div class="toggle-switch" id="toggle-switch" onclick="togglePricingPeriod()">
+            <div class="toggle-knob"></div>
+          </div>
+          <span class="toggle-label" id="toggle-yearly">Yearly <span class="yearly-badge">Save 15%</span></span>
+        </div>
+
         <div class="upgrade-pricing-grid">
           <div class="upgrade-price-card popular">
             <div class="popular-label">🔥 Most Popular</div>
             <div class="price-name">Starter</div>
-            <div class="price-amount">₹199<span class="price-per">/mo</span></div>
+            <div class="price-amount" id="starter-price">₹99<span class="price-per">/mo</span></div>
+            <div class="price-billed" id="starter-billed" style="font-size:12px;color:#999;margin-bottom:12px;">Billed monthly</div>
             <ul class="price-features">
-              <li>✓ 60 min AI practice/day</li>
-              <li>✓ All 6+ scenarios</li>
-              <li>✓ Full 30-day course</li>
-              <li>✓ Live coaching feedback</li>
+              <li>✓ All 6 practice scenarios</li>
+              <li>✓ Unlimited messages</li>
+              <li>✓ Full 30-day course (28 lessons)</li>
+              <li>✓ Live coach feedback</li>
               <li>✓ Wingman Mode (10/mo)</li>
             </ul>
             <button class="btn-primary full-width" onclick="initiatePayment('starter')">Get Starter ⚡</button>
           </div>
           <div class="upgrade-price-card">
             <div class="price-name">Pro</div>
-            <div class="price-amount">₹499<span class="price-per">/mo</span></div>
+            <div class="price-amount">Coming Soon</div>
+            <div style="font-size:12px;color:#999;margin-bottom:12px;">Voice calls + Human Coach</div>
             <ul class="price-features">
-              <li>✓ Unlimited voice + chat</li>
+              <li>✓ Everything in Starter</li>
+              <li>✓ Voice call practice (ElevenLabs)</li>
               <li>✓ Complete 90-day course</li>
               <li>✓ Unlimited Wingman Mode</li>
               <li>✓ Human coach Q&A (2x/mo)</li>
               <li>✓ Profile & bio review</li>
             </ul>
-            <button class="btn-outline full-width" onclick="initiatePayment('pro')">Get Pro 👑</button>
+            <button class="btn-outline full-width" disabled style="opacity:0.5;cursor:not-allowed;">Coming Soon 🚀</button>
           </div>
         </div>
+
+        <p style="text-align:center;font-size:12px;color:#999;margin-top:16px">
+          🔒 Secure payments via Razorpay · UPI · Cards · NetBanking · 7-day money back guarantee
+        </p>
       </div>
 
     </main>
@@ -181,9 +315,9 @@
       <div class="upgrade-modal-content">
         <div class="upgrade-modal-icon">🔒</div>
         <h3>Upgrade to Unlock</h3>
-        <p>Yeh scenario Starter plan ke liye available hai. Upgrade karke sab 6 scenarios, full course, aur Wingman Mode unlock karo!</p>
+        <p>This scenario is available on the Starter plan. Upgrade to unlock all 6 scenarios, full 30-day course, and Wingman Mode!</p>
         <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
-          Get Starter — ₹199/mo ⚡
+          Get Starter — ₹99/mo ⚡
         </button>
         <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">
           Maybe later
@@ -194,5 +328,32 @@
 
   <!-- Main JS (last mein) -->
   <script src="js/main.js"></script>
+
+  <script>
+    // Monthly / Yearly toggle
+    let _isYearly = false;
+    function togglePricingPeriod() {
+      _isYearly = !_isYearly;
+      const toggle = document.getElementById('toggle-switch');
+      const monthlyLabel = document.getElementById('toggle-monthly');
+      const yearlyLabel = document.getElementById('toggle-yearly');
+      const starterPrice = document.getElementById('starter-price');
+      const starterBilled = document.getElementById('starter-billed');
+
+      if (_isYearly) {
+        toggle.classList.add('yearly');
+        monthlyLabel.classList.remove('active');
+        yearlyLabel.classList.add('active');
+        starterPrice.innerHTML = '₹83<span class="price-per">/mo</span>';
+        starterBilled.textContent = 'Billed ₹999/year (save ₹189)';
+      } else {
+        toggle.classList.remove('yearly');
+        monthlyLabel.classList.add('active');
+        yearlyLabel.classList.remove('active');
+        starterPrice.innerHTML = '₹99<span class="price-per">/mo</span>';
+        starterBilled.textContent = 'Billed monthly';
+      }
+    }
+  </script>
 </body>
 </html>
