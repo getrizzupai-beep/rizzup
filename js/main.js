@@ -1,142 +1,11 @@
-// js/main.js — Glue code
-// Yeh file sirf sab modules ko connect karti hai
-// Auth events → Dashboard update
-// Chat events → UI update
-// Koi business logic yahan nahi hai
-
-// ─── FREE TIER RATE LIMITING ──────────────────────────────────────
-// Free users ke liye: 10 messages per 10 min, phir 10 min cooldown
-const RateLimit = (() => {
-  const STORAGE_KEY = 'rizzup_msg_window';
-
-  function _getWindow() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch { return null; }
-  }
-
-  function _saveWindow(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  }
-
-  // Check if user can send a message. Returns { allowed: bool, cooldownSecsLeft: number }
-  function check(userPlan) {
-    // Paid users — always allowed
-    if (userPlan && userPlan !== 'free') return { allowed: true, cooldownSecsLeft: 0 };
-
-    const now = Date.now();
-    const limit = CONFIG.FREE_RATE_LIMIT;
-    let win = _getWindow();
-
-    // No window yet — create one
-    if (!win) {
-      win = { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
-    }
-
-    // Currently in cooldown?
-    if (win.coolingDown) {
-      if (now < win.cooldownEnd) {
-        const secsLeft = Math.ceil((win.cooldownEnd - now) / 1000);
-        return { allowed: false, cooldownSecsLeft: secsLeft };
-      } else {
-        // Cooldown over — reset window
-        win = { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
-      }
-    }
-
-    // Window expired? Reset
-    const windowMs = limit.windowMinutes * 60 * 1000;
-    if (now - win.windowStart > windowMs) {
-      win = { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
-    }
-
-    // Limit hit?
-    if (win.count >= limit.messagesPerWindow) {
-      // Start cooldown
-      win.coolingDown = true;
-      win.cooldownEnd = now + (limit.cooldownMinutes * 60 * 1000);
-      _saveWindow(win);
-      const secsLeft = Math.ceil((win.cooldownEnd - now) / 1000);
-      return { allowed: false, cooldownSecsLeft: secsLeft };
-    }
-
-    return { allowed: true, cooldownSecsLeft: 0, currentCount: win.count, maxCount: limit.messagesPerWindow };
-  }
-
-  // Record that a message was sent
-  function recordMessage(userPlan) {
-    if (userPlan && userPlan !== 'free') return;
-    const now = Date.now();
-    let win = _getWindow() || { windowStart: now, count: 0, coolingDown: false, cooldownEnd: 0 };
-    win.count = (win.count || 0) + 1;
-    _saveWindow(win);
-  }
-
-  return { check, recordMessage };
-})();
-
-// ─── COOLDOWN TIMER UI ────────────────────────────────────────────
-let _cooldownInterval = null;
-
-function _startCooldownTimer(secsLeft) {
-  // Clear any existing timer
-  if (_cooldownInterval) clearInterval(_cooldownInterval);
-
-  const inputArea = document.querySelector('.chat-input-area');
-  const sendBtn = document.getElementById('btn-send');
-  const chatInput = document.getElementById('chat-input');
-
-  // Show cooldown bar
-  let existing = document.getElementById('cooldown-notice');
-  if (!existing) {
-    existing = document.createElement('div');
-    existing.id = 'cooldown-notice';
-    existing.style.cssText = `
-      background: linear-gradient(135deg, #fff3e0, #ffe0b2);
-      border: 1px solid #ffcc80;
-      border-radius: 12px;
-      padding: 12px 16px;
-      margin: 8px 16px;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 600;
-      color: #e65100;
-    `;
-    if (inputArea) inputArea.parentNode.insertBefore(existing, inputArea);
-  }
-
-  if (sendBtn) sendBtn.disabled = true;
-  if (chatInput) chatInput.disabled = true;
-
-  let remaining = secsLeft;
-
-  const update = () => {
-    const mins = Math.floor(remaining / 60);
-    const secs = remaining % 60;
-    const timeStr = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-    existing.innerHTML = `⏳ Free limit reached! Next ${CONFIG.FREE_RATE_LIMIT.messagesPerWindow} messages available in <strong>${timeStr}</strong> · <a href="#" onclick="document.querySelector('[data-tab=upgrade]').click(); return false;" style="color:#e84393">Upgrade for unlimited →</a>`;
-
-    remaining--;
-    if (remaining < 0) {
-      clearInterval(_cooldownInterval);
-      existing.remove();
-      if (sendBtn) sendBtn.disabled = false;
-      if (chatInput) chatInput.disabled = false;
-    }
-  };
-
-  update();
-  _cooldownInterval = setInterval(update, 1000);
-}
+// js/main.js — Glue code: sab modules connect karta hai
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-  // ─── 1. AUTH INIT ───────────────────────────────────────────────
+  // ─── 1. AUTH INIT ─────────────────────────────────────────────
   Auth.init();
 
-  // Auth change pe react karo
+  // ─── 2. AUTH STATE LISTENER ───────────────────────────────────
   Auth.onAuthChange(async (event, user) => {
     if (event === 'SIGNED_IN' && user) {
       const profile = await Auth.getUserProfile(user.id);
@@ -148,35 +17,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         Dashboard.renderCourse();
       }
     } else if (event === 'SIGNED_OUT') {
-      // App page pe hain toh landing pe bhejo
       if (window.location.pathname.includes('app.html')) {
         window.location.href = 'index.html';
       }
     }
   });
 
-  // ─── 2. PAGE DETECT: landing ya app? ────────────────────────────
-  const isAppPage = window.location.pathname.includes('app.html');
-  
-  if (isAppPage) {
-    await _initAppPage();
-  } else {
-    _initLandingPage();
-  }
-});
-
-// ─── APP PAGE INIT ────────────────────────────────────────────────
-async function _initAppPage() {
-  // Session check — login nahi hai toh landing pe bhejo
+  // ─── 3. APP PAGE INIT ─────────────────────────────────────────
   const session = await Auth.getSession();
+
   if (!session) {
     window.location.href = 'index.html';
     return;
   }
 
   const user = Auth.getCurrentUser();
+  if (!user) {
+    window.location.href = 'index.html';
+    return;
+  }
+
   const profile = await Auth.getUserProfile(user.id);
-  
   if (profile) {
     Dashboard.setProfile(profile);
     _updateNavUI(profile);
@@ -185,204 +46,236 @@ async function _initAppPage() {
     Dashboard.renderCourse();
   }
 
-  // Tab switching
+  // ─── 4. SETUP UI ──────────────────────────────────────────────
   _setupTabs();
-
-  // Chat input
   _setupChatInput();
 
-  // Logout button
-  const logoutBtn = document.getElementById('btn-logout');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', async () => {
-      await Auth.signOut();
-      window.location.href = 'index.html';
-    });
-  }
+  // Logout
+  document.getElementById('btn-logout')?.addEventListener('click', async () => {
+    await Auth.signOut();
+    window.location.href = 'index.html';
+  });
 
-  // Coach feedback button
-  const coachBtn = document.getElementById('btn-coach-feedback');
-  if (coachBtn) {
-    coachBtn.addEventListener('click', _handleCoachFeedback);
-  }
+  // Coach feedback
+  document.getElementById('btn-coach-feedback')?.addEventListener('click', _handleCoachFeedback);
 
   // Upgrade modal close
-  const upgradeClose = document.getElementById('upgrade-modal-close');
-  if (upgradeClose) {
-    upgradeClose.addEventListener('click', () => {
-      document.getElementById('upgrade-modal').style.display = 'none';
-    });
-  }
+  document.getElementById('upgrade-modal-close')?.addEventListener('click', () => {
+    document.getElementById('upgrade-modal').style.display = 'none';
+  });
+});
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────
+function _setupTabs() {
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => _switchTab(btn.dataset.tab));
+  });
 }
 
-// ─── LANDING PAGE INIT ────────────────────────────────────────────
-function _initLandingPage() {
-  // Auth modal buttons
-  const signupBtns = document.querySelectorAll('[data-action="open-signup"]');
-  const loginBtns = document.querySelectorAll('[data-action="open-login"]');
-  
-  signupBtns.forEach(btn => btn.addEventListener('click', () => openAuthModal('signup')));
-  loginBtns.forEach(btn => btn.addEventListener('click', () => openAuthModal('login')));
-
-  // Modal close
-  const modalClose = document.getElementById('auth-modal-close');
-  if (modalClose) {
-    modalClose.addEventListener('click', () => {
-      document.getElementById('auth-modal').style.display = 'none';
-    });
-  }
-
-  // Auth form tabs
-  _setupAuthTabs();
-
-  // Auth forms submit
-  _setupAuthForms();
-
-  // FAQ accordion
-  _setupFAQ();
-
-  // Session check — already logged in toh app pe bhejo
-  Auth.getSession().then(session => {
-    if (session) {
-      // Already logged in — sirf auth buttons hide karo, redirect nahi
-      const authBtns = document.querySelector('.nav-auth-btns');
-      if (authBtns) {
-        authBtns.innerHTML = `<a href="app.html" class="btn-primary">Go to App →</a>`;
-      }
-    }
+function _switchTab(tabName) {
+  // Buttons
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+  // Panels
+  document.querySelectorAll('[data-tab-panel]').forEach(panel => {
+    panel.style.display = panel.dataset.tabPanel === tabName ? 'block' : 'none';
   });
 }
 
 // ─── SCENARIO SELECT ──────────────────────────────────────────────
 function _handleScenarioSelect(scenarioId) {
-  // Chat tab pe switch karo
+  // Switch to chat tab
   _switchTab('chat');
 
-  // Scenario start karo
+  // Start scenario
   const scenario = Chat.startScenario(scenarioId);
   if (!scenario) return;
 
-  // "No scenario" state hide karo, chat show karo
-  const noScenarioState = document.getElementById('no-scenario-state');
+  // Update chat header
+  const avatarEl = document.getElementById('chat-persona-avatar');
+  const nameEl = document.getElementById('chat-persona-name');
+  const statusEl = document.getElementById('chat-status');
+
+  if (avatarEl) avatarEl.textContent = scenario.personaEmoji || '👩';
+  if (nameEl) nameEl.textContent = scenario.persona;
+  if (statusEl) statusEl.textContent = `● Online now · ${scenario.name}`;
+
+  // Show chat UI, hide no-scenario state
+  document.getElementById('no-scenario-state').style.display = 'none';
+  document.getElementById('chat-messages').style.display = 'flex';
+  document.getElementById('chat-input-area').style.display = 'flex';
+
+  // Clear and show greeting
   const chatMessages = document.getElementById('chat-messages');
-  const chatInputArea = document.querySelector('.chat-input-area');
+  chatMessages.innerHTML = '';
+  _appendMessage('assistant', scenario.greeting);
 
-  if (noScenarioState) noScenarioState.style.display = 'none';
-  if (chatMessages) chatMessages.style.display = 'flex';
-  if (chatInputArea) chatInputArea.style.display = 'flex';
-
-  // Chat header update karo
-  const chatPersona = document.getElementById('chat-persona-name');
-  const chatStatus = document.getElementById('chat-status');
-  if (chatPersona) chatPersona.textContent = scenario.persona;
-  if (chatStatus) chatStatus.textContent = `● Online now · ${scenario.name}`;
-
-  // Chat clear karke greeting dikhao
-  Dashboard.clearChat(scenario.greeting);
-
-  // Any existing cooldown timer clear karo
-  if (_cooldownInterval) {
-    clearInterval(_cooldownInterval);
-    const notice = document.getElementById('cooldown-notice');
-    if (notice) notice.remove();
-    const sendBtn = document.getElementById('btn-send');
-    const chatInput = document.getElementById('chat-input');
-    if (sendBtn) sendBtn.disabled = false;
-    if (chatInput) chatInput.disabled = false;
-  }
-
-  // Check rate limit status for free users
+  // Update sessions count
   const profile = Dashboard.getProfile();
-  if (profile?.plan === 'free' || !profile?.plan) {
-    const status = RateLimit.check(profile?.plan || 'free');
-    if (!status.allowed) {
-      _startCooldownTimer(status.cooldownSecsLeft);
-    }
+  if (profile) {
+    profile.sessions = (profile.sessions || 0) + 1;
+    Dashboard.renderStats();
+    Auth.updateUserStats(profile.id, { sessions: profile.sessions });
   }
+
+  // Reset message counter for cooldown
+  _msgCount = 0;
+  _cooldownActive = false;
+  document.getElementById('cooldown-banner').style.display = 'none';
 }
 
-// ─── CHAT INPUT SETUP ─────────────────────────────────────────────
+// ─── CHAT INPUT ───────────────────────────────────────────────────
+let _msgCount = 0;
+let _cooldownActive = false;
+let _cooldownTimer = null;
+
 function _setupChatInput() {
   const chatInput = document.getElementById('chat-input');
   const sendBtn = document.getElementById('btn-send');
 
   if (!chatInput || !sendBtn) return;
 
-  // Send on button click
   sendBtn.addEventListener('click', _sendChatMessage);
 
-  // Send on Enter (Shift+Enter = new line)
   chatInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       _sendChatMessage();
     }
   });
+
+  // Auto-resize textarea
+  chatInput.addEventListener('input', () => {
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+  });
 }
 
 async function _sendChatMessage() {
+  if (_cooldownActive) return;
+
   const chatInput = document.getElementById('chat-input');
   if (!chatInput) return;
 
   const message = chatInput.value.trim();
   if (!message) return;
 
-  // Chat nahi shuru hua toh
   if (!Chat.getCurrentScenario()) {
-    _showToast('First select a scenario from Dashboard! 👆', 'warning');
+    _showToast('Please select a scenario first! 👆', 'warning');
     return;
   }
 
   if (Chat.isTyping()) return;
 
-  // Rate limit check for free users
-  const profile = Dashboard.getProfile();
-  const userPlan = profile?.plan || 'free';
-  const limitStatus = RateLimit.check(userPlan);
-  
-  if (!limitStatus.allowed) {
-    _startCooldownTimer(limitStatus.cooldownSecsLeft);
-    return;
-  }
-
-  // UI update — user message dikhao + input clear karo
-  Dashboard.appendMessage('user', message);
+  // Show user message
+  _appendMessage('user', message);
   chatInput.value = '';
   chatInput.style.height = 'auto';
 
-  // Record this message for rate limiting
-  RateLimit.recordMessage(userPlan);
-
-  // Stats update
+  // Update stats
+  const profile = Dashboard.getProfile();
   if (profile) {
     profile.total_msgs = (profile.total_msgs || 0) + 1;
     Dashboard.renderStats();
     Auth.updateUserStats(profile.id, { total_msgs: profile.total_msgs });
   }
 
-  // Check if we just hit the limit
-  const newStatus = RateLimit.check(userPlan);
-  if (!newStatus.allowed) {
-    // Will show after AI replies
+  // Check cooldown (free plan)
+  _msgCount++;
+  const userPlan = profile?.plan || 'free';
+  const planConfig = CONFIG.PLANS[userPlan] || CONFIG.PLANS.free;
+
+  if (_msgCount >= planConfig.msgBeforeCooldown && planConfig.cooldownMinutes > 0) {
+    _startCooldown(planConfig.cooldownMinutes);
   }
 
-  // Typing indicator
-  Dashboard.showTypingIndicator(true);
+  // Show typing indicator
+  _showTyping(true);
 
   try {
     const reply = await Chat.sendMessage(message);
-    Dashboard.showTypingIndicator(false);
-    Dashboard.appendMessage('assistant', reply);
-
-    // Show cooldown AFTER AI reply if limit hit
-    const postStatus = RateLimit.check(userPlan);
-    if (!postStatus.allowed) {
-      _startCooldownTimer(postStatus.cooldownSecsLeft);
-    }
+    _showTyping(false);
+    _appendMessage('assistant', reply);
   } catch (error) {
-    Dashboard.showTypingIndicator(false);
+    _showTyping(false);
     console.error('Chat error:', error);
-    _showToast('Message send failed. Try again! 🙏', 'error');
+    _showToast('Message failed to send. Try again! 🙏', 'error');
+  }
+}
+
+// ─── COOLDOWN SYSTEM ──────────────────────────────────────────────
+function _startCooldown(minutes) {
+  _cooldownActive = true;
+  _msgCount = 0;
+
+  const banner = document.getElementById('cooldown-banner');
+  const timerEl = document.getElementById('cooldown-timer');
+  const sendBtn = document.getElementById('btn-send');
+  const chatInput = document.getElementById('chat-input');
+
+  banner.style.display = 'flex';
+  if (sendBtn) sendBtn.disabled = true;
+  if (chatInput) chatInput.disabled = true;
+
+  let secondsLeft = minutes * 60;
+
+  const updateTimer = () => {
+    const m = Math.floor(secondsLeft / 60);
+    const s = secondsLeft % 60;
+    if (timerEl) timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  updateTimer();
+
+  _cooldownTimer = setInterval(() => {
+    secondsLeft--;
+    updateTimer();
+
+    if (secondsLeft <= 0) {
+      clearInterval(_cooldownTimer);
+      _cooldownActive = false;
+      banner.style.display = 'none';
+      if (sendBtn) sendBtn.disabled = false;
+      if (chatInput) {
+        chatInput.disabled = false;
+        chatInput.placeholder = 'Type your message...';
+      }
+      _showToast("You're back! Keep practicing 💪", 'success');
+    }
+  }, 1000);
+}
+
+// ─── CHAT UI HELPERS ──────────────────────────────────────────────
+function _appendMessage(role, content) {
+  const chatMessages = document.getElementById('chat-messages');
+  if (!chatMessages) return;
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
+
+  const formatted = content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+
+  msgDiv.innerHTML = `<div class="message-bubble">${formatted}</div>`;
+  chatMessages.appendChild(msgDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function _showTyping(show) {
+  const existing = document.getElementById('typing-indicator');
+  const chatMessages = document.getElementById('chat-messages');
+
+  if (show && !existing && chatMessages) {
+    const typingDiv = document.createElement('div');
+    typingDiv.id = 'typing-indicator';
+    typingDiv.className = 'message ai-message';
+    typingDiv.innerHTML = `<div class="message-bubble typing-bubble"><span></span><span></span><span></span></div>`;
+    chatMessages.appendChild(typingDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  } else if (!show && existing) {
+    existing.remove();
   }
 }
 
@@ -391,237 +284,103 @@ async function _handleCoachFeedback() {
   const coachBtn = document.getElementById('btn-coach-feedback');
   if (coachBtn) coachBtn.disabled = true;
 
-  Dashboard.showTypingIndicator(true);
-  
+  _showTyping(true);
+
   try {
     const feedback = await Chat.getCoachFeedback();
-    Dashboard.showTypingIndicator(false);
-    
-    // Feedback special styling ke saath dikhao
+    _showTyping(false);
+
     const chatMessages = document.getElementById('chat-messages');
     if (chatMessages) {
       const feedbackDiv = document.createElement('div');
       feedbackDiv.className = 'coach-feedback-bubble';
       feedbackDiv.innerHTML = `
         <div class="coach-header">🎯 Coach Feedback</div>
-        <div class="coach-content">${feedback.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</div>
+        <div class="coach-content">${feedback
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\n/g, '<br>')
+        }</div>
       `;
       chatMessages.appendChild(feedbackDiv);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-  } catch (error) {
-    Dashboard.showTypingIndicator(false);
-    _showToast('Coach feedback unavailable right now. Try again!', 'error');
+  } catch (err) {
+    _showTyping(false);
+    _showToast('Coach feedback not available right now. Try again!', 'error');
   } finally {
     if (coachBtn) coachBtn.disabled = false;
   }
 }
 
-// ─── AUTH MODAL ───────────────────────────────────────────────────
-function openAuthModal(tab = 'signup') {
-  const modal = document.getElementById('auth-modal');
-  if (modal) {
-    modal.style.display = 'flex';
-    _switchAuthTab(tab);
-  }
-}
-
-function _setupAuthTabs() {
-  const tabs = document.querySelectorAll('[data-auth-tab]');
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => _switchAuthTab(tab.dataset.authTab));
-  });
-}
-
-function _switchAuthTab(tab) {
-  document.querySelectorAll('[data-auth-tab]').forEach(t => {
-    t.classList.toggle('active', t.dataset.authTab === tab);
-  });
-  document.querySelectorAll('[data-auth-panel]').forEach(p => {
-    p.style.display = p.dataset.authPanel === tab ? 'block' : 'none';
-  });
-}
-
-function _setupAuthForms() {
-  // Signup form
-  const signupForm = document.getElementById('form-signup');
-  if (signupForm) {
-    signupForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('signup-name').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value;
-      
-      const btn = signupForm.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = 'Creating account...';
-
-      try {
-        await Auth.signUp(name, email, password);
-        _showToast('Account created! 🎉 Check your email to verify.', 'success');
-        document.getElementById('auth-modal').style.display = 'none';
-      } catch (error) {
-        _showToast(error.message || 'Signup failed. Try again!', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Create Account →';
-      }
-    });
-  }
-
-  // Login form
-  const loginForm = document.getElementById('form-login');
-  if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      
-      const btn = loginForm.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = 'Logging in...';
-
-      try {
-        await Auth.signIn(email, password);
-        window.location.href = 'app.html';
-      } catch (error) {
-        _showToast(error.message || 'Login failed. Check email/password!', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Login →';
-      }
-    });
-  }
-
-  // OTP form
-  const otpForm = document.getElementById('form-otp');
-  if (otpForm) {
-    otpForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('otp-email').value.trim();
-      
-      const btn = otpForm.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = 'Sending...';
-
-      try {
-        await Auth.signInWithOtp(email);
-        _showToast('Magic link sent! 📧 Check your email.', 'success');
-      } catch (error) {
-        _showToast(error.message || 'OTP send failed!', 'error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Send Magic Link →';
-      }
-    });
-  }
-
-  // Google OAuth buttons
-  document.querySelectorAll('[data-action="google-signin"]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try {
-        await Auth.signInWithGoogle();
-      } catch (error) {
-        _showToast('Google login failed. Try again!', 'error');
-      }
-    });
-  });
-}
-
-// ─── TABS (app page) ──────────────────────────────────────────────
-function _setupTabs() {
-  const tabBtns = document.querySelectorAll('[data-tab]');
-  tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => _switchTab(btn.dataset.tab));
-  });
-}
-
-function _switchTab(tabName) {
-  document.querySelectorAll('[data-tab]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.tab === tabName);
-  });
-  document.querySelectorAll('[data-tab-panel]').forEach(panel => {
-    panel.style.display = panel.dataset.tabPanel === tabName ? 'block' : 'none';
-  });
-}
-
-// ─── NAV UI UPDATE ────────────────────────────────────────────────
+// ─── NAV UI ───────────────────────────────────────────────────────
 function _updateNavUI(profile) {
   const planBadge = document.getElementById('nav-plan-badge');
   const userName = document.getElementById('nav-user-name');
-  
-  if (planBadge) planBadge.textContent = (profile.plan || 'FREE').toUpperCase();
-  if (userName) userName.textContent = profile.name?.split(' ')[0] || 'User';
+  const userNameDash = document.getElementById('nav-user-name-dashboard');
+
+  const firstName = profile.name?.split(' ')[0] || 'User';
+  const plan = (profile.plan || 'free').toUpperCase();
+
+  if (planBadge) planBadge.textContent = plan;
+  if (userName) userName.textContent = firstName;
+  if (userNameDash) userNameDash.textContent = firstName;
 }
 
-// ─── FAQ ACCORDION ────────────────────────────────────────────────
-function _setupFAQ() {
-  document.querySelectorAll('.faq-item').forEach(item => {
-    const question = item.querySelector('.faq-question');
-    if (question) {
-      question.addEventListener('click', () => {
-        item.classList.toggle('open');
-      });
-    }
-  });
-}
-
-// ─── TOAST NOTIFICATIONS ──────────────────────────────────────────
+// ─── TOAST ────────────────────────────────────────────────────────
 function _showToast(message, type = 'info') {
-  const existing = document.getElementById('toast');
-  if (existing) existing.remove();
+  const toast = document.getElementById('toast');
+  if (!toast) return;
 
-  const toast = document.createElement('div');
-  toast.id = 'toast';
-  toast.className = `toast toast-${type}`;
   toast.textContent = message;
-  document.body.appendChild(toast);
+  toast.className = `toast toast-${type} show`;
 
-  setTimeout(() => toast.classList.add('show'), 10);
   setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => toast.remove(), 300);
+    toast.className = 'toast';
   }, 3500);
 }
 
 // ─── PAYMENT (Razorpay) ───────────────────────────────────────────
 function initiatePayment(planKey) {
-  const plan = CONFIG.PLANS[planKey];
+  const isYearly = planKey === 'starter_yearly';
+  const basePlanKey = isYearly ? 'starter' : planKey;
+  const plan = CONFIG.PLANS[basePlanKey];
+
   if (!plan) return;
 
   const profile = Dashboard.getProfile();
   if (!profile) {
-    openAuthModal('signup');
+    window.location.href = 'index.html';
     return;
   }
 
   if (CONFIG.RAZORPAY_KEY === 'rzp_test_placeholder') {
-    _showToast('Payments coming soon! 🚀', 'info');
+    _showToast('Payments coming very soon! 🚀', 'info');
     return;
   }
 
+  const amount = isYearly ? plan.yearlyPrice : plan.price;
+
   const options = {
     key: CONFIG.RAZORPAY_KEY,
-    amount: plan.price * 100,
+    amount: amount * 100, // paise
     currency: 'INR',
     name: 'RizzUp AI',
-    description: `${plan.name} Plan - Monthly`,
+    description: isYearly ? 'Starter Plan - Yearly' : 'Starter Plan - Monthly',
     handler: async (response) => {
-      await Auth.updateUserStats(profile.id, { plan: planKey });
-      profile.plan = planKey;
+      await Auth.updateUserStats(profile.id, { plan: basePlanKey });
+      profile.plan = basePlanKey;
       Dashboard.setProfile(profile);
+      _updateNavUI(profile);
       Dashboard.renderStats();
       Dashboard.renderScenarios(_handleScenarioSelect);
       _showToast(`${plan.name} plan activated! 🎉`, 'success');
-      
-      const upgradeModal = document.getElementById('upgrade-modal');
-      if (upgradeModal) upgradeModal.style.display = 'none';
+      document.getElementById('upgrade-modal').style.display = 'none';
     },
     prefill: {
       email: profile.email,
       name: profile.name,
     },
-    theme: { color: '#e84393' }
+    theme: { color: '#e84393' },
   };
 
   const rzp = new Razorpay(options);
