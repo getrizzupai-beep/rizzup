@@ -82,6 +82,10 @@ const Auth = (() => {
         plan: 'free',
         total_msgs: 0,
         sessions: 0,
+        xp: 0,
+        badges: [],
+        course_progress: {},
+        streak: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
