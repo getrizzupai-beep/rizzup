@@ -1,32 +1,27 @@
-// js/auth.js — Sirf auth logic
+// js/auth.js — Supabase authentication
 
 const Auth = (() => {
   let _supabase = null;
   let _currentUser = null;
-  let _onAuthChangeCallbacks = [];
+  let _authCallback = null;
 
   function init() {
-    _supabase = window.supabase.createClient(
-      CONFIG.SUPABASE_URL,
-      CONFIG.SUPABASE_ANON_KEY
-    );
+    _supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
+    // Listen for auth changes
     _supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         _currentUser = session.user;
-        _onAuthChangeCallbacks.forEach(cb => cb('SIGNED_IN', session.user));
+        _authCallback?.('SIGNED_IN', session.user);
       } else if (event === 'SIGNED_OUT') {
         _currentUser = null;
-        _onAuthChangeCallbacks.forEach(cb => cb('SIGNED_OUT', null));
+        _authCallback?.('SIGNED_OUT', null);
       }
     });
   }
 
-  function onAuthChange(callback) {
-    _onAuthChangeCallbacks.push(callback);
-  }
-
   async function getSession() {
+    if (!_supabase) return null;
     const { data: { session } } = await _supabase.auth.getSession();
     if (session?.user) _currentUser = session.user;
     return session;
@@ -36,109 +31,95 @@ const Auth = (() => {
     return _currentUser;
   }
 
-  async function signUp(name, email, password) {
-    const { data, error } = await _supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name } }
-    });
-    if (error) throw error;
-    if (data.user) await _saveUserToDb(data.user.id, name, email);
-    return data;
-  }
-
-  async function signIn(email, password) {
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
-  }
-
-  async function signInWithOtp(email) {
-    const { error } = await _supabase.auth.signInWithOtp({ email });
-    if (error) throw error;
-  }
-
   async function signInWithGoogle() {
-    const { error } = await _supabase.auth.signInWithOAuth({
+    if (!_supabase) throw new Error('Supabase not initialized');
+    const { data, error } = await _supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin + '/app.html' }
     });
     if (error) throw error;
+    return data;
   }
 
   async function signOut() {
-    const { error } = await _supabase.auth.signOut();
-    if (error) throw error;
+    if (!_supabase) return;
+    await _supabase.auth.signOut();
     _currentUser = null;
   }
 
-  async function _saveUserToDb(userId, name, email) {
-    try {
-      const { error } = await _supabase
-        .from('users')
-        .upsert({
-          id: userId,
-          name,
-          email,
-          plan: 'free',
-          total_msgs: 0,
-          sessions: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-      if (error) console.error('DB save error:', error);
-    } catch (e) {
-      console.error('DB save error:', e);
-    }
-  }
-
   async function getUserProfile(userId) {
-    try {
-      const { data, error } = await _supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      if (error) {
-        console.error('Profile fetch error:', error);
-        return null;
-      }
-      // Add defaults for missing columns
-      return {
-        ...data,
-        xp: data.xp || 0,
-        badges: data.badges || [],
-        course_progress: data.course_progress || {},
-        streak: data.streak || 0,
-      };
-    } catch (e) {
-      console.error('Profile fetch error:', e);
+    if (!_supabase) return null;
+
+    // Try to get existing profile
+    const { data, error } = await _supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching profile:', error);
       return null;
     }
+
+    if (data) return data;
+
+    // Create new profile if not exists
+    const user = getCurrentUser();
+    if (!user) return null;
+
+    const newProfile = {
+      id: userId,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      avatar: user.user_metadata?.avatar_url || '',
+      plan: 'free',
+      total_msgs: 0,
+      sessions: 0,
+      xp: 0,
+      level: 1,
+      streak: 0,
+      badges: [],
+      course_progress: {},
+      ai_gender: 'female',
+      created_at: new Date().toISOString(),
+    };
+
+    const { data: inserted, error: insertError } = await _supabase
+      .from('users')
+      .insert([newProfile])
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating profile:', insertError);
+      return null;
+    }
+
+    return inserted;
   }
 
   async function updateUserStats(userId, updates) {
-    try {
-      // Only update columns that exist in DB
-      const safeUpdates = {};
-      if (updates.total_msgs !== undefined) safeUpdates.total_msgs = updates.total_msgs;
-      if (updates.sessions !== undefined) safeUpdates.sessions = updates.sessions;
-      if (updates.plan !== undefined) safeUpdates.plan = updates.plan;
+    if (!_supabase) return;
+    const { error } = await _supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId);
+    if (error) console.error('Error updating stats:', error);
+  }
 
-      // Try to update new columns (will fail silently if columns don't exist)
-      const { error } = await _supabase
-        .from('users')
-        .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-        .eq('id', userId);
-      if (error) console.error('Stats update error:', error);
-    } catch (e) {
-      console.error('Stats update error:', e);
-    }
+  function onAuthChange(callback) {
+    _authCallback = callback;
   }
 
   return {
-    init, onAuthChange, getSession, getCurrentUser,
-    signUp, signIn, signInWithOtp, signInWithGoogle,
-    signOut, getUserProfile, updateUserStats,
+    init,
+    getSession,
+    getCurrentUser,
+    signInWithGoogle,
+    signOut,
+    getUserProfile,
+    updateUserStats,
+    onAuthChange,
   };
 })();
