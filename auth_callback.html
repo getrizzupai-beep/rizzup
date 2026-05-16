@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logging in... — RizzUp AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: linear-gradient(135deg, #e84393, #fd7943);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .callback-box {
+      text-align: center;
+      padding: 40px;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .callback-box h2 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+    .callback-box p {
+      opacity: 0.9;
+      font-size: 0.95rem;
+    }
+    .error-box {
+      display: none;
+      background: white;
+      color: #e74c3c;
+      padding: 24px 32px;
+      border-radius: 16px;
+      max-width: 400px;
+      text-align: center;
+    }
+    .error-box h3 {
+      margin-bottom: 12px;
+      font-size: 1.2rem;
+    }
+    .error-box button {
+      background: linear-gradient(135deg, #e84393, #fd7943);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 16px;
+      font-family: inherit;
+    }
+  </style>
+<base target="_blank">
+</head>
+<body>
+
+  <div class="callback-box" id="loading-state">
+    <div class="spinner"></div>
+    <h2>Logging you in... 🔐</h2>
+    <p>Please wait while we complete your Google sign-in.</p>
+  </div>
+
+  <div class="error-box" id="error-state">
+    <h3>❌ Login Failed</h3>
+    <p id="error-message">Something went wrong.</p>
+    <button onclick="window.location.href='../index.html'">Try Again →</button>
+  </div>
+
+  <script>
+    // Supabase config (same as main app)
+    const SUPABASE_URL = 'https://xzdjxvitqktsfeuzshik.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW';
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function handleCallback() {
+      try {
+        // Get the full URL
+        const url = new URL(window.location.href);
+
+        // Check for error in query params
+        const error = url.searchParams.get('error');
+        const errorDescription = url.searchParams.get('error_description');
+
+        if (error) {
+          throw new Error(errorDescription || 'Authentication failed');
+        }
+
+        // PKCE flow: exchange code for session
+        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
+
+        if (exchangeError) {
+          // Fallback: try to get existing session (implicit flow)
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+          if (sessionError || !session) {
+            throw new Error('Could not establish session. Please try again.');
+          }
+
+          // Session exists, proceed
+          await handleSuccess(session);
+          return;
+        }
+
+        if (data?.session) {
+          await handleSuccess(data.session);
+        } else {
+          throw new Error('No session returned from authentication.');
+        }
+
+      } catch (err) {
+        console.error('OAuth callback error:', err);
+        showError(err.message);
+      }
+    }
+
+    async function handleSuccess(session) {
+      const user = session.user;
+
+      // Check if user exists in DB, if not create profile
+      try {
+        const { data: existingUser, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (fetchError || !existingUser) {
+          // New Google user — create profile
+          const name = user.user_metadata?.full_name || user.user_metadata?.name || 'User';
+          const email = user.email;
+          const gender = user.user_metadata?.gender || 'male';
+
+          await supabase.from('users').upsert({
+            id: user.id,
+            name: name,
+            email: email,
+            gender: gender,
+            plan: 'free',
+            total_msgs: 0,
+            sessions: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'id' });
+        }
+      } catch (e) {
+        console.error('Profile creation error:', e);
+        // Don't block login if profile creation fails
+      }
+
+      // Redirect to app
+      window.location.href = '../app.html';
+    }
+
+    function showError(message) {
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('error-state').style.display = 'block';
+      document.getElementById('error-message').textContent = message;
+    }
+
+    // Run on load
+    handleCallback();
+  </script>
+</body>
+</html>
