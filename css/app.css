@@ -262,3 +262,285 @@ h1,h2,h3,h4 { font-family: var(--font-display); line-height: 1.2; }
   .chat-messages { max-height: 320px; }
   .message-bubble { max-width: 90%; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   COURSE SYSTEM STYLES
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Progress Bar */
+.course-progress-bar {
+  background: var(--light-gray);
+  border-radius: 50px;
+  height: 32px;
+  position: relative;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.course-progress-fill {
+  background: var(--gradient);
+  height: 100%;
+  border-radius: 50px;
+  transition: width 0.5s ease;
+}
+.course-progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* Level Badge */
+.course-level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff8fc;
+  border: 1.5px solid var(--pink);
+  border-radius: 50px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--pink);
+  margin-bottom: 24px;
+}
+
+/* Course Phase */
+.course-phase {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: all 0.2s;
+}
+.course-phase.locked {
+  opacity: 0.7;
+  background: var(--off-white);
+}
+.course-phase.bonus-phase {
+  border-style: dashed;
+  border-color: var(--pink-light);
+}
+
+.phase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.phase-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.phase-meta {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 50px;
+  background: var(--light-gray);
+  color: var(--text-muted);
+}
+.phase-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+/* Lessons Grid */
+.lessons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.lesson-card {
+  background: var(--off-white);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lesson-card:hover {
+  border-color: var(--pink);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 12px rgba(232,67,147,0.1);
+}
+.lesson-card.completed {
+  background: #e8f5e9;
+  border-color: #27ae60;
+}
+.lesson-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.lesson-card.locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.lesson-day {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gradient);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+.lesson-card.completed .lesson-day {
+  background: #27ae60;
+}
+.lesson-card.locked .lesson-day {
+  background: var(--text-muted);
+}
+
+.lesson-info {
+  flex: 1;
+  min-width: 0;
+}
+.lesson-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lesson-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.lesson-check {
+  color: #27ae60;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.lesson-lock {
+  font-size: 1rem;
+}
+
+/* Lesson Modal */
+.lesson-modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.lesson-modal-day {
+  display: inline-block;
+  background: var(--gradient);
+  color: white;
+  padding: 4px 14px;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.lesson-modal-header h3 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.lesson-modal-meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.lesson-content {
+  margin-bottom: 24px;
+}
+.lesson-section {
+  margin-bottom: 20px;
+}
+.lesson-section h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.lesson-section p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+.lesson-section ul {
+  list-style: none;
+  padding: 0;
+}
+.lesson-section ul li {
+  font-size: 0.9rem;
+  color: var(--text);
+  padding: 6px 0;
+  padding-left: 20px;
+  position: relative;
+}
+.lesson-section ul li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--pink);
+  font-weight: 700;
+}
+
+.lesson-actions {
+  text-align: center;
+}
+.lesson-actions .btn-primary {
+  padding: 14px 32px;
+  font-size: 1rem;
+}
+
+/* Badges */
+.badges-section {
+  margin-top: 32px;
+}
+.badges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+.badge-card {
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: all 0.2s;
+}
+.badge-card.earned {
+  background: #fff8fc;
+  border-color: var(--pink);
+}
+.badge-card.locked {
+  opacity: 0.5;
+}
+.badge-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+.badge-name {
+  font-weight: 700;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+.badge-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
