@@ -1,4 +1,5 @@
 // js/auth.js — Sirf auth logic
+
 const Auth = (() => {
   let _supabase = null;
   let _currentUser = null;
@@ -58,12 +59,9 @@ const Auth = (() => {
   }
 
   async function signInWithGoogle() {
-    // Redirect to same page (index.html), not app.html
     const { error } = await _supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: window.location.origin + '/'
-      }
+      options: { redirectTo: window.location.origin + '/app.html' }
     });
     if (error) throw error;
   }
@@ -75,54 +73,72 @@ const Auth = (() => {
   }
 
   async function _saveUserToDb(userId, name, email) {
-    const { error } = await _supabase
-      .from('users')
-      .upsert({
-        id: userId,
-        name,
-        email,
-        plan: 'free',
-        mins_used: 0,
-        total_msgs: 0,
-        sessions: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
-    if (error) console.error('DB save error:', error);
+    try {
+      const { error } = await _supabase
+        .from('users')
+        .upsert({
+          id: userId,
+          name,
+          email,
+          plan: 'free',
+          total_msgs: 0,
+          sessions: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'id' });
+      if (error) console.error('DB save error:', error);
+    } catch (e) {
+      console.error('DB save error:', e);
+    }
   }
 
   async function getUserProfile(userId) {
-    const { data, error } = await _supabase
-      .from('users')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    if (error) return null;
-    return data;
+    try {
+      const { data, error } = await _supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      if (error) {
+        console.error('Profile fetch error:', error);
+        return null;
+      }
+      // Add defaults for missing columns
+      return {
+        ...data,
+        xp: data.xp || 0,
+        badges: data.badges || [],
+        course_progress: data.course_progress || {},
+        streak: data.streak || 0,
+      };
+    } catch (e) {
+      console.error('Profile fetch error:', e);
+      return null;
+    }
   }
 
   async function updateUserStats(userId, updates) {
-    const { error } = await _supabase
-      .from('users')
-      .upsert({
-        id: userId,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'id' });
-    if (error) console.error('Stats update error:', error);
+    try {
+      // Only update columns that exist in DB
+      const safeUpdates = {};
+      if (updates.total_msgs !== undefined) safeUpdates.total_msgs = updates.total_msgs;
+      if (updates.sessions !== undefined) safeUpdates.sessions = updates.sessions;
+      if (updates.plan !== undefined) safeUpdates.plan = updates.plan;
+
+      // Try to update new columns (will fail silently if columns don't exist)
+      const { error } = await _supabase
+        .from('users')
+        .update({ ...safeUpdates, updated_at: new Date().toISOString() })
+        .eq('id', userId);
+      if (error) console.error('Stats update error:', error);
+    } catch (e) {
+      console.error('Stats update error:', e);
+    }
   }
 
   return {
-    init,
-    onAuthChange,
-    getSession,
-    getCurrentUser,
-    signUp,
-    signIn,
-    signInWithOtp,
-    signInWithGoogle,
-    signOut,
-    getUserProfile,
-    updateUserStats,
+    init, onAuthChange, getSession, getCurrentUser,
+    signUp, signIn, signInWithOtp, signInWithGoogle,
+    signOut, getUserProfile, updateUserStats,
   };
 })();
