@@ -1,6 +1,20 @@
-// js/main.js — Glue code: sab modules connect karta hai
+
+# Check what's wrong - the issue is likely that renderScenarios is called before CONFIG is loaded
+# or the callback isn't being passed correctly
+
+# Let me rewrite main.js with better initialization order and error handling
+
+main_js = r'''// js/main.js — Glue code: sab modules connect karta hai
 
 document.addEventListener('DOMContentLoaded', async () => {
+
+  // ─── 0. WAIT FOR CONFIG ───────────────────────────────────────
+  // Config should be loaded by now (script tag above), but let's be safe
+  if (typeof CONFIG === 'undefined') {
+    console.error('CONFIG not loaded! Check script order in HTML.');
+    _showToast('App failed to load. Please refresh.', 'error');
+    return;
+  }
 
   // ─── 1. AUTH INIT ─────────────────────────────────────────────
   Auth.init();
@@ -65,6 +79,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('upgrade-modal-close')?.addEventListener('click', () => {
     document.getElementById('upgrade-modal').style.display = 'none';
   });
+  
+  // Lesson modal close
+  document.getElementById('lesson-modal-close')?.addEventListener('click', () => {
+    const modal = document.getElementById('lesson-modal');
+    if (modal && modal._timerInterval) clearInterval(modal._timerInterval);
+    modal.style.display = 'none';
+  });
 });
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────
@@ -88,11 +109,15 @@ function _switchTab(tabName) {
 // ─── SCENARIO SELECT ──────────────────────────────────────────────
 function _handleScenarioSelect(scenarioId) {
   // Switch to chat tab
-  _switchTab('chat');
+  _switchTab('practice');
 
   // Start scenario with gender preference
   const scenario = Chat.startScenario(scenarioId, Dashboard.getGender());
-  if (!scenario) return;
+  if (!scenario) {
+    console.error('Failed to start scenario:', scenarioId);
+    _showToast('Failed to load scenario. Try again!', 'error');
+    return;
+  }
 
   // Update chat header
   const avatarEl = document.getElementById('chat-persona-avatar');
@@ -101,17 +126,26 @@ function _handleScenarioSelect(scenarioId) {
 
   if (avatarEl) avatarEl.textContent = scenario.personaEmoji || '👩';
   if (nameEl) nameEl.textContent = scenario.persona;
-  if (statusEl) statusEl.textContent = `● Online now · ${scenario.name}`;
+  if (statusEl) statusEl.textContent = `Online now · ${scenario.name}`;
 
   // Show chat UI, hide no-scenario state
-  document.getElementById('no-scenario-state').style.display = 'none';
-  document.getElementById('chat-messages').style.display = 'flex';
-  document.getElementById('chat-input-area').style.display = 'flex';
-
-  // Clear and show greeting
+  const noScenarioState = document.getElementById('no-scenario-state');
   const chatMessages = document.getElementById('chat-messages');
-  chatMessages.innerHTML = '';
+  const chatInputArea = document.getElementById('chat-input-area');
+  
+  if (noScenarioState) noScenarioState.style.display = 'none';
+  if (chatMessages) {
+    chatMessages.style.display = 'flex';
+    chatMessages.innerHTML = '';
+  }
+  if (chatInputArea) chatInputArea.style.display = 'flex';
+
+  // Show greeting
   _appendMessage('assistant', scenario.greeting);
+
+  // Enable coach feedback button
+  const coachBtn = document.getElementById('btn-coach-feedback');
+  if (coachBtn) coachBtn.disabled = false;
 
   // Update sessions count
   const profile = Dashboard.getProfile();
@@ -124,7 +158,8 @@ function _handleScenarioSelect(scenarioId) {
   // Reset message counter for cooldown
   _msgCount = 0;
   _cooldownActive = false;
-  document.getElementById('cooldown-banner').style.display = 'none';
+  const cooldownBanner = document.getElementById('cooldown-banner');
+  if (cooldownBanner) cooldownBanner.style.display = 'none';
 }
 
 // ─── CHAT INPUT ───────────────────────────────────────────────────
@@ -216,9 +251,12 @@ function _startCooldown(minutes) {
   const sendBtn = document.getElementById('btn-send');
   const chatInput = document.getElementById('chat-input');
 
-  banner.style.display = 'flex';
+  if (banner) banner.style.display = 'flex';
   if (sendBtn) sendBtn.disabled = true;
-  if (chatInput) chatInput.disabled = true;
+  if (chatInput) {
+    chatInput.disabled = true;
+    chatInput.placeholder = 'Cooldown active...';
+  }
 
   let secondsLeft = minutes * 60;
 
@@ -237,7 +275,7 @@ function _startCooldown(minutes) {
     if (secondsLeft <= 0) {
       clearInterval(_cooldownTimer);
       _cooldownActive = false;
-      banner.style.display = 'none';
+      if (banner) banner.style.display = 'none';
       if (sendBtn) sendBtn.disabled = false;
       if (chatInput) {
         chatInput.disabled = false;
@@ -256,10 +294,10 @@ function _appendMessage(role, content) {
   const msgDiv = document.createElement('div');
   msgDiv.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
 
+  // Format bold text
   const formatted = content
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/
-/g, '<br>');
+    .replace(/\n/g, '<br>');
 
   msgDiv.innerHTML = `<div class="message-bubble">${formatted}</div>`;
   chatMessages.appendChild(msgDiv);
@@ -301,8 +339,7 @@ async function _handleCoachFeedback() {
         <div class="coach-header">🎯 Coach Feedback</div>
         <div class="coach-content">${feedback
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/
-/g, '<br>')
+          .replace(/\n/g, '<br>')
         }</div>
       `;
       chatMessages.appendChild(feedbackDiv);
@@ -320,14 +357,12 @@ async function _handleCoachFeedback() {
 function _updateNavUI(profile) {
   const planBadge = document.getElementById('nav-plan-badge');
   const userName = document.getElementById('nav-user-name');
-  const userNameDash = document.getElementById('nav-user-name-dashboard');
 
-  const firstName = profile.name?.split(' ')[0] || 'User';
-  const plan = (profile.plan || 'free').toUpperCase();
+  const firstName = profile?.name?.split(' ')[0] || 'User';
+  const plan = (profile?.plan || 'free').toUpperCase();
 
   if (planBadge) planBadge.textContent = plan;
   if (userName) userName.textContent = firstName;
-  if (userNameDash) userNameDash.textContent = firstName;
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────
@@ -366,7 +401,7 @@ function initiatePayment(planKey) {
 
   const options = {
     key: CONFIG.RAZORPAY_KEY,
-    amount: amount * 100, // paise
+    amount: amount * 100,
     currency: 'INR',
     name: 'RizzUp AI',
     description: isYearly ? 'Starter Plan - Yearly' : 'Starter Plan - Monthly',
@@ -390,3 +425,9 @@ function initiatePayment(planKey) {
   const rzp = new Razorpay(options);
   rzp.open();
 }
+'''
+
+with open('/mnt/agents/output/main.js', 'w') as f:
+    f.write(main_js)
+
+print("main.js updated with fixes!")
