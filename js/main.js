@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         Dashboard.setProfile(profile);
         _updateNavUI(profile);
         Dashboard.renderStats();
+        Dashboard.renderGenderSelector();
         Dashboard.renderScenarios(_handleScenarioSelect);
         Dashboard.renderCourse();
       }
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     Dashboard.setProfile(profile);
     _updateNavUI(profile);
     Dashboard.renderStats();
+    Dashboard.renderGenderSelector();
     Dashboard.renderScenarios(_handleScenarioSelect);
     Dashboard.renderCourse();
   }
@@ -88,8 +90,8 @@ function _handleScenarioSelect(scenarioId) {
   // Switch to chat tab
   _switchTab('chat');
 
-  // Start scenario
-  const scenario = Chat.startScenario(scenarioId);
+  // Start scenario with gender preference
+  const scenario = Chat.startScenario(scenarioId, Dashboard.getGender());
   if (!scenario) return;
 
   // Update chat header
@@ -256,7 +258,8 @@ function _appendMessage(role, content) {
 
   const formatted = content
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
+    .replace(/
+/g, '<br>');
 
   msgDiv.innerHTML = `<div class="message-bubble">${formatted}</div>`;
   chatMessages.appendChild(msgDiv);
@@ -298,7 +301,8 @@ async function _handleCoachFeedback() {
         <div class="coach-header">🎯 Coach Feedback</div>
         <div class="coach-content">${feedback
           .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\n/g, '<br>')
+          .replace(/
+/g, '<br>')
         }</div>
       `;
       chatMessages.appendChild(feedbackDiv);
