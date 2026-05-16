@@ -1,234 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dating Mastery - App</title>
-  <link rel="stylesheet" href="css/app.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RizzUp AI — Practice</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body>
-  <div class="app-container">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <div class="logo">
-        <span>💘</span>
-        <span>Dating Mastery</span>
-      </div>
-      
-      <nav>
-        <ul class="nav-menu">
-          <li class="nav-item">
-            <a class="nav-link active" onclick="showTab('dashboard')">
-              <span class="nav-icon">📊</span>
-              <span>Dashboard</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" onclick="showTab('course')">
-              <span class="nav-icon">📚</span>
-              <span>Course</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" onclick="showTab('chat')">
-              <span class="nav-icon">💬</span>
-              <span>Practice Chat</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" onclick="showTab('badges')">
-              <span class="nav-icon">🏆</span>
-              <span>Badges</span>
-            </a>
-          </li>
-        </ul>
-      </nav>
-      
-      <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border);">
-        <a class="nav-link" onclick="logoutUser()">
-          <span class="nav-icon">🚪</span>
-          <span>Logout</span>
-        </a>
-      </div>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="main-content">
-      <!-- Dashboard Tab -->
-      <div id="dashboardTab" class="tab-content">
-        <h1 style="margin-bottom: 24px;">Dashboard</h1>
-        
-        <!-- Stats -->
-        <div class="user-stats">
-          <div class="stat-card">
-            <div class="stat-value" id="userXP">0 XP</div>
-            <div class="stat-label">Experience</div>
-            <div class="level-badge" id="levelBadge" style="background: #6B7280;">
-              <span id="userLevel">Rookie</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="userLevelNum">Level 1</div>
-            <div class="stat-label">Current Level</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="userStreak">0 🔥</div>
-            <div class="stat-label">Day Streak</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-value" id="completedDays">0/30</div>
-            <div class="stat-label">Days Completed</div>
-          </div>
-        </div>
-        
-        <!-- Progress -->
-        <div class="progress-section">
-          <div class="progress-header">
-            <span class="progress-title">Course Progress</span>
-            <span id="progressPercent">0%</span>
-          </div>
-          <div class="progress-bar-container">
-            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
-          </div>
-        </div>
-        
-        <!-- Badges Preview -->
-        <div class="badges-section">
-          <h3>🏆 Your Badges</h3>
-          <div class="badges-grid" id="badgesContainer">
-            <!-- Badges rendered by JS -->
-          </div>
-        </div>
-      </div>
-      
-      <!-- Course Tab -->
-      <div id="courseTab" class="tab-content" style="display: none;">
-        <h1 style="margin-bottom: 24px;">30-Day Course</h1>
-        <div class="course-grid" id="courseGrid">
-          <!-- Course cards rendered by JS -->
-        </div>
-      </div>
-      
-      <!-- Chat Tab -->
-      <div id="chatTab" class="tab-content" style="display: none;">
-        <h1 style="margin-bottom: 24px;">Practice Chat</h1>
-        
-        <div class="chat-container">
-          <div class="scenario-selector">
-            <h3>Choose a Scenario</h3>
-            <div class="scenario-buttons" id="scenarioButtons">
-              <!-- Scenario buttons rendered by JS -->
-            </div>
-          </div>
-          
-          <div class="scenario-info-card" id="scenarioInfo">
-            <!-- Scenario info rendered by JS -->
-          </div>
-          
-          <div class="chat-messages" id="chatMessages">
-            <!-- Messages rendered by JS -->
-          </div>
-          
-          <div class="chat-input-container">
-            <input 
-              type="text" 
-              class="chat-input" 
-              id="chatInput" 
-              placeholder="Type your message..."
-              onkeypress="handleChatKey(event)"
-            >
-            <button class="chat-send-btn" onclick="sendChatMessage()">Send</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Badges Tab -->
-      <div id="badgesTab" class="tab-content" style="display: none;">
-        <h1 style="margin-bottom: 24px;">All Badges</h1>
-        <div class="badges-grid" id="allBadgesContainer">
-          <!-- All badges rendered by JS -->
-        </div>
-      </div>
-    </main>
-  </div>
-  
-  <!-- Course Reader Modal -->
-  <div class="modal-overlay" id="courseModal" onclick="if(event.target === this) closeCourseModal()">
-    <div class="modal-content" id="courseModalContent">
-      <!-- Modal content rendered by JS -->
-    </div>
-  </div>
-  
-  <!-- Scripts -->
+
+  <!-- Razorpay -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <!-- Config first — everything else depends on it -->
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/dashboard.js"></script>
   <script src="js/chat.js"></script>
-  
-  <script>
-    // Initialize app
-    document.addEventListener('DOMContentLoaded', async () => {
-      initAuth();
-      
-      const isAuth = await checkAuth();
-      if (!isAuth) {
-        window.location.href = 'index.html';
-        return;
-      }
-      
-      initDashboard();
-      initChat();
-    });
-    
-    // Tab switching
-    function showTab(tabName) {
-      // Hide all tabs
-      document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.style.display = 'none';
-      });
-      
-      // Show selected tab
-      document.getElementById(tabName + 'Tab').style.display = 'block';
-      
-      // Update nav active state
-      document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-      });
-      event.target.closest('.nav-link').classList.add('active');
-      
-      // Refresh content
-      if (tabName === 'dashboard') {
-        renderStats();
-        renderBadges();
-      } else if (tabName === 'course') {
-        renderCourseGrid();
-      } else if (tabName === 'chat') {
-        renderScenarioButtons();
-      } else if (tabName === 'badges') {
-        renderAllBadges();
-      }
-    }
-    
-    // Render all badges for badges tab
-    function renderAllBadges() {
-      const container = document.getElementById('allBadgesContainer');
-      if (!container) return;
-      
-      const user = getCurrentUser();
-      const earnedBadges = user?.profile?.badges || [];
-      
-      container.innerHTML = CONFIG.BADGES.map(badge => {
-        const isEarned = earnedBadges.includes(badge.id);
-        return `
-          <div class="badge ${isEarned ? 'earned' : 'locked'}" style="padding: 24px;">
-            <span class="badge-icon" style="font-size: 48px;">${isEarned ? badge.icon : '🔒'}</span>
-            <span class="badge-name" style="font-size: 14px; margin-top: 12px;">${badge.name}</span>
-            <p style="font-size: 12px; color: var(--gray); margin-top: 4px;">${badge.desc}</p>
+  <script src="js/dashboard.js"></script>
+
+  <link rel="stylesheet" href="css/app.css" />
+<style>
+  /* Gender Badge in Nav */
+  .gender-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--light-gray);
+    border: 2px solid var(--border);
+    font-size: 1rem;
+    cursor: default;
+    transition: all 0.2s;
+  }
+  .gender-badge:hover {
+    border-color: var(--pink-light);
+    background: #fff0f7;
+  }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+  <!-- ─── TOP NAV ──────────────────────────────────────── -->
+  <nav class="app-nav">
+    <div class="app-nav-inner">
+      <a href="index.html" class="nav-logo">RizzUp 💘</a>
+      <div class="nav-right">
+        <span class="plan-badge" id="nav-plan-badge">FREE</span>
+        <span class="gender-badge" id="nav-gender-badge" title="Your gender">👨</span>
+        <span class="nav-user" id="nav-user-name">User</span>
+        <button class="btn-ghost-small" id="btn-logout">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── MAIN LAYOUT ──────────────────────────────────── -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+      <button class="tab-btn active" data-tab="dashboard">🏠 Dashboard</button>
+      <button class="tab-btn" data-tab="chat">💬 Practice</button>
+      <button class="tab-btn" data-tab="course">📚 Course</button>
+      <button class="tab-btn" data-tab="upgrade">⚡ Upgrade</button>
+    </aside>
+
+    <!-- Content -->
+    <main class="app-content">
+
+      <!-- ─── DASHBOARD TAB ────────────────────────────── -->
+      <div data-tab-panel="dashboard">
+        <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
+        <p class="tab-subtitle">Ready to practice today? Pick a scenario below.</p>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-value" id="stat-total-msgs">0</div>
+            <div class="stat-label">total messages</div>
           </div>
-        `;
-      }).join('');
-    }
-  </script>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-sessions">0</div>
+            <div class="stat-label">sessions done</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-plan">FREE</div>
+            <div class="stat-label">current plan</div>
+          </div>
+          <!-- NEW: XP & Level -->
+          <div class="stat-box">
+            <div class="stat-value" id="stat-xp" style="color:var(--orange)">0</div>
+            <div class="stat-label">XP earned</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-level" style="font-size:1.2rem">🌱 Rookie</div>
+            <div class="stat-label">level</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-streak">0 🔥</div>
+            <div class="stat-label">day streak</div>
+          </div>
+        </div>
+
+        <h3 class="section-heading">Pick a Scenario</h3>
+        <div class="scenarios-grid" id="scenarios-grid">
+          <div class="loading-scenarios">Loading scenarios...</div>
+        </div>
+      </div>
+
+      <!-- ─── CHAT TAB ─────────────────────────────────── -->
+      <div data-tab-panel="chat" style="display:none;">
+        <div class="chat-header">
+          <div class="chat-persona-avatar" id="chat-persona-avatar">👩</div>
+          <div class="chat-persona-info">
+            <div class="chat-persona-name" id="chat-persona-name">Priya</div>
+            <div class="chat-persona-status" id="chat-status">Select a scenario to start</div>
+          </div>
+          <button class="btn-coach" id="btn-coach-feedback">🎯 Coach Feedback</button>
+        </div>
+
+        <!-- No scenario selected state -->
+        <div class="no-scenario-state" id="no-scenario-state">
+          <div class="no-scenario-icon">💬</div>
+          <h3>No scenario selected</h3>
+          <p>Go to Dashboard and choose a scenario to start practicing.</p>
+          <button class="btn-primary" onclick="document.querySelector('[data-tab=dashboard]').click()">
+            Go to Dashboard →
+          </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chat-messages" style="display:none;"></div>
+
+        <!-- Cooldown Banner (free users) -->
+        <div class="cooldown-banner" id="cooldown-banner" style="display:none;">
+          ⏱️ Short break! Free plan has a cooldown after 10 messages.
+          <span id="cooldown-timer">5:00</span> remaining.
+          <button onclick="document.querySelector('[data-tab=upgrade]').click()">Upgrade for unlimited →</button>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area" id="chat-input-area" style="display:none;">
+          <textarea
+            id="chat-input"
+            placeholder="Type your message... (Enter = send, Shift+Enter = new line)"
+            rows="1"
+          ></textarea>
+          <button class="btn-send" id="btn-send">➤</button>
+        </div>
+      </div>
+
+      <!-- ─── COURSE TAB ────────────────────────────────── -->
+      <div data-tab-panel="course" style="display:none;">
+        <h2 class="tab-title">30-Day Dating Mastery 📚</h2>
+        <p class="tab-subtitle">From awkward to confident — structured daily lessons.</p>
+
+        <div id="course-list">
+          <!-- Course content rendered by dashboard.js -->
+        </div>
+      </div>
+
+      <!-- ─── UPGRADE TAB ───────────────────────────────── -->
+      <div data-tab-panel="upgrade" style="display:none;">
+        <h2 class="tab-title">Unlock Everything ⚡</h2>
+        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
+
+        <div class="upgrade-pricing-grid">
+          <!-- Starter -->
+          <div class="upgrade-price-card popular">
+            <div class="popular-label">🔥 Most Popular</div>
+            <div class="price-name">Starter</div>
+            <div class="price-amount">₹99<span class="price-per">/mo</span></div>
+            <div class="price-yearly">or ₹999/year <span class="save-badge">Save 15%</span></div>
+            <ul class="price-features">
+              <li>✓ All 6+ scenarios</li>
+              <li>✓ Unlimited messages</li>
+              <li>✓ Full 30-day course (28 lessons)</li>
+              <li>✓ Live coaching feedback</li>
+              <li>✓ Wingman Mode (10/mo)</li>
+            </ul>
+            <button class="btn-primary full-width" onclick="initiatePayment('starter')">Get Starter ⚡</button>
+            <div class="yearly-btn-wrap">
+              <button class="btn-outline full-width" onclick="initiatePayment('starter_yearly')">Get Yearly — ₹999 🏆</button>
+            </div>
+          </div>
+
+          <!-- Pro - Coming Soon -->
+          <div class="upgrade-price-card coming-soon-card">
+            <div class="coming-soon-label">🚀 Coming Soon</div>
+            <div class="price-name">Pro</div>
+            <div class="price-amount" style="font-size:22px;color:var(--muted)">Launching Soon</div>
+            <ul class="price-features" style="opacity:0.6;">
+              <li>✓ Everything in Starter</li>
+              <li>✓ Voice call practice (AI)</li>
+              <li>✓ Complete 90-day course</li>
+              <li>✓ Unlimited Wingman Mode</li>
+              <li>✓ Human coach Q&A (2x/mo)</li>
+            </ul>
+            <button class="btn-disabled full-width" disabled>Coming Soon 🚀</button>
+          </div>
+        </div>
+
+        <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:16px">
+          🔒 Secure payments via Razorpay · UPI · Cards · NetBanking · 7-day money back guarantee
+        </p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ─── LESSON MODAL ─────────────────────────────────── -->
+  <div class="modal-overlay" id="lesson-modal" style="display:none;">
+    <div class="modal-box" style="max-width:520px;">
+      <button class="modal-close" onclick="document.getElementById('lesson-modal').style.display='none'">✕</button>
+      <div id="lesson-modal-content">
+        <!-- Lesson content rendered by dashboard.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── UPGRADE MODAL ────────────────────────────────── -->
+  <div class="modal-overlay" id="upgrade-modal" style="display:none;">
+    <div class="modal-box">
+      <button class="modal-close" id="upgrade-modal-close">✕</button>
+      <div class="upgrade-modal-content">
+        <div class="upgrade-modal-icon">🔒</div>
+        <h3>Upgrade to Unlock</h3>
+        <p>This content is available on the Starter plan. Upgrade to unlock all 6 scenarios, full 28-day course, and Wingman Mode!</p>
+        <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
+          Get Starter — ₹99/mo ⚡
+        </button>
+        <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">
+          Maybe later
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Main JS last -->
+  <script src="js/main.js"></script>
 </body>
 </html>
