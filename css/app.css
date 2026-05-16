@@ -544,3 +544,46 @@ h1,h2,h3,h4 { font-family: var(--font-display); line-height: 1.2; }
   color: var(--text-muted);
   line-height: 1.4;
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   COURSE RESUME BANNER
+   ═══════════════════════════════════════════════════════════════════ */
+
+.course-resume-banner {
+  background: var(--gradient);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: all 0.2s;
+  color: white;
+}
+.course-resume-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(232,67,147,0.3);
+}
+.resume-icon {
+  font-size: 1.5rem;
+}
+.resume-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.resume-text strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+}
+.resume-text span {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+.resume-arrow {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
