@@ -1,144 +1,228 @@
-// js/auth.js — Sirf auth logic
+// ============================================
+// AUTH.JS — Gender Save + Single Tab Signup + Safe Supabase Updates
+// ============================================
 
-const Auth = (() => {
-  let _supabase = null;
-  let _currentUser = null;
-  let _onAuthChangeCallbacks = [];
+let supabaseClient = null;
+let currentUser = null;
 
-  function init() {
-    _supabase = window.supabase.createClient(
-      CONFIG.SUPABASE_URL,
-      CONFIG.SUPABASE_ANON_KEY
-    );
+// Initialize Supabase
+function initAuth() {
+  if (typeof supabase !== 'undefined') {
+    supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+    console.log('✅ Supabase initialized');
+  } else {
+    console.error('❌ Supabase library not loaded');
+  }
+}
 
-    _supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        _currentUser = session.user;
-        _onAuthChangeCallbacks.forEach(cb => cb('SIGNED_IN', session.user));
-      } else if (event === 'SIGNED_OUT') {
-        _currentUser = null;
-        _onAuthChangeCallbacks.forEach(cb => cb('SIGNED_OUT', null));
+// Check if user is logged in
+async function checkAuth() {
+  if (!supabaseClient) return false;
+  
+  try {
+    const { data: { session }, error } = await supabaseClient.auth.getSession();
+    if (error) throw error;
+    
+    if (session) {
+      currentUser = session.user;
+      await loadUserProfile();
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.error('Auth check error:', err);
+    return false;
+  }
+}
+
+// Load user profile with gender
+async function loadUserProfile() {
+  if (!currentUser || !supabaseClient) return;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('users')
+      .select('*')
+      .eq('id', currentUser.id)
+      .single();
+    
+    if (error) {
+      // User row doesn't exist, create it
+      if (error.code === 'PGRST116') {
+        await createUserProfile();
+      } else {
+        throw error;
       }
-    });
+    } else {
+      currentUser.profile = data;
+      // Store gender in localStorage for quick access
+      if (data.gender) {
+        localStorage.setItem('userGender', data.gender);
+      }
+    }
+  } catch (err) {
+    console.error('Load profile error:', err);
   }
+}
 
-  function onAuthChange(callback) {
-    _onAuthChangeCallbacks.push(callback);
+// Create user profile with gender
+async function createUserProfile(gender = 'male') {
+  if (!currentUser || !supabaseClient) return;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('users')
+      .insert([
+        {
+          id: currentUser.id,
+          email: currentUser.email,
+          gender: gender,
+          xp: 0,
+          badges: [],
+          course_progress: {},
+          streak: 0,
+          created_at: new Date().toISOString()
+        }
+      ])
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    currentUser.profile = data;
+    localStorage.setItem('userGender', gender);
+    console.log('✅ Profile created with gender:', gender);
+  } catch (err) {
+    console.error('Create profile error:', err);
   }
+}
 
-  async function getSession() {
-    const { data: { session } } = await _supabase.auth.getSession();
-    if (session?.user) _currentUser = session.user;
-    return session;
+// Signup with gender
+async function signupWithGender(email, password, gender) {
+  if (!supabaseClient) {
+    alert('Supabase not initialized. Please refresh.');
+    return;
   }
-
-  function getCurrentUser() {
-    return _currentUser;
-  }
-
-  async function signUp(name, email, password) {
-    const { data, error } = await _supabase.auth.signUp({
+  
+  try {
+    // Step 1: Sign up with Supabase Auth
+    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } }
-    });
-    if (error) throw error;
-    if (data.user) await _saveUserToDb(data.user.id, name, email);
-    return data;
-  }
-
-  async function signIn(email, password) {
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
-  }
-
-  async function signInWithOtp(email) {
-    const { error } = await _supabase.auth.signInWithOtp({ email });
-    if (error) throw error;
-  }
-
-  async function signInWithGoogle() {
-    const { error } = await _supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.origin + '/app.html' }
-    });
-    if (error) throw error;
-  }
-
-  async function signOut() {
-    const { error } = await _supabase.auth.signOut();
-    if (error) throw error;
-    _currentUser = null;
-  }
-
-  async function _saveUserToDb(userId, name, email) {
-    try {
-      const { error } = await _supabase
-        .from('users')
-        .upsert({
-          id: userId,
-          name,
-          email,
-          plan: 'free',
-          total_msgs: 0,
-          sessions: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'id' });
-      if (error) console.error('DB save error:', error);
-    } catch (e) {
-      console.error('DB save error:', e);
-    }
-  }
-
-  async function getUserProfile(userId) {
-    try {
-      const { data, error } = await _supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      if (error) {
-        console.error('Profile fetch error:', error);
-        return null;
+      options: {
+        emailRedirectTo: window.location.origin + '/app.html'
       }
-      // Add defaults for missing columns
-      return {
-        ...data,
-        xp: data.xp || 0,
-        badges: data.badges || [],
-        course_progress: data.course_progress || {},
-        streak: data.streak || 0,
-      };
-    } catch (e) {
-      console.error('Profile fetch error:', e);
-      return null;
-    }
+    });
+    
+    if (authError) throw authError;
+    
+    currentUser = authData.user;
+    
+    // Step 2: Create profile with gender
+    await createUserProfile(gender);
+    
+    // Step 3: Redirect to app (SAME TAB — no new tab!)
+    window.location.href = 'app.html';
+    
+  } catch (err) {
+    console.error('Signup error:', err);
+    alert('Signup failed: ' + err.message);
   }
+}
 
-  async function updateUserStats(userId, updates) {
-    try {
-      // Only update columns that exist in DB
-      const safeUpdates = {};
-      if (updates.total_msgs !== undefined) safeUpdates.total_msgs = updates.total_msgs;
-      if (updates.sessions !== undefined) safeUpdates.sessions = updates.sessions;
-      if (updates.plan !== undefined) safeUpdates.plan = updates.plan;
-
-      // Try to update new columns (will fail silently if columns don't exist)
-      const { error } = await _supabase
-        .from('users')
-        .update({ ...safeUpdates, updated_at: new Date().toISOString() })
-        .eq('id', userId);
-      if (error) console.error('Stats update error:', error);
-    } catch (e) {
-      console.error('Stats update error:', e);
-    }
+// Login
+async function loginUser(email, password) {
+  if (!supabaseClient) {
+    alert('Supabase not initialized. Please refresh.');
+    return;
   }
+  
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (error) throw error;
+    
+    currentUser = data.user;
+    await loadUserProfile();
+    
+    // Redirect to app (SAME TAB)
+    window.location.href = 'app.html';
+    
+  } catch (err) {
+    console.error('Login error:', err);
+    alert('Login failed: ' + err.message);
+  }
+}
 
-  return {
-    init, onAuthChange, getSession, getCurrentUser,
-    signUp, signIn, signInWithOtp, signInWithGoogle,
-    signOut, getUserProfile, updateUserStats,
+// Logout
+async function logoutUser() {
+  if (!supabaseClient) return;
+  
+  try {
+    await supabaseClient.auth.signOut();
+    currentUser = null;
+    localStorage.removeItem('userGender');
+    window.location.href = 'index.html';
+  } catch (err) {
+    console.error('Logout error:', err);
+  }
+}
+
+// Get user gender
+function getUserGender() {
+  // Check localStorage first (faster)
+  const stored = localStorage.getItem('userGender');
+  if (stored) return stored;
+  
+  // Check profile
+  if (currentUser?.profile?.gender) {
+    return currentUser.profile.gender;
+  }
+  
+  return 'male'; // Default
+}
+
+// Update user stats (XP, badges, progress)
+async function updateUserStats(updates) {
+  if (!currentUser || !supabaseClient) return;
+  
+  try {
+    const { data, error } = await supabaseClient
+      .from('users')
+      .update(updates)
+      .eq('id', currentUser.id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    currentUser.profile = { ...currentUser.profile, ...data };
+    return data;
+  } catch (err) {
+    console.error('Update stats error:', err);
+    return null;
+  }
+}
+
+// Get current user
+function getCurrentUser() {
+  return currentUser;
+}
+
+// Export
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    initAuth,
+    checkAuth,
+    signupWithGender,
+    loginUser,
+    logoutUser,
+    getUserGender,
+    updateUserStats,
+    getCurrentUser,
+    loadUserProfile
   };
-})();
+}
