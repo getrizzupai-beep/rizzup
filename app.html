@@ -1,35 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RizzUp AI — Practice</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
-  <!-- Supabase -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- Razorpay -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-
-  <!-- Config first — everything else depends on it -->
-  <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/chat.js"></script>
-  <script src="js/dashboard.js"></script>
-
-  <link rel="stylesheet" href="css/app.css" />
 <base target="_blank">
 </head>
 <body>
 
-  <!-- ─── TOP NAV ──────────────────────────────────────── -->
+  <!-- NAV -->
   <nav class="app-nav">
     <div class="app-nav-inner">
-      <a href="index.html" class="nav-logo">RizzUp 💘</a>
+      <a href="index.html" class="nav-logo">RizzUp AI</a>
       <div class="nav-right">
         <span class="plan-badge" id="nav-plan-badge">FREE</span>
         <span class="nav-user" id="nav-user-name">User</span>
@@ -38,191 +24,154 @@
     </div>
   </nav>
 
-  <!-- ─── MAIN LAYOUT ──────────────────────────────────── -->
+  <!-- LAYOUT -->
   <div class="app-layout">
-    <!-- Sidebar -->
+
+    <!-- SIDEBAR -->
     <aside class="app-sidebar">
-      <button class="tab-btn active" data-tab="dashboard">🏠 Dashboard</button>
-      <button class="tab-btn" data-tab="chat">💬 Practice</button>
+      <button class="tab-btn active" data-tab="practice">🎮 Practice</button>
       <button class="tab-btn" data-tab="course">📚 Course</button>
-      <button class="tab-btn" data-tab="upgrade">⚡ Upgrade</button>
+      <button class="tab-btn" data-tab="upgrade">💎 Upgrade</button>
     </aside>
 
-    <!-- Content -->
+    <!-- CONTENT -->
     <main class="app-content">
 
-      <!-- ─── DASHBOARD TAB ────────────────────────────── -->
-      <div data-tab-panel="dashboard">
-        <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
-        <p class="tab-subtitle">Ready to practice today? Pick a scenario below.</p>
+      <!-- ─── PRACTICE TAB ─────────────────────────────────────────── -->
+      <div data-tab-panel="practice" style="display:block;">
+        <h2 class="tab-title">🎮 Practice Scenarios</h2>
+        <p class="tab-subtitle">Choose a scenario and start chatting with AI personas</p>
 
-        <div class="stats-row">
-          <div class="stat-box">
-            <div class="stat-value" id="stat-total-msgs">0</div>
-            <div class="stat-label">total messages</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value" id="stat-sessions">0</div>
-            <div class="stat-label">sessions done</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value" id="stat-plan">FREE</div>
-            <div class="stat-label">current plan</div>
-          </div>
-          <!-- NEW: XP & Level -->
-          <div class="stat-box">
-            <div class="stat-value" id="stat-xp" style="color:var(--orange)">0</div>
-            <div class="stat-label">XP earned</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value" id="stat-level" style="font-size:1.2rem">🌱 Rookie</div>
-            <div class="stat-label">level</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value" id="stat-streak">0 🔥</div>
-            <div class="stat-label">day streak</div>
-          </div>
-        </div>
+        <!-- Gender Selector -->
+        <div id="gender-selector"></div>
 
-        <h3 class="section-heading">Pick a Scenario</h3>
         <div class="scenarios-grid" id="scenarios-grid">
           <div class="loading-scenarios">Loading scenarios...</div>
         </div>
-      </div>
 
-      <!-- ─── CHAT TAB ─────────────────────────────────── -->
-      <div data-tab-panel="chat" style="display:none;">
-        <div class="chat-header">
+        <!-- Chat Section -->
+        <div class="chat-header" style="margin-top:24px;">
           <div class="chat-persona-avatar" id="chat-persona-avatar">👩</div>
-          <div class="chat-persona-info">
-            <div class="chat-persona-name" id="chat-persona-name">Priya</div>
-            <div class="chat-persona-status" id="chat-status">Select a scenario to start</div>
+          <div>
+            <div class="chat-persona-name" id="chat-persona-name">Select a scenario</div>
+            <div class="chat-persona-status" id="chat-status">Choose from above to start</div>
           </div>
-          <button class="btn-coach" id="btn-coach-feedback">🎯 Coach Feedback</button>
+          <button class="btn-coach" id="btn-coach-feedback" disabled>🎯 Coach Feedback</button>
         </div>
 
-        <!-- No scenario selected state -->
+        <!-- Cooldown Banner -->
+        <div id="cooldown-banner" style="display:none; background:#fff3e0; border:1px solid #ffe0b2; border-radius:12px; padding:12px 16px; margin-bottom:12px; align-items:center; gap:10px;">
+          <span style="font-size:1.2rem;">⏳</span>
+          <span style="font-size:0.88rem; color:#e65100; font-weight:600;">
+            Free plan cooldown active — next message in <span id="cooldown-timer">5:00</span>
+          </span>
+        </div>
+
+        <!-- No Scenario State -->
         <div class="no-scenario-state" id="no-scenario-state">
-          <div class="no-scenario-icon">💬</div>
-          <h3>No scenario selected</h3>
-          <p>Go to Dashboard and choose a scenario to start practicing.</p>
-          <button class="btn-primary" onclick="document.querySelector('[data-tab=dashboard]').click()">
-            Go to Dashboard →
-          </button>
+          <div class="no-scenario-icon">👆</div>
+          <h3>Pick a scenario to start</h3>
+          <p>Choose any scenario above and start practicing your dating skills with AI</p>
         </div>
 
         <!-- Chat Messages -->
         <div class="chat-messages" id="chat-messages" style="display:none;"></div>
 
-        <!-- Cooldown Banner (free users) -->
-        <div class="cooldown-banner" id="cooldown-banner" style="display:none;">
-          ⏱️ Short break! Free plan has a cooldown after 10 messages.
-          <span id="cooldown-timer">5:00</span> remaining.
-          <button onclick="document.querySelector('[data-tab=upgrade]').click()">Upgrade for unlimited →</button>
-        </div>
-
         <!-- Chat Input -->
         <div class="chat-input-area" id="chat-input-area" style="display:none;">
-          <textarea
-            id="chat-input"
-            placeholder="Type your message... (Enter = send, Shift+Enter = new line)"
-            rows="1"
-          ></textarea>
+          <textarea id="chat-input" placeholder="Type your message..." rows="1"></textarea>
           <button class="btn-send" id="btn-send">➤</button>
         </div>
       </div>
 
-      <!-- ─── COURSE TAB ────────────────────────────────── -->
+      <!-- ─── COURSE TAB ───────────────────────────────────────────── -->
       <div data-tab-panel="course" style="display:none;">
-        <h2 class="tab-title">30-Day Dating Mastery 📚</h2>
-        <p class="tab-subtitle">From awkward to confident — structured daily lessons.</p>
-
-        <div id="course-list">
-          <!-- Course content rendered by dashboard.js -->
-        </div>
+        <h2 class="tab-title">📚 Dating Course</h2>
+        <p class="tab-subtitle" id="course-subtitle">30-Day Dating Mastery — structured daily lessons</p>
+        <div class="course-list" id="course-list"></div>
       </div>
 
-      <!-- ─── UPGRADE TAB ───────────────────────────────── -->
+      <!-- ─── UPGRADE TAB ──────────────────────────────────────────── -->
       <div data-tab-panel="upgrade" style="display:none;">
-        <h2 class="tab-title">Unlock Everything ⚡</h2>
-        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
-
+        <h2 class="tab-title">💎 Upgrade</h2>
+        <p class="tab-subtitle">Unlock all scenarios, full course, and human coaching</p>
         <div class="upgrade-pricing-grid">
-          <!-- Starter -->
-          <div class="upgrade-price-card popular">
-            <div class="popular-label">🔥 Most Popular</div>
-            <div class="price-name">Starter</div>
-            <div class="price-amount">₹99<span class="price-per">/mo</span></div>
-            <div class="price-yearly">or ₹999/year <span class="save-badge">Save 15%</span></div>
+          <div class="upgrade-price-card">
+            <div class="price-name">Free</div>
+            <div class="price-amount">₹0</div>
+            <div class="price-per">Forever free</div>
             <ul class="price-features">
-              <li>✓ All 6+ scenarios</li>
-              <li>✓ Unlimited messages</li>
-              <li>✓ Full 30-day course (28 lessons)</li>
-              <li>✓ Live coaching feedback</li>
-              <li>✓ Wingman Mode (10/mo)</li>
+              <li>✅ 3 practice scenarios</li>
+              <li>✅ 7-day course (Week 1)</li>
+              <li>✅ AI chat (10 msgs, 5min cooldown)</li>
+              <li>✅ Basic stats</li>
             </ul>
-            <button class="btn-primary full-width" onclick="initiatePayment('starter')">Get Starter ⚡</button>
-            <div class="yearly-btn-wrap">
-              <button class="btn-outline full-width" onclick="initiatePayment('starter_yearly')">Get Yearly — ₹999 🏆</button>
-            </div>
+            <button class="btn-ghost full-width" disabled>Current Plan</button>
           </div>
-
-          <!-- Pro - Coming Soon -->
-          <div class="upgrade-price-card coming-soon-card">
-            <div class="coming-soon-label">🚀 Coming Soon</div>
-            <div class="price-name">Pro</div>
-            <div class="price-amount" style="font-size:22px;color:var(--muted)">Launching Soon</div>
-            <ul class="price-features" style="opacity:0.6;">
-              <li>✓ Everything in Starter</li>
-              <li>✓ Voice call practice (AI)</li>
-              <li>✓ Complete 90-day course</li>
-              <li>✓ Unlimited Wingman Mode</li>
-              <li>✓ Human coach Q&A (2x/mo)</li>
+          <div class="upgrade-price-card popular">
+            <div class="popular-label">Most Popular</div>
+            <div class="price-name">Starter</div>
+            <div class="price-amount">₹99<span style="font-size:1rem;font-weight:500">/mo</span></div>
+            <div class="price-per">or ₹999/year (save ₹189)</div>
+            <ul class="price-features">
+              <li>✅ All 6 practice scenarios</li>
+              <li>✅ Full 28-day course</li>
+              <li>✅ Unlimited AI chat</li>
+              <li>✅ AI coach feedback</li>
+              <li>✅ Progress tracking & badges</li>
             </ul>
-            <button class="btn-disabled full-width" disabled>Coming Soon 🚀</button>
+            <button class="btn-primary full-width" onclick="initiatePayment('starter')">Upgrade — ₹99/mo</button>
+            <button class="btn-outline full-width" onclick="initiatePayment('starter_yearly')">Save with Yearly — ₹999</button>
+          </div>
+          <div class="upgrade-price-card">
+            <div class="price-name">Pro</div>
+            <div class="price-amount">₹0</div>
+            <div class="price-per">Coming soon</div>
+            <ul class="price-features">
+              <li>✅ Everything in Starter</li>
+              <li>✅ Voice call simulation</li>
+              <li>✅ 1-on-1 human coach</li>
+              <li>✅ Priority support</li>
+            </ul>
+            <button class="btn-ghost full-width" disabled>Coming Soon</button>
           </div>
         </div>
-
-        <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:16px">
-          🔒 Secure payments via Razorpay · UPI · Cards · NetBanking · 7-day money back guarantee
-        </p>
       </div>
 
     </main>
   </div>
 
-  <!-- ─── LESSON MODAL ─────────────────────────────────── -->
+  <!-- ─── LESSON MODAL ─────────────────────────────────────────────── -->
   <div class="modal-overlay" id="lesson-modal" style="display:none;">
-    <div class="modal-box" style="max-width:520px;">
-      <button class="modal-close" onclick="document.getElementById('lesson-modal').style.display='none'">✕</button>
-      <div id="lesson-modal-content">
-        <!-- Lesson content rendered by dashboard.js -->
-      </div>
+    <div class="modal-box">
+      <button class="modal-close" id="lesson-modal-close">✕</button>
+      <div id="lesson-modal-content"></div>
     </div>
   </div>
 
-  <!-- ─── UPGRADE MODAL ────────────────────────────────── -->
+  <!-- ─── UPGRADE MODAL ──────────────────────────────────────────── -->
   <div class="modal-overlay" id="upgrade-modal" style="display:none;">
     <div class="modal-box">
       <button class="modal-close" id="upgrade-modal-close">✕</button>
       <div class="upgrade-modal-content">
         <div class="upgrade-modal-icon">🔒</div>
-        <h3>Upgrade to Unlock</h3>
-        <p>This content is available on the Starter plan. Upgrade to unlock all 6 scenarios, full 28-day course, and Wingman Mode!</p>
-        <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
-          Get Starter — ₹99/mo ⚡
-        </button>
-        <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">
-          Maybe later
-        </button>
+        <h3>Unlock This Feature</h3>
+        <p>This content is available on the Starter plan. Upgrade to get full access to all scenarios, the complete 28-day course, and unlimited AI practice.</p>
+        <button class="btn-primary full-width" onclick="initiatePayment('starter')">Upgrade for ₹99/mo</button>
+        <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">Maybe Later</button>
       </div>
     </div>
   </div>
 
-  <!-- Toast -->
+  <!-- ─── TOAST ──────────────────────────────────────────────────── -->
   <div class="toast" id="toast"></div>
 
-  <!-- Main JS last -->
+  <!-- ─── SCRIPTS ─────────────────────────────────────────────────── -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/dashboard.js"></script>
   <script src="js/main.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </body>
 </html>
