@@ -1,216 +1,263 @@
-
-# Check what's wrong - the issue is likely that renderScenarios is called before CONFIG is loaded
-# or the callback isn't being passed correctly
-
-# Let me rewrite main.js with better initialization order and error handling
-
-main_js = r'''// js/main.js — Glue code: sab modules connect karta hai
+// js/main.js — Single Page App Glue Code
+// No redirects — sab ek hi page pe
 
 document.addEventListener('DOMContentLoaded', async () => {
 
-  // ─── 0. WAIT FOR CONFIG ───────────────────────────────────────
-  // Config should be loaded by now (script tag above), but let's be safe
-  if (typeof CONFIG === 'undefined') {
-    console.error('CONFIG not loaded! Check script order in HTML.');
-    _showToast('App failed to load. Please refresh.', 'error');
-    return;
-  }
-
-  // ─── 1. AUTH INIT ─────────────────────────────────────────────
+  // ─── 1. AUTH INIT ────────────────────────────────────────────────
   Auth.init();
 
-  // ─── 2. AUTH STATE LISTENER ───────────────────────────────────
+  // ─── 2. EXISTING SESSION CHECK ───────────────────────────────────
+  const session = await Auth.getSession();
+  if (session) {
+    let profile = await Auth.getUserProfile(session.user.id);
+    if (!profile) {
+      profile = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.user_metadata?.full_name || 'User',
+        plan: 'free',
+        mins_used: 0,
+        total_msgs: 0,
+        sessions: 0,
+        gender: null,
+      };
+    }
+    _showApp(profile);
+  } else {
+    _showLanding();
+  }
+
+  // ─── 3. AUTH STATE CHANGE ────────────────────────────────────────
   Auth.onAuthChange(async (event, user) => {
     if (event === 'SIGNED_IN' && user) {
-      const profile = await Auth.getUserProfile(user.id);
-      if (profile) {
-        Dashboard.setProfile(profile);
-        _updateNavUI(profile);
-        Dashboard.renderStats();
-        Dashboard.renderGenderSelector();
-        Dashboard.renderScenarios(_handleScenarioSelect);
-        Dashboard.renderCourse();
+      let profile = await Auth.getUserProfile(user.id);
+      if (!profile) {
+        profile = {
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || 'User',
+          plan: 'free',
+          mins_used: 0,
+          total_msgs: 0,
+          sessions: 0,
+          gender: null,
+        };
       }
+      closeAuthModal();
+      _showApp(profile);
     } else if (event === 'SIGNED_OUT') {
-      if (window.location.pathname.includes('app.html')) {
-        window.location.href = 'index.html';
-      }
+      _showLanding();
     }
   });
 
-  // ─── 3. APP PAGE INIT ─────────────────────────────────────────
-  const session = await Auth.getSession();
-
-  if (!session) {
-    window.location.href = 'index.html';
-    return;
+  // ─── 4. CHAT INPUT SETUP ─────────────────────────────────────────
+  const chatInput = document.getElementById('chat-input');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = 'auto';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    });
   }
 
-  const user = Auth.getCurrentUser();
-  if (!user) {
-    window.location.href = 'index.html';
-    return;
-  }
-
-  const profile = await Auth.getUserProfile(user.id);
-  if (profile) {
-    Dashboard.setProfile(profile);
-    _updateNavUI(profile);
-    Dashboard.renderStats();
-    Dashboard.renderGenderSelector();
-    Dashboard.renderScenarios(_handleScenarioSelect);
-    Dashboard.renderCourse();
-  }
-
-  // ─── 4. SETUP UI ──────────────────────────────────────────────
-  _setupTabs();
-  _setupChatInput();
-
-  // Logout
-  document.getElementById('btn-logout')?.addEventListener('click', async () => {
-    await Auth.signOut();
-    window.location.href = 'index.html';
-  });
-
-  // Coach feedback
-  document.getElementById('btn-coach-feedback')?.addEventListener('click', _handleCoachFeedback);
-
-  // Upgrade modal close
-  document.getElementById('upgrade-modal-close')?.addEventListener('click', () => {
-    document.getElementById('upgrade-modal').style.display = 'none';
-  });
-  
-  // Lesson modal close
-  document.getElementById('lesson-modal-close')?.addEventListener('click', () => {
-    const modal = document.getElementById('lesson-modal');
-    if (modal && modal._timerInterval) clearInterval(modal._timerInterval);
-    modal.style.display = 'none';
-  });
 });
 
-// ─── TAB SWITCHING ────────────────────────────────────────────────
-function _setupTabs() {
-  document.querySelectorAll('[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => _switchTab(btn.dataset.tab));
-  });
+// ─── SHOW APP ────────────────────────────────────────────────────
+function _showApp(profile) {
+  document.getElementById('landingView').style.display = 'none';
+  document.getElementById('appView').style.display = 'block';
+
+  Dashboard.setProfile(profile);
+
+  // Nav update
+  const firstName = profile.name?.split(' ')[0] || 'there';
+  const planBadge = document.getElementById('nav-plan-badge');
+  const userName = document.getElementById('nav-user-name');
+  const greetName = document.getElementById('greet-name');
+
+  if (planBadge) planBadge.textContent = (profile.plan || 'free').toUpperCase();
+  if (userName) userName.textContent = firstName;
+  if (greetName) greetName.textContent = firstName;
+
+  Dashboard.renderStats();
+  Dashboard.renderScenarios(_handleScenarioSelect);
+  Dashboard.renderCourse();
 }
 
-function _switchTab(tabName) {
-  // Buttons
-  document.querySelectorAll('[data-tab]').forEach(btn => {
+// ─── SHOW LANDING ────────────────────────────────────────────────
+function _showLanding() {
+  document.getElementById('appView').style.display = 'none';
+  document.getElementById('landingView').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+// ─── AUTH MODAL ──────────────────────────────────────────────────
+function openAuthModal(tab = 'signup') {
+  document.getElementById('authModal').style.display = 'flex';
+  switchAuthTab(tab);
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').style.display = 'none';
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('authModal')) closeAuthModal();
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('panel-signup').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('panel-login').style.display = tab === 'login' ? 'block' : 'none';
+}
+
+// ─── AUTH ACTIONS ────────────────────────────────────────────────
+async function doSignup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+
+  if (!name || !email || !password) { showToast('Sab fields fill karo! 🙏', 'error'); return; }
+  if (password.length < 6) { showToast('Password kam se kam 6 characters ka hona chahiye!', 'error'); return; }
+
+  const btn = document.getElementById('signup-btn');
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
+
+  try {
+    await Auth.signUp(name, email, password);
+    showToast('Account ban gaya! 🎉 Email verify karke login karo.', 'success');
+  } catch (error) {
+    showToast(error.message || 'Signup failed. Try again!', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Start Practicing Free →';
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  if (!email || !password) { showToast('Email aur password dono chahiye!', 'error'); return; }
+
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  btn.textContent = 'Logging in...';
+
+  try {
+    await Auth.signIn(email, password);
+    // onAuthChange handle karega
+  } catch (error) {
+    showToast(error.message || 'Login failed. Check email/password!', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Login →';
+  }
+}
+
+async function doGoogleLogin() {
+  try {
+    await Auth.signInWithGoogle();
+  } catch (error) {
+    showToast('Google login failed. Try again!', 'error');
+  }
+}
+
+async function doLogout() {
+  try {
+    await Auth.signOut();
+    Chat.resetConversation();
+  } catch (error) {
+    showToast('Logout failed!', 'error');
+  }
+}
+
+// ─── APP TAB SWITCHING ───────────────────────────────────────────
+function switchAppTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabName);
   });
-  // Panels
-  document.querySelectorAll('[data-tab-panel]').forEach(panel => {
-    panel.style.display = panel.dataset.tabPanel === tabName ? 'block' : 'none';
+  document.querySelectorAll('.app-panel').forEach(panel => {
+    panel.style.display = panel.id === `tab-panel-${tabName}` ? 'block' : 'none';
   });
 }
 
-// ─── SCENARIO SELECT ──────────────────────────────────────────────
+// ─── SCENARIO SELECT ─────────────────────────────────────────────
 function _handleScenarioSelect(scenarioId) {
-  // Switch to chat tab
-  _switchTab('practice');
-
-  // Start scenario with gender preference
-  const scenario = Chat.startScenario(scenarioId, Dashboard.getGender());
-  if (!scenario) {
-    console.error('Failed to start scenario:', scenarioId);
-    _showToast('Failed to load scenario. Try again!', 'error');
+  if (Dashboard.hasReachedLimit()) {
+    Dashboard.showUpgradePrompt();
     return;
   }
 
-  // Update chat header
+  switchAppTab('chat');
+
+  // Dono scenario sets mein dhundo
+  const allScenarios = {
+    ...CONFIG.SCENARIOS_FEMALE,
+    ...CONFIG.SCENARIOS_MALE,
+  };
+  const scenarioData = allScenarios[scenarioId];
+  if (!scenarioData) return;
+
+  // Chat module mein start karo
+  const scenario = Chat.startScenario(scenarioId);
+  if (!scenario) return;
+
+  // Chat header update
   const avatarEl = document.getElementById('chat-persona-avatar');
   const nameEl = document.getElementById('chat-persona-name');
-  const statusEl = document.getElementById('chat-status');
+  const statusEl = document.getElementById('chat-persona-status');
+  if (avatarEl) avatarEl.textContent = scenarioData.emoji || '👩';
+  if (nameEl) nameEl.textContent = scenarioData.persona;
+  if (statusEl) statusEl.textContent = `● Online now · ${scenarioData.name}`;
 
-  if (avatarEl) avatarEl.textContent = scenario.personaEmoji || '👩';
-  if (nameEl) nameEl.textContent = scenario.persona;
-  if (statusEl) statusEl.textContent = `Online now · ${scenario.name}`;
+  // Show chat UI
+  document.getElementById('no-scenario-state').style.display = 'none';
+  document.getElementById('chat-messages').style.display = 'flex';
+  document.getElementById('chat-input-area').style.display = 'flex';
 
-  // Show chat UI, hide no-scenario state
-  const noScenarioState = document.getElementById('no-scenario-state');
+  // Clear + greeting
   const chatMessages = document.getElementById('chat-messages');
-  const chatInputArea = document.getElementById('chat-input-area');
-  
-  if (noScenarioState) noScenarioState.style.display = 'none';
-  if (chatMessages) {
-    chatMessages.style.display = 'flex';
-    chatMessages.innerHTML = '';
-  }
-  if (chatInputArea) chatInputArea.style.display = 'flex';
+  chatMessages.innerHTML = '';
+  _appendMessage('assistant', scenarioData.greeting);
 
-  // Show greeting
-  _appendMessage('assistant', scenario.greeting);
-
-  // Enable coach feedback button
-  const coachBtn = document.getElementById('btn-coach-feedback');
-  if (coachBtn) coachBtn.disabled = false;
-
-  // Update sessions count
-  const profile = Dashboard.getProfile();
-  if (profile) {
-    profile.sessions = (profile.sessions || 0) + 1;
+  // Session timer
+  Dashboard.startSessionTimer(async (minsElapsed) => {
+    const profile = Dashboard.getProfile();
+    if (!profile) return;
+    const newMins = (profile.mins_used || 0) + 1;
+    profile.mins_used = newMins;
     Dashboard.renderStats();
-    Auth.updateUserStats(profile.id, { sessions: profile.sessions });
-  }
-
-  // Reset message counter for cooldown
-  _msgCount = 0;
-  _cooldownActive = false;
-  const cooldownBanner = document.getElementById('cooldown-banner');
-  if (cooldownBanner) cooldownBanner.style.display = 'none';
-}
-
-// ─── CHAT INPUT ───────────────────────────────────────────────────
-let _msgCount = 0;
-let _cooldownActive = false;
-let _cooldownTimer = null;
-
-function _setupChatInput() {
-  const chatInput = document.getElementById('chat-input');
-  const sendBtn = document.getElementById('btn-send');
-
-  if (!chatInput || !sendBtn) return;
-
-  sendBtn.addEventListener('click', _sendChatMessage);
-
-  chatInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      _sendChatMessage();
+    await Auth.updateUserStats(profile.id, { mins_used: newMins });
+    if (Dashboard.hasReachedLimit()) {
+      Dashboard.stopSessionTimer();
+      Dashboard.showUpgradePrompt();
     }
   });
-
-  // Auto-resize textarea
-  chatInput.addEventListener('input', () => {
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
-  });
 }
 
-async function _sendChatMessage() {
-  if (_cooldownActive) return;
-
+// ─── SEND CHAT MESSAGE ───────────────────────────────────────────
+async function sendChatMessage() {
   const chatInput = document.getElementById('chat-input');
   if (!chatInput) return;
 
   const message = chatInput.value.trim();
   if (!message) return;
-
   if (!Chat.getCurrentScenario()) {
-    _showToast('Please select a scenario first! 👆', 'warning');
+    showToast('Pehle koi scenario select karo! 👆', 'warning');
     return;
   }
-
   if (Chat.isTyping()) return;
 
-  // Show user message
   _appendMessage('user', message);
   chatInput.value = '';
   chatInput.style.height = 'auto';
 
-  // Update stats
   const profile = Dashboard.getProfile();
   if (profile) {
     profile.total_msgs = (profile.total_msgs || 0) + 1;
@@ -218,118 +265,28 @@ async function _sendChatMessage() {
     Auth.updateUserStats(profile.id, { total_msgs: profile.total_msgs });
   }
 
-  // Check cooldown (free plan)
-  _msgCount++;
-  const userPlan = profile?.plan || 'free';
-  const planConfig = CONFIG.PLANS[userPlan] || CONFIG.PLANS.free;
-
-  if (_msgCount >= planConfig.msgBeforeCooldown && planConfig.cooldownMinutes > 0) {
-    _startCooldown(planConfig.cooldownMinutes);
-  }
-
-  // Show typing indicator
-  _showTyping(true);
+  _showTypingIndicator(true);
 
   try {
     const reply = await Chat.sendMessage(message);
-    _showTyping(false);
+    _showTypingIndicator(false);
     _appendMessage('assistant', reply);
   } catch (error) {
-    _showTyping(false);
+    _showTypingIndicator(false);
     console.error('Chat error:', error);
-    _showToast('Message failed to send. Try again! 🙏', 'error');
+    showToast('Message send nahi hua. Try again! 🙏', 'error');
   }
 }
 
-// ─── COOLDOWN SYSTEM ──────────────────────────────────────────────
-function _startCooldown(minutes) {
-  _cooldownActive = true;
-  _msgCount = 0;
-
-  const banner = document.getElementById('cooldown-banner');
-  const timerEl = document.getElementById('cooldown-timer');
-  const sendBtn = document.getElementById('btn-send');
-  const chatInput = document.getElementById('chat-input');
-
-  if (banner) banner.style.display = 'flex';
-  if (sendBtn) sendBtn.disabled = true;
-  if (chatInput) {
-    chatInput.disabled = true;
-    chatInput.placeholder = 'Cooldown active...';
-  }
-
-  let secondsLeft = minutes * 60;
-
-  const updateTimer = () => {
-    const m = Math.floor(secondsLeft / 60);
-    const s = secondsLeft % 60;
-    if (timerEl) timerEl.textContent = `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  updateTimer();
-
-  _cooldownTimer = setInterval(() => {
-    secondsLeft--;
-    updateTimer();
-
-    if (secondsLeft <= 0) {
-      clearInterval(_cooldownTimer);
-      _cooldownActive = false;
-      if (banner) banner.style.display = 'none';
-      if (sendBtn) sendBtn.disabled = false;
-      if (chatInput) {
-        chatInput.disabled = false;
-        chatInput.placeholder = 'Type your message...';
-      }
-      _showToast("You're back! Keep practicing 💪", 'success');
-    }
-  }, 1000);
-}
-
-// ─── CHAT UI HELPERS ──────────────────────────────────────────────
-function _appendMessage(role, content) {
-  const chatMessages = document.getElementById('chat-messages');
-  if (!chatMessages) return;
-
-  const msgDiv = document.createElement('div');
-  msgDiv.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
-
-  // Format bold text
-  const formatted = content
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\n/g, '<br>');
-
-  msgDiv.innerHTML = `<div class="message-bubble">${formatted}</div>`;
-  chatMessages.appendChild(msgDiv);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-function _showTyping(show) {
-  const existing = document.getElementById('typing-indicator');
-  const chatMessages = document.getElementById('chat-messages');
-
-  if (show && !existing && chatMessages) {
-    const typingDiv = document.createElement('div');
-    typingDiv.id = 'typing-indicator';
-    typingDiv.className = 'message ai-message';
-    typingDiv.innerHTML = `<div class="message-bubble typing-bubble"><span></span><span></span><span></span></div>`;
-    chatMessages.appendChild(typingDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-  } else if (!show && existing) {
-    existing.remove();
-  }
-}
-
-// ─── COACH FEEDBACK ───────────────────────────────────────────────
-async function _handleCoachFeedback() {
+// ─── COACH FEEDBACK ──────────────────────────────────────────────
+async function getCoachFeedback() {
   const coachBtn = document.getElementById('btn-coach-feedback');
   if (coachBtn) coachBtn.disabled = true;
-
-  _showTyping(true);
+  _showTypingIndicator(true);
 
   try {
     const feedback = await Chat.getCoachFeedback();
-    _showTyping(false);
+    _showTypingIndicator(false);
 
     const chatMessages = document.getElementById('chat-messages');
     if (chatMessages) {
@@ -337,97 +294,112 @@ async function _handleCoachFeedback() {
       feedbackDiv.className = 'coach-feedback-bubble';
       feedbackDiv.innerHTML = `
         <div class="coach-header">🎯 Coach Feedback</div>
-        <div class="coach-content">${feedback
-          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\n/g, '<br>')
-        }</div>
+        <div class="coach-content">${feedback.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</div>
       `;
       chatMessages.appendChild(feedbackDiv);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-  } catch (err) {
-    _showTyping(false);
-    _showToast('Coach feedback not available right now. Try again!', 'error');
+  } catch (error) {
+    _showTypingIndicator(false);
+    showToast('Coach feedback abhi available nahi. Try again!', 'error');
   } finally {
     if (coachBtn) coachBtn.disabled = false;
   }
 }
 
-// ─── NAV UI ───────────────────────────────────────────────────────
-function _updateNavUI(profile) {
-  const planBadge = document.getElementById('nav-plan-badge');
-  const userName = document.getElementById('nav-user-name');
-
-  const firstName = profile?.name?.split(' ')[0] || 'User';
-  const plan = (profile?.plan || 'free').toUpperCase();
-
-  if (planBadge) planBadge.textContent = plan;
-  if (userName) userName.textContent = firstName;
-}
-
-// ─── TOAST ────────────────────────────────────────────────────────
-function _showToast(message, type = 'info') {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-
-  toast.textContent = message;
-  toast.className = `toast toast-${type} show`;
-
-  setTimeout(() => {
-    toast.className = 'toast';
-  }, 3500);
-}
-
-// ─── PAYMENT (Razorpay) ───────────────────────────────────────────
+// ─── PAYMENT ─────────────────────────────────────────────────────
 function initiatePayment(planKey) {
-  const isYearly = planKey === 'starter_yearly';
-  const basePlanKey = isYearly ? 'starter' : planKey;
-  const plan = CONFIG.PLANS[basePlanKey];
-
+  const plan = CONFIG.PLANS[planKey];
   if (!plan) return;
 
   const profile = Dashboard.getProfile();
-  if (!profile) {
-    window.location.href = 'index.html';
-    return;
-  }
+  if (!profile) { openAuthModal('signup'); return; }
 
   if (CONFIG.RAZORPAY_KEY === 'rzp_test_placeholder') {
-    _showToast('Payments coming very soon! 🚀', 'info');
+    showToast('Payments coming soon! 🚀', 'info');
     return;
   }
-
-  const amount = isYearly ? plan.yearlyPrice : plan.price;
 
   const options = {
     key: CONFIG.RAZORPAY_KEY,
-    amount: amount * 100,
+    amount: plan.price * 100,
     currency: 'INR',
     name: 'RizzUp AI',
-    description: isYearly ? 'Starter Plan - Yearly' : 'Starter Plan - Monthly',
+    description: `${plan.name} Plan - Monthly`,
     handler: async (response) => {
-      await Auth.updateUserStats(profile.id, { plan: basePlanKey });
-      profile.plan = basePlanKey;
+      await Auth.updateUserStats(profile.id, { plan: planKey });
+      profile.plan = planKey;
       Dashboard.setProfile(profile);
-      _updateNavUI(profile);
       Dashboard.renderStats();
       Dashboard.renderScenarios(_handleScenarioSelect);
-      _showToast(`${plan.name} plan activated! 🎉`, 'success');
+      showToast(`${plan.name} plan active ho gaya! 🎉`, 'success');
       document.getElementById('upgrade-modal').style.display = 'none';
     },
-    prefill: {
-      email: profile.email,
-      name: profile.name,
-    },
-    theme: { color: '#e84393' },
+    prefill: { email: profile.email, name: profile.name },
+    theme: { color: '#e84393' }
   };
 
   const rzp = new Razorpay(options);
   rzp.open();
 }
-'''
 
-with open('/mnt/agents/output/main.js', 'w') as f:
-    f.write(main_js)
+// ─── CHAT MODULE SCENARIO LOOKUP FIX ────────────────────────────
+// chat.js ko dono sets se scenario milna chahiye
+// Iske liye Chat.startScenario override karte hain
+const _originalStartScenario = Chat.startScenario.bind(Chat);
 
-print("main.js updated with fixes!")
+// ─── HELPERS ─────────────────────────────────────────────────────
+function _appendMessage(role, content) {
+  const chatMessages = document.getElementById('chat-messages');
+  if (!chatMessages) return;
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
+  const formatted = content
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+  msgDiv.innerHTML = `<div class="message-bubble">${formatted}</div>`;
+  chatMessages.appendChild(msgDiv);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function _showTypingIndicator(show) {
+  const existing = document.getElementById('typing-indicator');
+  if (show && !existing) {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+    const div = document.createElement('div');
+    div.id = 'typing-indicator';
+    div.className = 'message ai-message';
+    div.innerHTML = `<div class="message-bubble typing-bubble"><span></span><span></span><span></span></div>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  } else if (!show && existing) {
+    existing.remove();
+  }
+}
+
+// ─── LANDING HELPERS ─────────────────────────────────────────────
+function switchFeature(el, idx) {
+  document.querySelectorAll('.feat-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.preview-card').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  const prev = document.getElementById('prev-' + idx);
+  if (prev) prev.classList.add('active');
+}
+
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  item.classList.toggle('open');
+  const arr = el.querySelector('.arr');
+  if (arr) arr.textContent = item.classList.contains('open') ? '−' : '+';
+}
+
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toastEl');
+  if (!toast) return;
+  toast.textContent = message;
+  toast.className = `toast toast-${type} show`;
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove('show'), 3500);
+}
