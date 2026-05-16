@@ -1,536 +1,213 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RizzUp AI — India's #1 AI Dating Coach</title>
-  <meta name="description" content="Practice real conversations, get live coaching, and master the art of dating — all in Hinglish.">
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/landing.css">
-  <link rel="stylesheet" href="css/app.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RizzUp AI — Practice</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- Razorpay -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <!-- Config first — everything else depends on it -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/dashboard.js"></script>
+
+  <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
 
-<!-- ===== LANDING VIEW ===== -->
-<div id="landingView">
-
-<!-- NAV -->
-<nav>
-  <div class="nav-inner">
-    <a href="#" class="nav-logo"><span class="r">Rizz</span>Up 💘</a>
-    <ul class="nav-links">
-      <li><a href="#features">Features</a></li>
-      <li><a href="#scenarios">Scenarios</a></li>
-      <li><a href="#pricing">Pricing</a></li>
-      <li><a href="#faq">FAQ</a></li>
-    </ul>
-    <div class="nav-right">
-      <span class="nav-login" onclick="openAuthModal('login')">Login</span>
-      <button class="nav-cta" onclick="openAuthModal('signup')">Try Free →</button>
-    </div>
-  </div>
-</nav>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="hero-left">
-    <div class="hero-badge"><div class="dot"></div>🇮🇳 Trusted by 5,000+ Indians</div>
-    <h1>Your personal<br><span class="pink">AI dating coach</span><br>for <span class="underline">real results.</span></h1>
-    <p class="hero-sub">Practice real conversations, get live coaching, and master the art of dating — all in Hinglish. India ka pehla AI dating coach.</p>
-    <div class="hero-actions">
-      <button class="btn-primary" onclick="openAuthModal('signup')">Start Free — No Card Needed</button>
-      <button class="btn-secondary" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">See How It Works</button>
-    </div>
-    <div class="hero-trust">
-      <div class="trust-item">⚡ Free to start</div>
-      <div class="trust-item">🔒 100% Private</div>
-      <div class="trust-item">💬 Hinglish support</div>
-      <div class="trust-item">🇮🇳 Made for India</div>
-    </div>
-  </div>
-  <div class="hero-right">
-    <div class="phone-mockup">
-      <div class="phone-top">
-        <div class="phone-av">👩</div>
-        <div class="phone-persona">
-          <div class="phone-name">Priya</div>
-          <div class="phone-status">● Online · First Date</div>
-        </div>
-      </div>
-      <div class="phone-body">
-        <div class="chat-msg ai"><div class="cb">Hiii! *nervously sips coffee* Tum actually apni photo jaise ho 😄 So tell me something interesting!</div></div>
-        <div class="chat-msg user" style="display:flex;justify-content:flex-end"><div class="cb">Haha thanks! Honestly I was nervous too... but you seem really easy to talk to 😊</div></div>
-        <div class="coach-msg"><div class="cl">🎯 Coach Feedback</div><strong>Vibe Score: 8.5/10</strong> — Vulnerability + compliment combo = 🔥 Keep going!</div>
-      </div>
-      <div class="phone-score">
-        <div class="score-item"><div class="sv">8.5</div><div class="sl">Vibe Score</div></div>
-        <div class="score-item" style="background:var(--green-pale)"><div class="sv" style="color:var(--green)">+50</div><div class="sl">XP Earned</div></div>
-        <div class="score-item" style="background:var(--purple-pale)"><div class="sv" style="color:var(--purple)">Day 3</div><div class="sl">Streak 🔥</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- TICKER -->
-<div class="ticker-wrap">
-  <div class="ticker-track">
-    <div class="ticker-item">AI Dating Coach</div><div class="ticker-item">Live Feedback</div><div class="ticker-item">30-Day Course</div><div class="ticker-item">Hinglish Support</div><div class="ticker-item">First Date Prep</div><div class="ticker-item">Arranged Meet</div><div class="ticker-item">Texting Game</div><div class="ticker-item">Rejection Handling</div><div class="ticker-item">Confidence Builder</div><div class="ticker-item">Wingman Mode</div>
-    <div class="ticker-item">AI Dating Coach</div><div class="ticker-item">Live Feedback</div><div class="ticker-item">30-Day Course</div><div class="ticker-item">Hinglish Support</div><div class="ticker-item">First Date Prep</div><div class="ticker-item">Arranged Meet</div><div class="ticker-item">Texting Game</div><div class="ticker-item">Rejection Handling</div><div class="ticker-item">Confidence Builder</div><div class="ticker-item">Wingman Mode</div>
-  </div>
-</div>
-
-<!-- STATS -->
-<div class="stats-section">
-  <div class="stats-inner">
-    <div class="stat-box"><div class="stat-icon">💬</div><div class="stat-num">50K<span>+</span></div><div class="stat-lbl">Chats Practiced</div></div>
-    <div class="stat-box"><div class="stat-icon">🎯</div><div class="stat-num">5K<span>+</span></div><div class="stat-lbl">Happy Users</div></div>
-    <div class="stat-box"><div class="stat-icon">⭐</div><div class="stat-num">4.<span>8</span></div><div class="stat-lbl">Average Rating</div></div>
-    <div class="stat-box"><div class="stat-icon">🚀</div><div class="stat-num">3<span>x</span></div><div class="stat-lbl">Confidence Boost</div></div>
-  </div>
-</div>
-
-<!-- FEATURES -->
-<section class="section features-section" id="features">
-  <div class="section-inner">
-    <div class="sec-tag">How It Works</div>
-    <h2 class="sec-title">Everything you need to<br>win the dating game</h2>
-    <p class="sec-sub">From your first message to the first date — RizzUp has your back at every step.</p>
-    <div class="features-layout">
-      <div class="feat-tabs">
-        <div class="feat-tab active" onclick="switchFeature(this, 0)">
-          <div class="ft-header"><span class="ft-icon">🎭</span><span class="ft-name">AI Roleplay Practice</span></div>
-          <div class="ft-desc">Practice real dating conversations with AI personas trained on actual Indian dating scenarios.</div>
-        </div>
-        <div class="feat-tab" onclick="switchFeature(this, 1)">
-          <div class="ft-header"><span class="ft-icon">🎯</span><span class="ft-name">Live Coach Feedback</span></div>
-          <div class="ft-desc">Get a Vibe Score, what worked, what to fix, and exactly what to say next.</div>
-        </div>
-        <div class="feat-tab" onclick="switchFeature(this, 2)">
-          <div class="ft-header"><span class="ft-icon">📚</span><span class="ft-name">30-Day Course</span></div>
-          <div class="ft-desc">Structured daily lessons from first message to first date. Week 1 is free.</div>
-        </div>
-        <div class="feat-tab" onclick="switchFeature(this, 3)">
-          <div class="ft-header"><span class="ft-icon">🪽</span><span class="ft-name">Wingman Mode</span></div>
-          <div class="ft-desc">Stuck on a real chat? Paste the conversation — get 3 reply options ranked by vibe score.</div>
-        </div>
-      </div>
-      <div class="feat-preview">
-        <div class="preview-card active" id="prev-0">
-          <div class="pc-title">💬 Practice · First Date</div>
-          <div class="mini-chat">
-            <div class="mc-row"><div class="mc-av">👩</div><div class="mc-bub ai">Hiii! Tum actually apni photo jaise ho 😄 Tell me something interesting!</div></div>
-            <div class="mc-row user"><div class="mc-av u">🧑</div><div class="mc-bub user">Haha I was nervous too — but you seem really easy to talk to 😊</div></div>
-            <div class="mc-row"><div class="mc-av">👩</div><div class="mc-bub ai">Aww that's sweet! *smiles* Okay — chai ya coffee? 😄</div></div>
-          </div>
-        </div>
-        <div class="preview-card" id="prev-1">
-          <div class="pc-title">🎯 Coach Feedback</div>
-          <div class="mc-coach"><div class="mc-coach-hdr">🎯 Dating Coach</div><strong>Vibe Score: 8.5/10</strong> — Vulnerability ka use bahut achha kiya!<br><br><strong>Kya kaam kiya:</strong> Compliment + admission of nerves = genuine<br><strong>Improve karo:</strong> Follow-up question poocho<br><strong>Next bolna chahiye:</strong> "Okay fair — chai date sounds perfect 😄"</div>
-          <div class="score-grid" style="margin-top:14px"><div class="sg-card"><div class="sg-num">8.5</div><div class="sg-lbl">Vibe Score</div></div><div class="sg-card" style="background:var(--green-pale)"><div class="sg-num" style="color:var(--green)">+50</div><div class="sg-lbl">XP Earned</div></div></div>
-        </div>
-        <div class="preview-card" id="prev-2">
-          <div class="pc-title">📚 30-Day Bootcamp</div>
-          <div class="course-days">
-            <div class="cd-row"><div class="cd-num cd-done">✓</div><div class="cd-info"><div class="cd-t">Why You're Getting Ignored</div><div class="cd-s">Foundation · Free</div></div></div>
-            <div class="cd-row" style="border-color:var(--pink-pale2);background:var(--pink-pale)"><div class="cd-num cd-cur">2</div><div class="cd-info"><div class="cd-t">The Confidence Framework</div><div class="cd-s">Today's lesson · Free</div></div></div>
-            <div class="cd-row"><div class="cd-num cd-lock">🔒</div><div class="cd-info"><div class="cd-t">First Message Formula</div><div class="cd-s">Day 3 · Starter+</div></div></div>
-          </div>
-        </div>
-        <div class="preview-card" id="prev-3">
-          <div class="pc-title">🪽 Wingman Mode</div>
-          <div style="background:var(--gray);border-radius:12px;padding:14px;font-size:13px;margin-bottom:14px"><div style="color:var(--muted);font-weight:700;margin-bottom:8px">Their message:</div><div style="font-weight:600">"haha okay I'll think about it 😏"</div></div>
-          <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Top Replies</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div style="background:var(--pink-pale);border:1px solid var(--pink-pale2);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600">🔥 9.2 — "haha okay I'll help you think then 😄 coffee ya chai?"</div>
-            <div style="background:var(--gray);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-size:13px;font-weight:600">😊 7.8 — "take your time, I'm not going anywhere 😊"</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- COMPARISON -->
-<section class="section compare-section">
-  <div class="section-inner">
-    <div style="text-align:center;margin-bottom:48px">
-      <div class="sec-tag">Why RizzUp</div>
-      <h2 class="sec-title">RizzUp vs Generic AI Tools</h2>
-      <p class="sec-sub" style="margin:0 auto">ChatGPT ke saath dating practice? That's like using a calculator to play cricket.</p>
-    </div>
-    <div class="compare-grid">
-      <div class="compare-card winner">
-        <div class="cc-header"><div class="cc-logo" style="color:var(--pink)">RizzUp AI 💘</div><div class="winner-tag">✓ Better Choice</div></div>
-        <div class="compare-items">
-          <div class="ci good">Trained on real Indian dating scenarios</div>
-          <div class="ci good">Hinglish native — responds like a real person</div>
-          <div class="ci good">Knows Indian culture — arranged meets, chai dates</div>
-          <div class="ci good">Instant vibe score + specific coaching</div>
-          <div class="ci good">6+ roleplay scenarios built for India</div>
-          <div class="ci good">30-day structured transformation course</div>
-        </div>
-      </div>
-      <div class="compare-card">
-        <div class="cc-header"><div class="cc-logo" style="color:var(--muted)">Generic AI Tools 🤖</div></div>
-        <div class="compare-items">
-          <div class="ci bad">Generic responses — sounds like a work email</div>
-          <div class="ci bad">No Hinglish or Indian cultural context</div>
-          <div class="ci bad">No concept of arranged meetings or desi vibes</div>
-          <div class="ci bad">No coaching — just replies, no improvement</div>
-          <div class="ci bad">Copy-paste prompts every single time</div>
-          <div class="ci bad">No structured learning path</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- SCENARIOS -->
-<section class="section scenarios-section" id="scenarios">
-  <div class="section-inner">
-    <div class="sec-tag">Practice Scenarios</div>
-    <h2 class="sec-title">Every Indian dating situation — covered</h2>
-    <p class="sec-sub">6+ realistic scenarios built for how Indians actually date.</p>
-    <div class="scen-grid">
-      <div class="scen-card" onclick="openAuthModal('signup')"><span class="sc-emoji">☕</span><div class="sc-name">First Date</div><div class="sc-desc">Coffee meetup — make a great first impression.</div><span class="sc-badge sc-free">Free</span></div>
-      <div class="scen-card" onclick="openAuthModal('signup')"><span class="sc-emoji">💬</span><div class="sc-name">Texting Game</div><div class="sc-desc">Keep the convo interesting after matching on a dating app.</div><span class="sc-badge sc-free">Free</span></div>
-      <div class="scen-card" onclick="openAuthModal('signup')"><span class="sc-emoji">💪</span><div class="sc-name">Handle Rejection</div><div class="sc-desc">Stay confident and graceful when things don't go your way.</div><span class="sc-badge sc-free">Free</span></div>
-      <div class="scen-card locked" onclick="openAuthModal('signup')"><div class="sc-lock">🔒</div><span class="sc-emoji">😏</span><div class="sc-name">Flirting Practice</div><div class="sc-desc">Playful banter, wit, and charm — practice until it's natural.</div><span class="sc-badge sc-pro">Starter+</span></div>
-      <div class="scen-card locked" onclick="openAuthModal('signup')"><div class="sc-lock">🔒</div><span class="sc-emoji">💐</span><div class="sc-name">Arranged Meet</div><div class="sc-desc">Navigate the Indian arranged meeting setup with confidence.</div><span class="sc-badge sc-pro">Starter+</span></div>
-      <div class="scen-card locked" onclick="openAuthModal('signup')"><div class="sc-lock">🔒</div><span class="sc-emoji">🌙</span><div class="sc-name">Second Date</div><div class="sc-desc">Deepen the connection — go beyond small talk.</div><span class="sc-badge sc-pro">Starter+</span></div>
-    </div>
-  </div>
-</section>
-
-<!-- TESTIMONIALS -->
-<section class="section testi-section">
-  <div class="section-inner">
-    <div style="text-align:center;margin-bottom:48px"><div class="sec-tag">Real Users</div><h2 class="sec-title">What Indians are saying</h2></div>
-    <div class="testi-grid">
-      <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"Pehle date pe kya bolun samajh hi nahi aata tha. RizzUp ke 2 weeks baad — puri conversation maine lead ki. She texted me first the next day!"</p><div class="testi-author"><div class="ta-av">👨</div><div><div class="ta-name">Arjun K.</div><div class="ta-loc">Mumbai · 24</div></div></div></div>
-      <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"The coach feedback is insane — it told me exactly what I did wrong and what to say next. Itna specific advice kisi real coach ne bhi nahi diya."</p><div class="testi-author"><div class="ta-av">🧑</div><div><div class="ta-name">Rahul S.</div><div class="ta-loc">Delhi · 26</div></div></div></div>
-      <div class="testi-card"><div class="testi-stars">★★★★★</div><p class="testi-text">"Arranged meet scenario ne mujhe save kiya. Family ke saamne kitna awkward hota tha — ab I actually look forward to these meetings!"</p><div class="testi-author"><div class="ta-av">👦</div><div><div class="ta-name">Varun M.</div><div class="ta-loc">Bangalore · 27</div></div></div></div>
-    </div>
-  </div>
-</section>
-
-<!-- PRICING -->
-<section class="section pricing-section" id="pricing">
-  <div class="section-inner">
-    <div class="pricing-header">
-      <div class="sec-tag">Pricing</div>
-      <h2 class="sec-title">Start free. Upgrade when ready.</h2>
-      <p class="sec-sub">No credit card needed to start. Indian payments — UPI, Cards, NetBanking.</p>
-    </div>
-    <div class="pricing-grid">
-      <div class="price-card">
-        <div class="pc-name">Free</div>
-        <div class="pc-price">₹0</div>
-        <div class="pc-tagline">Forever free, no card needed</div>
-        <div class="pc-feats"><div class="pf">3 free scenarios</div><div class="pf">Unlimited chat (cooldown)</div><div class="pf">Week 1 of 30-day course</div><div class="pf off">All 6 scenarios</div><div class="pf off">Full course access</div><div class="pf off">Wingman Mode</div></div>
-        <button class="pc-btn pc-btn-out" onclick="openAuthModal('signup')">Get Started Free</button>
-      </div>
-      <div class="price-card hot">
-        <div class="hot-badge">🔥 Most Popular</div>
-        <div class="pc-name">Starter</div>
-        <div class="pc-price"><sup>₹</sup>99<sub>/mo</sub></div>
-        <div class="pc-tagline">or ₹999/year — save 15%</div>
-        <div class="pc-feats"><div class="pf">All 6+ scenarios</div><div class="pf">Unlimited messages</div><div class="pf">Full 30-day course (28 lessons)</div><div class="pf">Live coaching feedback</div><div class="pf">Wingman Mode (10/mo)</div><div class="pf off">Voice call practice</div></div>
-        <button class="pc-btn pc-btn-main" onclick="openAuthModal('signup')">Get Starter ⚡</button>
-      </div>
-      <div class="price-card">
-        <div class="pc-name">Pro</div>
-        <div class="pc-price" style="font-size:18px;padding:12px 0">Coming Soon</div>
-        <div class="pc-tagline">Voice calls + Human Coach</div>
-        <div class="pc-feats"><div class="pf">Everything in Starter</div><div class="pf">Voice call practice (AI)</div><div class="pf">Complete 90-day course</div><div class="pf">Unlimited Wingman Mode</div><div class="pf">Human coach Q&A (2x/mo)</div></div>
-        <button class="pc-btn pc-btn-out" disabled style="opacity:0.5;cursor:not-allowed">Coming Soon 🚀</button>
-      </div>
-    </div>
-    <div class="pricing-footer">🔒 Secure payments via Razorpay · UPI · Debit/Credit Cards · NetBanking · 7-day money back guarantee</div>
-  </div>
-</section>
-
-<!-- PRIVACY -->
-<section class="section privacy-section">
-  <div class="section-inner">
-    <div style="text-align:center;margin-bottom:48px"><div class="sec-tag">Privacy</div><h2 class="sec-title">Your conversations stay private</h2><p class="sec-sub" style="margin:0 auto">We know how personal dating conversations are. Privacy is our top priority.</p></div>
-    <div class="privacy-grid">
-      <div class="privacy-card"><div class="pv-icon">🔒</div><div class="pv-title">100% Encrypted</div><div class="pv-desc">All conversations are encrypted. Nobody can read your practice sessions — not even us.</div></div>
-      <div class="privacy-card"><div class="pv-icon">🚫</div><div class="pv-title">Zero Data Selling</div><div class="pv-desc">We never sell your data to third parties. Your conversations are yours alone — period.</div></div>
-      <div class="privacy-card"><div class="pv-icon">🗑️</div><div class="pv-title">Delete Anytime</div><div class="pv-desc">Delete your account and all data disappears completely. No hidden backups.</div></div>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section class="section faq-section" id="faq">
-  <div class="section-inner">
-    <div class="faq-inner">
-      <div style="text-align:center;margin-bottom:40px"><div class="sec-tag">FAQ</div><h2 class="sec-title">Frequently Asked Questions</h2></div>
-      <div class="faq-list">
-        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">What is RizzUp AI?<span class="arr">+</span></div><div class="faq-a">RizzUp is India's first AI dating coach. Practice real dating conversations with AI personas, get live coaching feedback, and learn from daily lessons — all in Hinglish.</div></div>
-        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Is it really free to start?<span class="arr">+</span></div><div class="faq-a">Yes — 100% free, no credit card needed. You get 3 free scenarios and the first week of the 30-day course completely free forever.</div></div>
-        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Does it support Hinglish?<span class="arr">+</span></div><div class="faq-a">Absolutely. The AI understands and responds in Hinglish, and we have specific scenarios for arranged meets, Hinge/Bumble matches, and typical Indian dating situations.</div></div>
-        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">Is my data private?<span class="arr">+</span></div><div class="faq-a">Yes. All conversations are encrypted. We never sell data. You can delete everything anytime. Your practice sessions are completely private.</div></div>
-        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)">How does the free limit work?<span class="arr">+</span></div><div class="faq-a">Free users get unlimited chat across 3 scenarios with a short cooldown after 10 messages — then you're back. Upgrade to Starter for all 6 scenarios with no cooldowns.</div></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- CTA -->
-<section class="cta-section">
-  <div class="cta-inner">
-    <h2 class="cta-title">Ready to level up your dating game?</h2>
-    <p class="cta-sub">Join 5,000+ Indians already practicing with RizzUp. Start free today — no excuses.</p>
-    <div class="cta-actions">
-      <button class="btn-white-solid" onclick="openAuthModal('signup')">Start Free Now 🚀</button>
-      <button class="btn-white-ghost" onclick="document.getElementById('scenarios').scrollIntoView({behavior:'smooth'})">See Scenarios →</button>
-    </div>
-    <div class="cta-trust">
-      <span>⚡ Free forever plan</span>
-      <span>🔒 100% private</span>
-      <span>🇮🇳 Made for India</span>
-    </div>
-  </div>
-</section>
-
-<!-- FOOTER -->
-<footer>
-  <div class="footer-inner">
-    <div class="footer-top">
-      <div class="footer-brand"><div class="fl"><span class="r">Rizz</span>Up 💘</div><p>India's first AI dating coach. Practice, learn, and level up your dating game — in Hinglish.</p></div>
-      <div class="footer-col"><h4>Product</h4><a href="#features">Features</a><a href="#scenarios">Scenarios</a><a href="#pricing">Pricing</a></div>
-      <div class="footer-col"><h4>Legal</h4><a href="#">Privacy</a><a href="#">Terms</a><a href="#">Refunds</a></div>
-    </div>
-    <div class="footer-bottom">
-      <div class="footer-copy">© 2025 RizzUp AI. Made with 💕 in India.</div>
-      <div class="footer-copy">Not affiliated with Anthropic.</div>
-    </div>
-  </div>
-</footer>
-
-</div><!-- end landingView -->
-
-<!-- ===== AUTH MODAL ===== -->
-<div class="modal-overlay" id="authModal" style="display:none;" onclick="handleModalOverlayClick(event)">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
-    <div style="text-align:center;font-size:36px;margin-bottom:4px">💘</div>
-    <h3 style="text-align:center;margin-bottom:4px;font-family:'Bricolage Grotesque',sans-serif;">RizzUp AI</h3>
-    <p style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px">Join 5,000+ Indians leveling up their dating game</p>
-
-    <!-- Auth Tabs -->
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
-      <button class="auth-tab" id="tab-login" onclick="switchAuthTab('login')">Login</button>
-    </div>
-
-    <!-- Signup Panel -->
-    <div id="panel-signup">
-      <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input id="signup-name" class="form-input" placeholder="Rahul Kumar" type="text">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="signup-email" class="form-input" placeholder="rahul@gmail.com" type="email">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="signup-password" class="form-input" placeholder="Min 6 characters" type="password">
-      </div>
-      <button class="btn-primary" style="width:100%;margin-bottom:12px" id="signup-btn" onclick="doSignup()">Start Practicing Free →</button>
-      <div class="modal-divider"><span>or</span></div>
-      <button class="btn-google-modal" onclick="doGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/></svg>
-        Continue with Google
-      </button>
-      <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:14px">Already have an account? <span style="color:var(--pink);cursor:pointer;font-weight:600" onclick="switchAuthTab('login')">Login</span></p>
-    </div>
-
-    <!-- Login Panel -->
-    <div id="panel-login" style="display:none;">
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="login-email" class="form-input" placeholder="rahul@gmail.com" type="email">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="login-password" class="form-input" placeholder="Your password" type="password">
-      </div>
-      <button class="btn-primary" style="width:100%;margin-bottom:12px" id="login-btn" onclick="doLogin()">Login →</button>
-      <div class="modal-divider"><span>or</span></div>
-      <button class="btn-google-modal" onclick="doGoogleLogin()">
-        <svg width="18" height="18" viewBox="0 0 18 18" style="margin-right:8px"><path fill="#4285F4" d="M16.51 8H8.98v3h4.3c-.18 1-.74 1.48-1.6 2.04v2.01h2.6a7.8 7.8 0 0 0 2.38-5.88c0-.57-.05-.66-.15-1.18z"/><path fill="#34A853" d="M8.98 17c2.16 0 3.97-.72 5.3-1.94l-2.6-2a4.8 4.8 0 0 1-7.18-2.54H1.83v2.07A8 8 0 0 0 8.98 17z"/><path fill="#FBBC05" d="M4.5 10.52a4.8 4.8 0 0 1 0-3.04V5.41H1.83a8 8 0 0 0 0 7.18l2.67-2.07z"/><path fill="#EA4335" d="M8.98 4.18c1.17 0 2.23.4 3.06 1.2l2.3-2.3A8 8 0 0 0 1.83 5.4L4.5 7.49a4.77 4.77 0 0 1 4.48-3.31z"/></svg>
-        Continue with Google
-      </button>
-      <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:14px">Don't have an account? <span style="color:var(--pink);cursor:pointer;font-weight:600" onclick="switchAuthTab('signup')">Sign up free</span></p>
-    </div>
-
-    <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px">🔒 256-bit SSL · ⚡ Instant Access · 🇮🇳 Made for India</div>
-  </div>
-</div>
-
-<!-- ===== APP VIEW ===== -->
-<div id="appView" style="display:none;">
-
-  <!-- TOP NAV -->
+  <!-- ─── TOP NAV ──────────────────────────────────────── -->
   <nav class="app-nav">
     <div class="app-nav-inner">
-      <a href="#" class="nav-logo" onclick="return false;">RizzUp 💘</a>
-      <div class="app-nav-tabs">
-        <button class="tab-btn active" data-tab="dashboard" onclick="switchAppTab('dashboard')">🏠 Dashboard</button>
-        <button class="tab-btn" data-tab="chat" onclick="switchAppTab('chat')">💬 Practice</button>
-        <button class="tab-btn" data-tab="course" onclick="switchAppTab('course')">📚 Course</button>
-        <button class="tab-btn" data-tab="upgrade" onclick="switchAppTab('upgrade')">⚡ Upgrade</button>
-      </div>
+      <a href="index.html" class="nav-logo">RizzUp 💘</a>
       <div class="nav-right">
         <span class="plan-badge" id="nav-plan-badge">FREE</span>
-        <span class="nav-user-name" id="nav-user-name">User</span>
-        <button class="btn-ghost-small" onclick="doLogout()">Logout</button>
+        <span class="nav-user" id="nav-user-name">User</span>
+        <button class="btn-ghost-small" id="btn-logout">Logout</button>
       </div>
     </div>
   </nav>
 
-  <!-- APP CONTENT -->
-  <div class="app-content">
+  <!-- ─── MAIN LAYOUT ──────────────────────────────────── -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="app-sidebar">
+      <button class="tab-btn active" data-tab="dashboard">🏠 Dashboard</button>
+      <button class="tab-btn" data-tab="chat">💬 Practice</button>
+      <button class="tab-btn" data-tab="course">📚 Course</button>
+      <button class="tab-btn" data-tab="upgrade">⚡ Upgrade</button>
+    </aside>
 
-    <!-- DASHBOARD TAB -->
-    <div class="app-panel active" id="tab-panel-dashboard">
-      <h2 class="tab-title">Hey <span id="greet-name">there</span>! 👋</h2>
-      <p class="tab-subtitle">Ready to practice today? Choose a scenario below.</p>
+    <!-- Content -->
+    <main class="app-content">
 
-      <div class="stats-row">
-        <div class="stat-box">
-          <div class="stat-value"><span id="stat-mins-used">0</span>/<span id="stat-mins-limit">20</span></div>
-          <div class="stat-label">mins used today</div>
-          <div class="progress-bar"><div class="progress-fill" id="mins-progress-bar" style="width:0%"></div></div>
+      <!-- ─── DASHBOARD TAB ────────────────────────────── -->
+      <div data-tab-panel="dashboard">
+        <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
+        <p class="tab-subtitle">Ready to practice today? Pick a scenario below.</p>
+
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-value" id="stat-total-msgs">0</div>
+            <div class="stat-label">total messages</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-sessions">0</div>
+            <div class="stat-label">sessions done</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-plan">FREE</div>
+            <div class="stat-label">current plan</div>
+          </div>
         </div>
-        <div class="stat-box">
-          <div class="stat-value" id="stat-total-msgs">0</div>
-          <div class="stat-label">total messages</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value" id="stat-sessions">0</div>
-          <div class="stat-label">sessions done</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value" id="stat-plan">FREE</div>
-          <div class="stat-label">current plan</div>
-        </div>
-      </div>
 
-      <div class="limit-warning" id="limit-warning" style="display:none;">
-        ⚠️ Daily limit reached! <span class="link-btn" onclick="switchAppTab('upgrade')">Upgrade to keep practicing →</span>
-      </div>
-
-      <h3 class="section-heading">Pick a Scenario</h3>
-      <div class="scenarios-grid" id="scenarios-grid">
-        <div class="loading-scenarios">Loading scenarios...</div>
-      </div>
-    </div>
-
-    <!-- CHAT TAB -->
-    <div class="app-panel" id="tab-panel-chat" style="display:none;">
-      <div class="chat-header">
-        <div class="chat-persona-avatar" id="chat-persona-avatar">👩</div>
-        <div class="chat-persona-info">
-          <div class="chat-persona-name" id="chat-persona-name">Select a scenario</div>
-          <div class="chat-persona-status" id="chat-persona-status">Go to Dashboard to pick one</div>
-        </div>
-        <button class="btn-coach" id="btn-coach-feedback" onclick="getCoachFeedback()">🎯 Coach Feedback</button>
-      </div>
-
-      <div class="no-scenario-state" id="no-scenario-state">
-        <div style="font-size:48px;margin-bottom:12px">💬</div>
-        <h3>Koi scenario select karo</h3>
-        <p>Dashboard pe jaao aur ek scenario choose karo practice ke liye.</p>
-        <button class="btn-primary" onclick="switchAppTab('dashboard')" style="margin-top:12px">Go to Dashboard →</button>
-      </div>
-
-      <div class="chat-messages" id="chat-messages" style="display:none;"></div>
-
-      <div class="chat-input-area" id="chat-input-area" style="display:none;">
-        <textarea id="chat-input" placeholder="Apna message type karo... (Enter = send, Shift+Enter = new line)" rows="1"></textarea>
-        <button class="btn-send" id="btn-send" onclick="sendChatMessage()">➤</button>
-      </div>
-    </div>
-
-    <!-- COURSE TAB -->
-    <div class="app-panel" id="tab-panel-course" style="display:none;">
-      <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
-      <p class="tab-subtitle">Daily lessons to go from nervous to confident. Week 1 is free!</p>
-      <div class="course-list" id="course-list"></div>
-    </div>
-
-    <!-- UPGRADE TAB -->
-    <div class="app-panel" id="tab-panel-upgrade" style="display:none;">
-      <div style="text-align:center;margin-bottom:32px">
-        <div style="font-size:40px;margin-bottom:12px">⚡</div>
-        <h2 class="tab-title">Unlock Everything</h2>
-        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more. Cancel anytime.</p>
-      </div>
-      <div class="upgrade-pricing-grid">
-        <div class="upgrade-price-card popular">
-          <div class="popular-label">🔥 Most Popular</div>
-          <div class="price-name">Starter</div>
-          <div class="price-amount">₹99<span class="price-per">/mo</span></div>
-          <ul class="price-features">
-            <li>✓ All 6+ scenarios</li>
-            <li>✓ Unlimited messages</li>
-            <li>✓ Full 30-day course</li>
-            <li>✓ Live coaching feedback</li>
-            <li>✓ Wingman Mode (10/mo)</li>
-          </ul>
-          <button class="btn-primary full-width" onclick="initiatePayment('starter')">Get Starter ⚡</button>
-        </div>
-        <div class="upgrade-price-card">
-          <div class="price-name">Pro</div>
-          <div class="price-amount" style="font-size:20px;padding:10px 0">Coming Soon</div>
-          <ul class="price-features">
-            <li>✓ Unlimited voice + chat</li>
-            <li>✓ Complete 90-day course</li>
-            <li>✓ Unlimited Wingman Mode</li>
-            <li>✓ Human coach Q&A (2x/mo)</li>
-            <li>✓ Profile & bio review</li>
-          </ul>
-          <button class="btn-outline full-width" disabled style="opacity:0.5;cursor:not-allowed">Coming Soon 🚀</button>
+        <h3 class="section-heading">Pick a Scenario</h3>
+        <div class="scenarios-grid" id="scenarios-grid">
+          <div class="loading-scenarios">Loading scenarios...</div>
         </div>
       </div>
-      <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:16px">🔒 Secure payments via Razorpay · 7-day money back guarantee</p>
-    </div>
 
-  </div><!-- end app-content -->
-</div><!-- end appView -->
+      <!-- ─── CHAT TAB ─────────────────────────────────── -->
+      <div data-tab-panel="chat" style="display:none;">
+        <div class="chat-header">
+          <div class="chat-persona-avatar" id="chat-persona-avatar">👩</div>
+          <div class="chat-persona-info">
+            <div class="chat-persona-name" id="chat-persona-name">Priya</div>
+            <div class="chat-persona-status" id="chat-status">Select a scenario to start</div>
+          </div>
+          <button class="btn-coach" id="btn-coach-feedback">🎯 Coach Feedback</button>
+        </div>
 
-<!-- Upgrade Modal -->
-<div class="modal-overlay" id="upgrade-modal" style="display:none;" onclick="document.getElementById('upgrade-modal').style.display='none'">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <button class="modal-close-btn" onclick="document.getElementById('upgrade-modal').style.display='none'">✕</button>
-    <div style="text-align:center">
-      <div style="font-size:40px;margin-bottom:12px">🔒</div>
-      <h3 style="font-family:'Bricolage Grotesque',sans-serif;margin-bottom:8px">Upgrade to Unlock</h3>
-      <p style="color:var(--muted);font-size:14px;margin-bottom:20px">Yeh scenario Starter plan ke liye available hai. Upgrade karke sab 6 scenarios, full course, aur Wingman Mode unlock karo!</p>
-      <button class="btn-primary" style="width:100%;margin-bottom:10px" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">Get Starter — ₹99/mo ⚡</button>
-      <button class="btn-google-modal" onclick="document.getElementById('upgrade-modal').style.display='none'">Maybe later</button>
+        <!-- No scenario selected state -->
+        <div class="no-scenario-state" id="no-scenario-state">
+          <div class="no-scenario-icon">💬</div>
+          <h3>No scenario selected</h3>
+          <p>Go to Dashboard and choose a scenario to start practicing.</p>
+          <button class="btn-primary" onclick="document.querySelector('[data-tab=dashboard]').click()">
+            Go to Dashboard →
+          </button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="chat-messages" id="chat-messages" style="display:none;"></div>
+
+        <!-- Cooldown Banner (free users) -->
+        <div class="cooldown-banner" id="cooldown-banner" style="display:none;">
+          ⏱️ Short break! Free plan has a cooldown after 10 messages.
+          <span id="cooldown-timer">5:00</span> remaining.
+          <button onclick="document.querySelector('[data-tab=upgrade]').click()">Upgrade for unlimited →</button>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="chat-input-area" id="chat-input-area" style="display:none;">
+          <textarea
+            id="chat-input"
+            placeholder="Type your message... (Enter = send, Shift+Enter = new line)"
+            rows="1"
+          ></textarea>
+          <button class="btn-send" id="btn-send">➤</button>
+        </div>
+      </div>
+
+      <!-- ─── COURSE TAB ────────────────────────────────── -->
+      <div data-tab-panel="course" style="display:none;">
+        <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
+        <p class="tab-subtitle">Daily lessons to go from nervous to confident.</p>
+
+        <!-- Coming Soon Banner -->
+        <div class="coming-soon-banner">
+          <div class="csb-icon">🚀</div>
+          <div class="csb-text">
+            <strong>Course content is coming soon!</strong>
+            <p>We're writing amazing lessons for you. Week 1 will be free when it launches. Stay tuned!</p>
+          </div>
+        </div>
+
+        <!-- Preview of what's coming -->
+        <h3 class="section-heading" style="margin-top:24px;">What's Coming</h3>
+        <div class="course-list" id="course-list"></div>
+      </div>
+
+      <!-- ─── UPGRADE TAB ───────────────────────────────── -->
+      <div data-tab-panel="upgrade" style="display:none;">
+        <h2 class="tab-title">Unlock Everything ⚡</h2>
+        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
+
+        <div class="upgrade-pricing-grid">
+          <!-- Starter -->
+          <div class="upgrade-price-card popular">
+            <div class="popular-label">🔥 Most Popular</div>
+            <div class="price-name">Starter</div>
+            <div class="price-amount">₹99<span class="price-per">/mo</span></div>
+            <div class="price-yearly">or ₹999/year <span class="save-badge">Save 15%</span></div>
+            <ul class="price-features">
+              <li>✓ All 6+ scenarios</li>
+              <li>✓ Unlimited messages</li>
+              <li>✓ Full 30-day course</li>
+              <li>✓ Live coaching feedback</li>
+              <li>✓ Wingman Mode (10/mo)</li>
+            </ul>
+            <button class="btn-primary full-width" onclick="initiatePayment('starter')">Get Starter ⚡</button>
+            <div class="yearly-btn-wrap">
+              <button class="btn-outline full-width" onclick="initiatePayment('starter_yearly')">Get Yearly — ₹999 🏆</button>
+            </div>
+          </div>
+
+          <!-- Pro - Coming Soon -->
+          <div class="upgrade-price-card coming-soon-card">
+            <div class="coming-soon-label">🚀 Coming Soon</div>
+            <div class="price-name">Pro</div>
+            <div class="price-amount" style="font-size:22px;color:var(--muted)">Launching Soon</div>
+            <ul class="price-features" style="opacity:0.6;">
+              <li>✓ Everything in Starter</li>
+              <li>✓ Voice call practice (AI)</li>
+              <li>✓ Complete 90-day course</li>
+              <li>✓ Unlimited Wingman Mode</li>
+              <li>✓ Human coach Q&A (2x/mo)</li>
+            </ul>
+            <button class="btn-disabled full-width" disabled>Coming Soon 🚀</button>
+          </div>
+        </div>
+
+        <p style="text-align:center;font-size:12px;color:var(--muted);margin-top:16px">
+          🔒 Secure payments via Razorpay · UPI · Cards · NetBanking · 7-day money back guarantee
+        </p>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ─── UPGRADE MODAL ────────────────────────────────── -->
+  <div class="modal-overlay" id="upgrade-modal" style="display:none;">
+    <div class="modal-box">
+      <button class="modal-close" id="upgrade-modal-close">✕</button>
+      <div class="upgrade-modal-content">
+        <div class="upgrade-modal-icon">🔒</div>
+        <h3>Upgrade to Unlock</h3>
+        <p>This scenario is available on the Starter plan. Upgrade to unlock all 6 scenarios, full course, and Wingman Mode!</p>
+        <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
+          Get Starter — ₹99/mo ⚡
+        </button>
+        <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">
+          Maybe later
+        </button>
+      </div>
     </div>
   </div>
-</div>
 
-<!-- Toast -->
-<div class="toast" id="toastEl"></div>
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
-<!-- Scripts — ORDER MATTERS -->
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/chat.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/main.js"></script>
-
+  <!-- Main JS last -->
+  <script src="js/main.js"></script>
 </body>
 </html>
