@@ -30,7 +30,7 @@ const Dashboard = (() => {
     _setText('stat-total-msgs', _userProfile.total_msgs || 0);
     _setText('stat-sessions', _userProfile.sessions || 0);
     _setText('stat-plan', plan.toUpperCase());
-
+    
     const level = _getLevel(_userXP);
     _setText('stat-xp', _userXP);
     _setText('stat-level', `${level.icon} ${level.name}`);
@@ -47,13 +47,13 @@ const Dashboard = (() => {
     const userPlan = _userProfile?.plan || 'free';
     const isPaid = userPlan !== 'free';
     const maxFreeDay = CONFIG.COURSE.freeDays;
-
+    
     let html = '';
-
+    
     // Progress bar
     const completedDays = Object.keys(_courseProgress).filter(k => _courseProgress[k]).length;
     const progressPercent = Math.round((completedDays / CONFIG.COURSE.totalDays) * 100);
-
+    
     html += `
       <div class="course-progress-bar">
         <div class="course-progress-fill" style="width:${progressPercent}%"></div>
@@ -63,7 +63,7 @@ const Dashboard = (() => {
         ${_getLevel(_userXP).icon} Level ${_getLevel(_userXP).level} — ${_getLevel(_userXP).name}
       </div>
     `;
-
+    
     // Resume banner
     if (completedDays > 0 && completedDays < CONFIG.COURSE.totalDays) {
       const nextDay = completedDays + 1;
@@ -81,12 +81,12 @@ const Dashboard = (() => {
         `;
       }
     }
-
+    
     // Phases
     CONFIG.COURSE.phases.forEach(phase => {
       const isPhaseFree = phase.free;
       const isLocked = !isPhaseFree && !isPaid;
-
+      
       html += `
         <div class="course-phase ${isLocked ? 'locked' : ''}" data-phase="${phase.id}">
           <div class="phase-header">
@@ -98,12 +98,15 @@ const Dashboard = (() => {
           <div class="phase-desc">${phase.description}</div>
           <div class="lessons-grid">
       `;
-
+      
       phase.lessons.forEach(lesson => {
-        const isCompleted = _courseProgress[lesson.day];
+        const isCompleted = !!_courseProgress[lesson.day];
         const isDayFree = lesson.day <= maxFreeDay;
         const isDayLocked = !isDayFree && !isPaid;
-
+        
+        // DEBUG
+        console.log('Lesson', lesson.day, 'progress:', _courseProgress[lesson.day], 'isCompleted:', isCompleted);
+        
         html += `
           <div class="lesson-card ${isCompleted ? 'completed' : ''} ${isDayLocked ? 'locked' : ''}"
                data-day="${lesson.day}"
@@ -111,17 +114,17 @@ const Dashboard = (() => {
             <div class="lesson-day">${isCompleted ? '✓' : lesson.day}</div>
             <div class="lesson-info">
               <div class="lesson-title">${lesson.emoji} ${lesson.title}</div>
-              <div class="lesson-meta">${lesson.duration} • +${lesson.xp} XP</div>
+              <div class="lesson-meta">${lesson.duration} • +${lesson.xp} XP ${isCompleted ? '• ✓ Completed' : ''}</div>
             </div>
             ${isCompleted ? '<div class="lesson-check">✓</div>' : ''}
             ${isDayLocked ? '<div class="lesson-lock">🔒</div>' : ''}
           </div>
         `;
       });
-
+      
       html += `</div></div>`;
     });
-
+    
     // Bonus (Pro)
     html += `
       <div class="course-phase bonus-phase">
@@ -143,12 +146,12 @@ const Dashboard = (() => {
         </div>
       </div>
     `;
-
+    
     // Badges section
     html += _renderBadges();
-
+    
     container.innerHTML = html;
-
+    
     // Attach event listeners
     _attachLessonListeners();
     _attachResumeListener();
@@ -159,7 +162,7 @@ const Dashboard = (() => {
       card.addEventListener('click', function(e) {
         const day = parseInt(this.dataset.day);
         const isLocked = this.dataset.locked === 'true';
-
+        
         if (isLocked) {
           showUpgradePrompt();
         } else if (day) {
@@ -185,49 +188,49 @@ const Dashboard = (() => {
   function openLesson(day) {
     const lesson = _findLesson(day);
     if (!lesson) return;
-
+    
     const phase = CONFIG.COURSE.phases.find(p => p.lessons.some(l => l.day === day));
-    const isCompleted = _courseProgress[day];
-
+    const isCompleted = !!_courseProgress[day];
+    
     const modal = document.getElementById('lesson-modal');
     const content = document.getElementById('lesson-modal-content');
-
+    
     if (!modal || !content) return;
-
+    
     content.innerHTML = `
       <div class="lesson-modal-header">
         <div class="lesson-modal-day">Day ${lesson.day}</div>
         <h3>${lesson.emoji} ${lesson.title}</h3>
         <div class="lesson-modal-meta">${phase ? phase.name : ''} • ${lesson.duration} • +${lesson.xp} XP</div>
       </div>
-
+      
       <div class="lesson-content">
         <div class="lesson-section">
           <h4>🎯 Today's Task</h4>
           <p>${lesson.task}</p>
         </div>
-
+        
         <div class="lesson-section">
           <h4>💡 Key Takeaways</h4>
           <ul>
             ${lesson.keyTakeaways.map(k => `<li>${k}</li>`).join('')}
           </ul>
         </div>
-
+        
         <div class="lesson-section">
           <h4>📝 Practice</h4>
           <p>Complete today's task to earn <strong>+${lesson.xp} XP</strong>!</p>
         </div>
       </div>
-
+      
       <div class="lesson-actions">
         ${isCompleted 
-          ? '<button class="btn-primary" disabled>✓ Completed</button>'
-          : `<button class="btn-primary" id="btn-complete-lesson" data-day="${day}">Complete Lesson ✓</button>`
+          ? '<button class="btn-primary" disabled>✓ Already Completed</button>'
+          : `<button class="btn-primary" id="btn-complete-lesson" data-day="${day}">🚀 Start Lesson</button>`
         }
       </div>
     `;
-
+    
     // Attach complete button listener
     const completeBtn = document.getElementById('btn-complete-lesson');
     if (completeBtn) {
@@ -235,7 +238,7 @@ const Dashboard = (() => {
         completeLesson(parseInt(this.dataset.day));
       });
     }
-
+    
     modal.style.display = 'flex';
   }
 
@@ -247,20 +250,20 @@ const Dashboard = (() => {
       _showToast('Already completed! 🎉', 'info');
       return;
     }
-
+    
     const lesson = _findLesson(day);
     if (!lesson) return;
-
+    
     // Mark complete
     _courseProgress[day] = true;
-
+    
     // Add XP
     _userXP += lesson.xp;
-
+    
     // Check for new badges
     const newBadges = _checkBadges();
     _userBadges = [...new Set([..._userBadges, ...newBadges])];
-
+    
     // Save to profile
     if (_userProfile) {
       _userProfile.course_progress = _courseProgress;
@@ -272,14 +275,14 @@ const Dashboard = (() => {
         badges: _userBadges,
       });
     }
-
+    
     // Close modal
     const modal = document.getElementById('lesson-modal');
     if (modal) modal.style.display = 'none';
-
+    
     // Show celebration
     _showToast(`🎉 +${lesson.xp} XP earned! Day ${day} complete!`, 'success');
-
+    
     // Show new badges
     newBadges.forEach(badgeId => {
       const badge = CONFIG.BADGES.find(b => b.id === badgeId);
@@ -289,7 +292,7 @@ const Dashboard = (() => {
         }, 1500);
       }
     });
-
+    
     // Re-render
     renderCourse();
     renderStats();
@@ -301,7 +304,7 @@ const Dashboard = (() => {
   function _renderBadges() {
     const earnedBadges = CONFIG.BADGES.filter(b => _userBadges.includes(b.id));
     const lockedBadges = CONFIG.BADGES.filter(b => !_userBadges.includes(b.id));
-
+    
     return `
       <div class="badges-section">
         <h3 class="section-heading">🏆 Your Badges</h3>
@@ -331,10 +334,10 @@ const Dashboard = (() => {
     const sessions = _userProfile?.sessions || 0;
     const completedDays = Object.keys(_courseProgress).filter(k => _courseProgress[k]).length;
     const level = _getLevel(_userXP).level;
-
+    
     CONFIG.BADGES.forEach(badge => {
       if (_userBadges.includes(badge.id)) return;
-
+      
       let earned = false;
       switch(badge.id) {
         case 'first_msg': earned = totalMsgs >= 10; break;
@@ -345,10 +348,10 @@ const Dashboard = (() => {
         case 'course_complete': earned = completedDays >= 28; break;
         case 'level_5': earned = level >= 5; break;
       }
-
+      
       if (earned) newBadges.push(badge.id);
     });
-
+    
     return newBadges;
   }
 
