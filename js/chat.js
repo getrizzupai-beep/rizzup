@@ -1,205 +1,289 @@
-// js/chat.js — Sirf AI chat logic
-// Kaam: message bhejo, reply lo, coach feedback lo
-// Auth ya UI ke baare mein kuch nahi jaanta yeh file
+// ============================================
+// CHAT.JS — Gender-based Persona Selection + Language Detection
+// ============================================
 
-const Chat = (() => {
-  let _conversationHistory = [];
-  let _currentScenario = null;
-  let _isTyping = false;
+let currentScenario = null;
+let chatHistory = [];
+let isTyping = false;
 
-  // Detect language of a message
-  function _detectLanguage(text) {
-    // Hindi/Hinglish indicators
-    const hindiWords = /\b(ka|ke|ki|hai|hain|ho|hoon|main|mera|meri|tum|tera|teri|aap|apka|yeh|woh|kya|kyun|kaise|kahan|kab|aur|ya|lekin|par|magar|toh|bhi|bahut|thoda|acha|bura|nahi|haan|ji|na|re|yaar|bhai|dost|ladki|ladka|pyaar|mohabbat|shadi|ghar|kaam|khana|paani|chai|coffee|school|college|office|naam|din|raat|subah|shaam|aaj|kal|abhi|pehle|baad|andar|bahar|upar|niche|sath|akela|sab|kuch|koi|har|ek|do|teen|char|paanch|das|sau|hazaar)\b/gi;
-    const hindiScript = /[\u0900-\u097F]/;
-
-    const hindiMatches = (text.match(hindiWords) || []).length;
-    const hasHindiScript = hindiScript.test(text);
-
-    // If has Hindi script OR significant Hinglish words → Hinglish
-    if (hasHindiScript || hindiMatches >= 2) {
-      return 'hinglish';
-    }
-    return 'english';
+// Initialize chat
+function initChat() {
+  renderScenarioButtons();
+  
+  // Check if user has tried all scenarios
+  const triedScenarios = JSON.parse(localStorage.getItem('triedScenarios') || '[]');
+  if (triedScenarios.length >= 6) {
+    unlockBadge('social_butterfly');
   }
+}
 
-  // Naya scenario start karo
-  function startScenario(scenarioKey) {
-    const scenario = CONFIG.SCENARIOS[scenarioKey];
-    if (!scenario) {
-      console.error('Unknown scenario:', scenarioKey);
-      return null;
-    }
+// Get scenarios based on user gender
+function getScenarios() {
+  const gender = getUserGender();
+  return CONFIG.SCENARIOS[gender] || CONFIG.SCENARIOS.male;
+}
 
-    _currentScenario = scenario;
-    _conversationHistory = [];
+// Render scenario buttons
+function renderScenarioButtons() {
+  const container = document.getElementById('scenarioButtons');
+  if (!container) return;
+  
+  const scenarios = getScenarios();
+  container.innerHTML = scenarios.map(s => `
+    <button class="scenario-btn" onclick="startScenario('${s.id}')" data-scenario="${s.id}">
+      <span class="scenario-emoji">${s.emoji}</span>
+      <div class="scenario-info">
+        <h4>${s.name}</h4>
+        <p>${s.persona}, ${s.age}, ${s.city}</p>
+      </div>
+    </button>
+  `).join('');
+}
 
-    // AI ka pehla greeting message history mein add karo
-    _conversationHistory.push({
-      role: 'assistant',
-      content: scenario.greeting
-    });
-
-    return scenario;
+// Start a scenario
+async function startScenario(scenarioId) {
+  const scenarios = getScenarios();
+  currentScenario = scenarios.find(s => s.id === scenarioId);
+  
+  if (!currentScenario) {
+    console.error('Scenario not found:', scenarioId);
+    return;
   }
-
-  // Conversation reset
-  function resetConversation() {
-    _conversationHistory = [];
-    _currentScenario = null;
-  }
-
-  // Current scenario
-  function getCurrentScenario() {
-    return _currentScenario;
-  }
-
-  // Message bhejo, reply lo
-  async function sendMessage(userMessage) {
-    if (!_currentScenario) {
-      throw new Error('No scenario selected');
+  
+  // Clear chat
+  chatHistory = [];
+  const chatContainer = document.getElementById('chatMessages');
+  if (chatContainer) chatContainer.innerHTML = '';
+  
+  // Show scenario info
+  showScenarioInfo();
+  
+  // Send initial AI message
+  const initialMessage = getInitialMessage();
+  await addMessage('ai', initialMessage);
+  
+  // Mark scenario as tried
+  const triedScenarios = JSON.parse(localStorage.getItem('triedScenarios') || '[]');
+  if (!triedScenarios.includes(scenarioId)) {
+    triedScenarios.push(scenarioId);
+    localStorage.setItem('triedScenarios', JSON.stringify(triedScenarios));
+    
+    if (triedScenarios.length === 1) {
+      unlockBadge('first_chat');
     }
-
-    if (_isTyping) {
-      throw new Error('Already waiting for response');
+    if (triedScenarios.length >= 6) {
+      unlockBadge('social_butterfly');
     }
+  }
+}
 
-    // Detect user's language
-    const userLang = _detectLanguage(userMessage);
-    const lastUserLang = _getLastUserLanguage();
+// Get initial message based on scenario
+function getInitialMessage() {
+  const s = currentScenario;
+  const gender = getUserGender();
+  
+  if (gender === 'male') {
+    // Female persona talking to male user
+    switch(s.id) {
+      case 'first_date':
+        return `Hi! *nervous smile* I'm ${s.persona}. Thanks for meeting me. This place has great coffee, right?`;
+      case 'texting':
+        return `Hey! So we matched. Your profile was... interesting. What's your most controversial opinion?`;
+      case 'rejection':
+        return `Hey... I need to talk to you about something. Can we be honest for a minute?`;
+      case 'flirting':
+        return `Well well, look who it is. I was wondering if you'd actually show up. 😏`;
+      case 'arranged':
+        return `Namaste! I'm ${s.persona}. My parents have been talking about you non-stop. Shall we get to know each other?`;
+      case 'second_date':
+        return `I'm so glad we could meet again. The rooftop view here is beautiful, isn't it?`;
+      default:
+        return `Hi! I'm ${s.persona}. Nice to meet you!`;
+    }
+  } else {
+    // Male persona talking to female user
+    switch(s.id) {
+      case 'first_date':
+        return `Hey! I'm ${s.persona}. I hope you didn't have trouble finding this place. I ordered us some coffee — hope that's okay?`;
+      case 'texting':
+        return `Hey! Your bio made me laugh. The one about hating pineapple on pizza — controversial but I respect it.`;
+      case 'rejection':
+        return `Hey... I wanted to talk to you about us. I feel like we need to be honest about where this is going.`;
+      case 'flirting':
+        return `There she is. I was starting to think you stood me up just to make me nervous. 😄`;
+      case 'arranged':
+        return `Namaste! I'm ${s.persona}. My mom showed me your photo and... well, I had to meet you.`;
+      case 'second_date':
+        return `I'm really glad you said yes to meeting again. I've been looking forward to this all week.`;
+      default:
+        return `Hi! I'm ${s.persona}. Nice to meet you!`;
+    }
+  }
+}
 
-    // User message history mein add karo
-    _conversationHistory.push({
+// Show scenario info in chat
+function showScenarioInfo() {
+  const infoEl = document.getElementById('scenarioInfo');
+  if (!infoEl || !currentScenario) return;
+  
+  infoEl.innerHTML = `
+    <div class="scenario-card">
+      <span class="scenario-emoji-large">${currentScenario.emoji}</span>
+      <div>
+        <h3>${currentScenario.name}</h3>
+        <p>${currentScenario.persona}, ${currentScenario.age}, ${currentScenario.city}</p>
+        <small>${currentScenario.personality}</small>
+      </div>
+    </div>
+  `;
+  infoEl.style.display = 'block';
+}
+
+// Send message
+async function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  if (!input || !input.value.trim() || isTyping) return;
+  
+  const message = input.value.trim();
+  input.value = '';
+  
+  // Add user message
+  await addMessage('user', message);
+  
+  // Show typing indicator
+  showTyping();
+  
+  // Get AI response
+  try {
+    const response = await getAIResponse(message);
+    hideTyping();
+    await addMessage('ai', response);
+  } catch (err) {
+    hideTyping();
+    console.error('AI error:', err);
+    await addMessage('ai', 'Sorry, I got distracted. Can you say that again?');
+  }
+}
+
+// Get AI response from Groq API
+async function getAIResponse(userMessage) {
+  if (!currentScenario) return 'Please select a scenario first!';
+  
+  // Build conversation history
+  const messages = [
+    {
+      role: 'system',
+      content: currentScenario.systemPrompt + '\n\nKeep responses short (2-3 sentences). Be natural and conversational. Match the user\'s language (English or Hinglish).'
+    },
+    ...chatHistory.map(h => ({
+      role: h.role === 'user' ? 'user' : 'assistant',
+      content: h.content
+    })),
+    {
       role: 'user',
       content: userMessage
-    });
-
-    _isTyping = true;
-
-    try {
-      // Build enhanced system prompt with language instruction
-      let enhancedSystem = _currentScenario.systemPrompt;
-
-      // Add explicit language instruction based on detection
-      if (userLang === 'english') {
-        enhancedSystem += `\n\nCRITICAL: The user just wrote in ENGLISH. You MUST reply in ENGLISH only. No Hindi words. No Hinglish.`;
-      } else {
-        enhancedSystem += `\n\nCRITICAL: The user just wrote in HINGLISH/HINDI. You MUST reply in HINGLISH only. Mix Hindi and English naturally.`;
-      }
-
-      const response = await fetch(CONFIG.CHAT_API_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: enhancedSystem,
-          messages: _conversationHistory,
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const reply = data.reply;
-
-      if (!reply) throw new Error('Empty response from server');
-
-      // AI reply history mein add karo
-      _conversationHistory.push({
-        role: 'assistant',
-        content: reply
-      });
-
-      return reply;
-
-    } finally {
-      _isTyping = false;
     }
+  ];
+  
+  // Call API
+  const response = await fetch(CONFIG.CHAT_API_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ messages })
+  });
+  
+  if (!response.ok) {
+    throw new Error('API request failed');
   }
+  
+  const data = await response.json();
+  return data.content || data.message || 'Hmm, interesting... tell me more!';
+}
 
-  // Get last user's language from conversation
-  function _getLastUserLanguage() {
-    for (let i = _conversationHistory.length - 1; i >= 0; i--) {
-      if (_conversationHistory[i].role === 'user') {
-        return _detectLanguage(_conversationHistory[i].content);
-      }
-    }
-    return 'english';
+// Add message to chat
+async function addMessage(role, content) {
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `message ${role}`;
+  
+  const avatar = role === 'user' ? '👤' : currentScenario?.emoji || '🤖';
+  const name = role === 'user' ? 'You' : (currentScenario?.persona || 'AI');
+  
+  msgDiv.innerHTML = `
+    <div class="message-avatar">${avatar}</div>
+    <div class="message-content">
+      <div class="message-name">${name}</div>
+      <div class="message-text">${escapeHtml(content)}</div>
+    </div>
+  `;
+  
+  container.appendChild(msgDiv);
+  container.scrollTop = container.scrollHeight;
+  
+  // Save to history
+  chatHistory.push({ role, content });
+  
+  // Limit history to last 20 messages
+  if (chatHistory.length > 20) {
+    chatHistory = chatHistory.slice(-20);
   }
+}
 
-  // Coach feedback lo — alag API call, conversation history se analyze karo
-  async function getCoachFeedback() {
-    if (_conversationHistory.length < 3) {
-      return 'Practice a bit more first! At least 2-3 messages needed for coach feedback. 💪';
-    }
+// Show typing indicator
+function showTyping() {
+  isTyping = true;
+  const container = document.getElementById('chatMessages');
+  if (!container) return;
+  
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'message ai typing-indicator';
+  typingDiv.id = 'typingIndicator';
+  typingDiv.innerHTML = `
+    <div class="message-avatar">${currentScenario?.emoji || '🤖'}</div>
+    <div class="message-content">
+      <div class="typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  `;
+  
+  container.appendChild(typingDiv);
+  container.scrollTop = container.scrollHeight;
+}
 
-    // Detect dominant language in conversation
-    const userMessages = _conversationHistory.filter(m => m.role === 'user');
-    const englishCount = userMessages.filter(m => _detectLanguage(m.content) === 'english').length;
-    const totalUserMsgs = userMessages.length;
-    const dominantLang = (englishCount / totalUserMsgs) >= 0.5 ? 'english' : 'hinglish';
+// Hide typing indicator
+function hideTyping() {
+  isTyping = false;
+  const indicator = document.getElementById('typingIndicator');
+  if (indicator) indicator.remove();
+}
 
-    // Last kuch messages lo
-    const recentMessages = _conversationHistory.slice(-6);
-    const conversationText = recentMessages
-      .map(m => `${m.role === 'user' ? 'User' : _currentScenario.persona}: ${m.content}`)
-      .join('\n');
+// Escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
-    const feedbackLang = dominantLang === 'english' ? 'English' : 'Hinglish';
-
-    try {
-      const response = await fetch(CONFIG.CHAT_API_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: `You are an expert Indian dating coach. Analyze the conversation and give honest feedback.
-ALWAYS respond in ${feedbackLang}.
-Use this format:
-**Vibe Score: X/10** — [one line summary]
-
-**What worked:** [2-3 bullet points]
-**Improve:** [1-2 specific tips]  
-**Say next:** "[exact suggested reply]"
-
-Be honest — don't sugar coat.`,
-          messages: [{
-            role: 'user',
-            content: `Analyze this conversation and give feedback:\n\n${conversationText}`
-          }]
-        }),
-      });
-
-      if (!response.ok) throw new Error('Feedback API error');
-
-      const data = await response.json();
-      return data.reply || 'Coach feedback not available right now. Try again!';
-
-    } catch (error) {
-      console.error('Coach feedback error:', error);
-      return 'Coach feedback not available right now. Try again later! 🙏';
-    }
+// Handle Enter key
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
   }
+}
 
-  // Conversation history
-  function getHistory() {
-    return [..._conversationHistory];
-  }
-
-  // Typing state
-  function isTyping() {
-    return _isTyping;
-  }
-
-  // Public API
-  return {
+// Export
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    initChat,
     startScenario,
-    resetConversation,
-    getCurrentScenario,
-    sendMessage,
-    getCoachFeedback,
-    getHistory,
-    isTyping,
+    sendChatMessage,
+    handleChatKey,
+    getUserGender
   };
-})();
+}
