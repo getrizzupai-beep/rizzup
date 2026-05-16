@@ -54,6 +54,7 @@ const CONFIG = {
       {
         id: 'foundation',
         name: 'Phase 1: Foundation',
+        emoji: '🌱',
         week: 1,
         free: true,
         description: 'Build your base — confidence, first messages, reading signals',
@@ -70,6 +71,7 @@ const CONFIG = {
       {
         id: 'first_date',
         name: 'Phase 2: First Date Mastery',
+        emoji: '☕',
         week: 2,
         free: false,
         description: 'Win the first date — venue, conversation, body language',
@@ -86,6 +88,7 @@ const CONFIG = {
       {
         id: 'connection',
         name: 'Phase 3: Connection Building',
+        emoji: '💫',
         week: 3,
         free: false,
         description: 'Deepen the bond — emotional intelligence, attraction, trust',
@@ -102,6 +105,7 @@ const CONFIG = {
       {
         id: 'long_game',
         name: 'Phase 4: The Long Game',
+        emoji: '💑',
         week: 4,
         free: false,
         description: 'From dating to relationship — family, fights, forever',
