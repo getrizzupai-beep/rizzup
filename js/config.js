@@ -9,7 +9,7 @@ const CONFIG = {
   // API endpoint (Vercel serverless)
   CHAT_API_ENDPOINT: '/api/chat',
 
-  // Plans — FREE: 3 scenarios, cooldown after 10 msgs | STARTER: all 6, unlimited
+  // Plans
   PLANS: {
     free: {
       name: 'Free',
@@ -18,6 +18,7 @@ const CONFIG = {
       cooldownMinutes: 5,
       scenarios: ['first_date', 'texting', 'rejection'],
       courseWeeks: 1,
+      courseDays: 7,
     },
     starter: {
       name: 'Starter',
@@ -27,6 +28,7 @@ const CONFIG = {
       cooldownMinutes: 0,
       scenarios: ['first_date', 'texting', 'rejection', 'flirting', 'arranged', 'second_date'],
       courseWeeks: 4,
+      courseDays: 28,
     },
     pro: {
       name: 'Pro',
@@ -34,11 +36,127 @@ const CONFIG = {
       msgBeforeCooldown: 9999,
       cooldownMinutes: 0,
       scenarios: ['first_date', 'texting', 'rejection', 'flirting', 'arranged', 'second_date'],
-      courseWeeks: 12,
+      courseWeeks: 4,
+      courseDays: 30,
     },
   },
 
-  // Scenarios — system prompts ab language-aware hain
+  // ═══════════════════════════════════════════════════════════════════
+  // COURSE SYSTEM — 30-Day Dating Mastery
+  // ═══════════════════════════════════════════════════════════════════
+  COURSE: {
+    title: '30-Day Dating Mastery',
+    subtitle: 'From awkward to confident — structured daily lessons',
+    totalDays: 28,
+    freeDays: 7,
+
+    phases: [
+      {
+        id: 'foundation',
+        name: 'Phase 1: Foundation',
+        week: 1,
+        free: true,
+        description: 'Build your base — confidence, first messages, reading signals',
+        lessons: [
+          { day: 1, title: "Why You're Getting Ignored", emoji: '🚫', xp: 50, duration: '5 min', keyTakeaways: ['5 silent killers', 'First impression psychology', 'What actually matters'], task: 'Self-audit quiz' },
+          { day: 2, title: 'The Confidence DNA', emoji: '💪', xp: 50, duration: '6 min', keyTakeaways: ['Inner vs Outer game', 'Body language basics', 'Self-esteem hacks'], task: 'Mirror exercise' },
+          { day: 3, title: 'First Message Formula', emoji: '💬', xp: 50, duration: '7 min', keyTakeaways: ['Hook + Question + Personality', '3 proven templates', 'Common mistakes'], task: 'Write 3 opening lines' },
+          { day: 4, title: 'Reading Her Signals', emoji: '📡', xp: 50, duration: '5 min', keyTakeaways: ['Green flags', 'Red flags', 'When to push/pull'], task: 'Signal identification quiz' },
+          { day: 5, title: 'The Art of Banter', emoji: '🎭', xp: 50, duration: '8 min', keyTakeaways: ['Teasing without offending', 'Playful comebacks', 'Indian context'], task: 'AI roleplay practice' },
+          { day: 6, title: 'From Text to Date', emoji: '📅', xp: 50, duration: '6 min', keyTakeaways: ['Asking out scripts', 'Timing matters', 'Handling maybe'], task: 'Script practice' },
+          { day: 7, title: 'Week 1 Boss Battle', emoji: '⚔️', xp: 100, duration: '10 min', keyTakeaways: ['Full simulation', 'AI judges progress', 'Vibe Score'], task: 'Complete simulation' },
+        ]
+      },
+      {
+        id: 'first_date',
+        name: 'Phase 2: First Date Mastery',
+        week: 2,
+        free: false,
+        description: 'Win the first date — venue, conversation, body language',
+        lessons: [
+          { day: 8, title: 'Date Planning 101', emoji: '☕', xp: 50, duration: '5 min', keyTakeaways: ['Coffee > Dinner > Movie', 'Timing & backup plan', 'Dress code'], task: 'Plan a date' },
+          { day: 9, title: 'Conversation Depth', emoji: '🗣️', xp: 50, duration: '7 min', keyTakeaways: ['FORD method', 'Beyond small talk', 'Deep questions'], task: 'Practice FORD' },
+          { day: 10, title: 'Body Language Secrets', emoji: '🕺', xp: 50, duration: '6 min', keyTakeaways: ['60% eye contact', 'Open posture', 'Touch escalation'], task: 'Body language audit' },
+          { day: 11, title: 'Handling Awkward Moments', emoji: '😅', xp: 50, duration: '5 min', keyTakeaways: ['Silence recovery', 'Spill solutions', 'Topic recovery'], task: 'Awkward scenario practice' },
+          { day: 12, title: 'The Perfect Exit', emoji: '👋', xp: 50, duration: '5 min', keyTakeaways: ['When to leave', 'Hug vs handshake', 'Next date setup'], task: 'Exit script practice' },
+          { day: 13, title: 'Post-Date Text Game', emoji: '📱', xp: 50, duration: '6 min', keyTakeaways: ['Follow-up timing', 'What to say', 'What NOT to say'], task: 'Write follow-up text' },
+          { day: 14, title: 'Week 2 Boss Battle', emoji: '⚔️', xp: 100, duration: '12 min', keyTakeaways: ['Full date simulation', 'Real-time feedback', 'Score breakdown'], task: 'Complete simulation' },
+        ]
+      },
+      {
+        id: 'connection',
+        name: 'Phase 3: Connection Building',
+        week: 3,
+        free: false,
+        description: 'Deepen the bond — emotional intelligence, attraction, trust',
+        lessons: [
+          { day: 15, title: 'Second Date Strategy', emoji: '💫', xp: 50, duration: '6 min', keyTakeaways: ['Deeper connection', 'Vulnerability', 'Comfort zone'], task: 'Plan date 2' },
+          { day: 16, title: 'Emotional Intelligence', emoji: '🧠', xp: 50, duration: '7 min', keyTakeaways: ['Empathy', 'Validation', 'Active listening'], task: 'Listening exercise' },
+          { day: 17, title: 'Rejection Mastery', emoji: '🛡️', xp: 50, duration: '6 min', keyTakeaways: ['Graceful exit', 'Self-respect', 'Bounce back'], task: 'Rejection simulation' },
+          { day: 18, title: 'Tests & Shit Tests', emoji: '🧪', xp: 50, duration: '8 min', keyTakeaways: ['Identify tests', 'Perfect replies', 'Stay calm'], task: 'Test response practice' },
+          { day: 19, title: 'Attraction Science', emoji: '⚡', xp: 50, duration: '7 min', keyTakeaways: ['Mystery', 'Challenge', 'Value demonstration'], task: 'Attraction audit' },
+          { day: 20, title: 'The Ex Conversation', emoji: '💔', xp: 50, duration: '5 min', keyTakeaways: ['When to discuss', 'How much to share', 'Red flags'], task: 'Script practice' },
+          { day: 21, title: 'Week 3 Boss Battle', emoji: '⚔️', xp: 100, duration: '12 min', keyTakeaways: ['Relationship simulation', 'Multi-scenario test', 'Final score'], task: 'Complete simulation' },
+        ]
+      },
+      {
+        id: 'long_game',
+        name: 'Phase 4: The Long Game',
+        week: 4,
+        free: false,
+        description: 'From dating to relationship — family, fights, forever',
+        lessons: [
+          { day: 22, title: 'The Relationship Talk', emoji: '💑', xp: 50, duration: '6 min', keyTakeaways: ['Exclusivity', 'Boundaries', 'Expectations'], task: 'Define your boundaries' },
+          { day: 23, title: 'Meeting Family', emoji: '👨‍👩‍👧', xp: 50, duration: '7 min', keyTakeaways: ['Indian family dynamics', 'Impressing parents', 'Cultural respect'], task: 'Family meeting prep' },
+          { day: 24, title: 'Fight Resolution', emoji: '🥊', xp: 50, duration: '6 min', keyTakeaways: ['Healthy arguments', 'Apology art', 'Compromise'], task: 'Conflict simulation' },
+          { day: 25, title: 'Spark Alive', emoji: '🔥', xp: 50, duration: '5 min', keyTakeaways: ['Date nights', 'Surprises', 'Avoid routine'], task: 'Plan surprise date' },
+          { day: 26, title: 'Trust & Jealousy', emoji: '🤝', xp: 50, duration: '6 min', keyTakeaways: ['Building security', 'Handling insecurities', 'Transparency'], task: 'Trust exercise' },
+          { day: 27, title: 'Long Distance', emoji: '✈️', xp: 50, duration: '5 min', keyTakeaways: ['Communication', 'Visits', 'Maintaining faith'], task: 'LDR plan' },
+          { day: 28, title: 'Graduation Day', emoji: '🎓', xp: 150, duration: '15 min', keyTakeaways: ['Personalized blueprint', 'Lifetime habits', 'Next steps'], task: 'Create your action plan' },
+        ]
+      }
+    ],
+
+    // Bonus for Pro
+    bonus: [
+      { day: 29, title: 'Voice Call Practice', emoji: '🎙️', pro: true, description: 'AI voice call simulation' },
+      { day: 30, title: '1-on-1 Coach Session', emoji: '👨‍🏫', pro: true, description: 'Human coach consultation' },
+    ]
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // GAMIFICATION
+  // ═══════════════════════════════════════════════════════════════════
+  XP: {
+    lessonComplete: 50,
+    quizPerfect: 25,
+    dailyStreak: 10,
+    roleplayWin: 30,
+    coachPositive: 20,
+    bossBattle: 100,
+    graduation: 150,
+  },
+
+  LEVELS: [
+    { level: 1, name: 'Rookie', minXP: 0, icon: '🌱' },
+    { level: 2, name: 'Learner', minXP: 200, icon: '📖' },
+    { level: 3, name: 'Player', minXP: 500, icon: '🎮' },
+    { level: 4, name: 'Dating Pro', minXP: 1000, icon: '💎' },
+    { level: 5, name: 'Rizz Master', minXP: 2000, icon: '👑' },
+    { level: 6, name: 'Legend', minXP: 3500, icon: '🔥' },
+  ],
+
+  BADGES: [
+    { id: 'first_msg', name: 'First Message Hero', icon: '🥉', desc: 'Send 10 opening lines', condition: 'msgs >= 10' },
+    { id: 'date_closer', name: 'Date Closer', icon: '🥈', desc: 'Complete date simulation', condition: 'scenario == first_date' },
+    { id: 'rejection_pro', name: 'Rejection Survivor', icon: '🥇', desc: 'Handle rejection gracefully', condition: 'scenario == rejection' },
+    { id: 'streak_7', name: 'Streak King', icon: '🔥', desc: '7-day login streak', condition: 'streak >= 7' },
+    { id: 'week1_done', name: 'Foundation Graduate', icon: '📚', desc: 'Complete Week 1', condition: 'course_day >= 7' },
+    { id: 'course_complete', name: 'RizzUp Certified', icon: '💎', desc: 'Complete full 28-day course', condition: 'course_day >= 28' },
+    { id: 'level_5', name: 'Rizz Master', icon: '👑', desc: 'Reach Level 5', condition: 'level >= 5' },
+  ],
+
+  // Scenarios — same as before with language rules
   SCENARIOS: {
     first_date: {
       id: 'first_date',
