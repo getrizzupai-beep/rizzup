@@ -22,6 +22,7 @@
   <script src="js/dashboard.js"></script>
 
   <link rel="stylesheet" href="css/app.css" />
+<base target="_blank">
 </head>
 <body>
 
@@ -67,6 +68,19 @@
           <div class="stat-box">
             <div class="stat-value" id="stat-plan">FREE</div>
             <div class="stat-label">current plan</div>
+          </div>
+          <!-- NEW: XP & Level -->
+          <div class="stat-box">
+            <div class="stat-value" id="stat-xp" style="color:var(--orange)">0</div>
+            <div class="stat-label">XP earned</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-level" style="font-size:1.2rem">🌱 Rookie</div>
+            <div class="stat-label">level</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="stat-streak">0 🔥</div>
+            <div class="stat-label">day streak</div>
           </div>
         </div>
 
@@ -120,21 +134,12 @@
 
       <!-- ─── COURSE TAB ────────────────────────────────── -->
       <div data-tab-panel="course" style="display:none;">
-        <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
-        <p class="tab-subtitle">Daily lessons to go from nervous to confident.</p>
+        <h2 class="tab-title">30-Day Dating Mastery 📚</h2>
+        <p class="tab-subtitle">From awkward to confident — structured daily lessons.</p>
 
-        <!-- Coming Soon Banner -->
-        <div class="coming-soon-banner">
-          <div class="csb-icon">🚀</div>
-          <div class="csb-text">
-            <strong>Course content is coming soon!</strong>
-            <p>We're writing amazing lessons for you. Week 1 will be free when it launches. Stay tuned!</p>
-          </div>
+        <div id="course-list">
+          <!-- Course content rendered by dashboard.js -->
         </div>
-
-        <!-- Preview of what's coming -->
-        <h3 class="section-heading" style="margin-top:24px;">What's Coming</h3>
-        <div class="course-list" id="course-list"></div>
       </div>
 
       <!-- ─── UPGRADE TAB ───────────────────────────────── -->
@@ -152,7 +157,7 @@
             <ul class="price-features">
               <li>✓ All 6+ scenarios</li>
               <li>✓ Unlimited messages</li>
-              <li>✓ Full 30-day course</li>
+              <li>✓ Full 30-day course (28 lessons)</li>
               <li>✓ Live coaching feedback</li>
               <li>✓ Wingman Mode (10/mo)</li>
             </ul>
@@ -186,6 +191,16 @@
     </main>
   </div>
 
+  <!-- ─── LESSON MODAL ─────────────────────────────────── -->
+  <div class="modal-overlay" id="lesson-modal" style="display:none;">
+    <div class="modal-box" style="max-width:520px;">
+      <button class="modal-close" onclick="document.getElementById('lesson-modal').style.display='none'">✕</button>
+      <div id="lesson-modal-content">
+        <!-- Lesson content rendered by dashboard.js -->
+      </div>
+    </div>
+  </div>
+
   <!-- ─── UPGRADE MODAL ────────────────────────────────── -->
   <div class="modal-overlay" id="upgrade-modal" style="display:none;">
     <div class="modal-box">
@@ -193,7 +208,7 @@
       <div class="upgrade-modal-content">
         <div class="upgrade-modal-icon">🔒</div>
         <h3>Upgrade to Unlock</h3>
-        <p>This scenario is available on the Starter plan. Upgrade to unlock all 6 scenarios, full course, and Wingman Mode!</p>
+        <p>This content is available on the Starter plan. Upgrade to unlock all 6 scenarios, full 28-day course, and Wingman Mode!</p>
         <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
           Get Starter — ₹99/mo ⚡
         </button>
