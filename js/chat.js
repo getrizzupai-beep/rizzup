@@ -12,10 +12,11 @@ const Chat = (() => {
     // Hindi/Hinglish indicators
     const hindiWords = /\b(ka|ke|ki|hai|hain|ho|hoon|main|mera|meri|tum|tera|teri|aap|apka|yeh|woh|kya|kyun|kaise|kahan|kab|aur|ya|lekin|par|magar|toh|bhi|bahut|thoda|acha|bura|nahi|haan|ji|na|re|yaar|bhai|dost|ladki|ladka|pyaar|mohabbat|shadi|ghar|kaam|khana|paani|chai|coffee|school|college|office|naam|din|raat|subah|shaam|aaj|kal|abhi|pehle|baad|andar|bahar|upar|niche|sath|akela|sab|kuch|koi|har|ek|do|teen|char|paanch|das|sau|hazaar)\b/gi;
     const hindiScript = /[\u0900-\u097F]/;
-    
+
     const hindiMatches = (text.match(hindiWords) || []).length;
     const hasHindiScript = hindiScript.test(text);
-    
+
+    // If has Hindi script OR significant Hinglish words → Hinglish
     if (hasHindiScript || hindiMatches >= 2) {
       return 'hinglish';
     }
@@ -65,6 +66,7 @@ const Chat = (() => {
 
     // Detect user's language
     const userLang = _detectLanguage(userMessage);
+    const lastUserLang = _getLastUserLanguage();
 
     // User message history mein add karo
     _conversationHistory.push({
@@ -77,7 +79,7 @@ const Chat = (() => {
     try {
       // Build enhanced system prompt with language instruction
       let enhancedSystem = _currentScenario.systemPrompt;
-      
+
       // Add explicit language instruction based on detection
       if (userLang === 'english') {
         enhancedSystem += `\n\nCRITICAL: The user just wrote in ENGLISH. You MUST reply in ENGLISH only. No Hindi words. No Hinglish.`;
