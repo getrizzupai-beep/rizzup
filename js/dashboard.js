@@ -1,467 +1,501 @@
-// js/dashboard.js — Dashboard UI + stats + course + gamification
+// ============================================
+// DASHBOARD.JS — Course Reader Modal + Scroll Completion + Progress Save/Load
+// ============================================
 
-const Dashboard = (() => {
-  let _userProfile = null;
-  let _courseProgress = {};
-  let _userXP = 0;
-  let _userBadges = [];
-  let _streak = 0;
+let currentDay = null;
+let readingStartTime = null;
+let scrollProgress = 0;
+let quizAnswers = {};
 
-  function setProfile(profile) {
-    _userProfile = profile;
-    _courseProgress = profile?.course_progress || {};
-    _userXP = profile?.xp || 0;
-    _userBadges = profile?.badges || [];
-    _streak = profile?.streak || 0;
+// Initialize dashboard
+async function initDashboard() {
+  renderStats();
+  renderCourseGrid();
+  renderBadges();
+  checkStreak();
+}
+
+// Render user stats
+function renderStats() {
+  const user = getCurrentUser();
+  const profile = user?.profile || {};
+  
+  const xp = profile.xp || 0;
+  const level = getLevelFromXP(xp);
+  const streak = profile.streak || 0;
+  const completedDays = Object.keys(profile.course_progress || {}).length;
+  
+  // Update DOM elements
+  updateElement('userXP', xp + ' XP');
+  updateElement('userLevel', level.name);
+  updateElement('userLevelNum', 'Level ' + level.level);
+  updateElement('userStreak', streak + ' 🔥');
+  updateElement('completedDays', completedDays + '/30');
+  
+  // Progress bar
+  const progressPercent = (completedDays / 30) * 100;
+  const progressBar = document.getElementById('progressBar');
+  if (progressBar) {
+    progressBar.style.width = progressPercent + '%';
   }
-
-  function getProfile() {
-    return _userProfile;
+  
+  // Level color
+  const levelBadge = document.getElementById('levelBadge');
+  if (levelBadge) {
+    levelBadge.style.background = level.color;
   }
+}
 
-  // ═══════════════════════════════════════════════════════════════════
-  // STATS
-  // ═══════════════════════════════════════════════════════════════════
-  function renderStats() {
-    if (!_userProfile) return;
-
-    const plan = _userProfile.plan || 'free';
-
-    _setText('stat-total-msgs', _userProfile.total_msgs || 0);
-    _setText('stat-sessions', _userProfile.sessions || 0);
-    _setText('stat-plan', plan.toUpperCase());
-
-    const level = _getLevel(_userXP);
-    _setText('stat-xp', _userXP);
-    _setText('stat-level', `${level.icon} ${level.name}`);
-    _setText('stat-streak', `${_streak} 🔥`);
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // COURSE RENDER
-  // ═══════════════════════════════════════════════════════════════════
-  function renderCourse() {
-    const container = document.getElementById('course-list');
-    if (!container) return;
-
-    const userPlan = _userProfile?.plan || 'free';
-    const isPaid = userPlan !== 'free';
-    const maxFreeDay = CONFIG.COURSE.freeDays;
-
-    let html = '';
-
-    // Progress bar
-    const completedDays = Object.keys(_courseProgress).filter(k => _courseProgress[k]).length;
-    const progressPercent = Math.round((completedDays / CONFIG.COURSE.totalDays) * 100);
-
-    html += `
-      <div class="course-progress-bar">
-        <div class="course-progress-fill" style="width:${progressPercent}%"></div>
-        <span class="course-progress-text">${completedDays}/${CONFIG.COURSE.totalDays} days • ${progressPercent}%</span>
-      </div>
-      <div class="course-level-badge">
-        ${_getLevel(_userXP).icon} Level ${_getLevel(_userXP).level} — ${_getLevel(_userXP).name}
-      </div>
-    `;
-
-    // Resume banner
-    if (completedDays > 0 && completedDays < CONFIG.COURSE.totalDays) {
-      const nextDay = completedDays + 1;
-      const nextLesson = _findLesson(nextDay);
-      if (nextLesson) {
-        html += `
-          <div class="course-resume-banner" data-resume-day="${nextDay}">
-            <div class="resume-icon">▶️</div>
-            <div class="resume-text">
-              <strong>Resume Course</strong>
-              <span>Continue Day ${nextDay}: ${nextLesson.emoji} ${nextLesson.title}</span>
-            </div>
-            <div class="resume-arrow">→</div>
-          </div>
-        `;
-      }
-    }
-
-    // Phases
-    CONFIG.COURSE.phases.forEach(phase => {
-      const isPhaseFree = phase.free;
-      const isLocked = !isPhaseFree && !isPaid;
-
-      html += `
-        <div class="course-phase ${isLocked ? 'locked' : ''}" data-phase="${phase.id}">
-          <div class="phase-header">
-            <div class="phase-name">${phase.emoji || '📚'} ${phase.name}</div>
-            <div class="phase-meta">
-              ${isLocked ? '🔒 ₹99 to unlock' : (isPhaseFree ? '✅ Free' : '✅ Unlocked')}
-            </div>
-          </div>
-          <div class="phase-desc">${phase.description}</div>
-          <div class="lessons-grid">
-      `;
-
-      phase.lessons.forEach(lesson => {
-        const isCompleted = _courseProgress[lesson.day];
-        const isDayFree = lesson.day <= maxFreeDay;
-        const isDayLocked = !isDayFree && !isPaid;
-
-        // DEBUG
-        console.log('Lesson', lesson.day, 'progress:', _courseProgress[lesson.day], 'isCompleted:', !!_courseProgress[lesson.day]);
-
-        html += `
-          <div class="lesson-card ${isCompleted ? 'completed' : ''} ${isDayLocked ? 'locked' : ''}"
-               data-day="${lesson.day}"
-               data-locked="${isDayLocked}">
-            <div class="lesson-day">${isCompleted ? '✓' : lesson.day}</div>
-            <div class="lesson-info">
-              <div class="lesson-title">${lesson.emoji} ${lesson.title}</div>
-              <div class="lesson-meta">${lesson.duration} • +${lesson.xp} XP ${isCompleted ? '• ✓ Completed' : ''}</div>
-            </div>
-            ${isCompleted ? '<div class="lesson-check">✓</div>' : ''}
-            ${isDayLocked ? '<div class="lesson-lock">🔒</div>' : ''}
-          </div>
-        `;
-      });
-
-      html += `</div></div>`;
-    });
-
-    // Bonus (Pro)
-    html += `
-      <div class="course-phase bonus-phase">
-        <div class="phase-header">
-          <div class="phase-name">🚀 Bonus (Pro)</div>
-          <div class="phase-meta">Coming Soon</div>
-        </div>
-        <div class="lessons-grid">
-          ${CONFIG.COURSE.bonus.map(b => `
-            <div class="lesson-card locked">
-              <div class="lesson-day">${b.day}</div>
-              <div class="lesson-info">
-                <div class="lesson-title">${b.emoji} ${b.title}</div>
-                <div class="lesson-meta">${b.description}</div>
-              </div>
-              <div class="lesson-lock">🔒</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-    // Badges section
-    html += _renderBadges();
-
-    container.innerHTML = html;
-
-    // Attach event listeners
-    _attachLessonListeners();
-    _attachResumeListener();
-  }
-
-  function _attachLessonListeners() {
-    document.querySelectorAll('.lesson-card').forEach(card => {
-      card.addEventListener('click', function(e) {
-        const day = parseInt(this.dataset.day);
-        const isLocked = this.dataset.locked === 'true';
-
-        if (isLocked) {
-          showUpgradePrompt();
-        } else if (day) {
-          openLesson(day);
-        }
-      });
-    });
-  }
-
-  function _attachResumeListener() {
-    const resumeBanner = document.querySelector('.course-resume-banner');
-    if (resumeBanner) {
-      resumeBanner.addEventListener('click', function() {
-        const day = parseInt(this.dataset.resumeDay);
-        if (day) openLesson(day);
-      });
+// Get level from XP
+function getLevelFromXP(xp) {
+  for (let i = CONFIG.LEVELS.length - 1; i >= 0; i--) {
+    if (xp >= CONFIG.LEVELS[i].xpNeeded) {
+      return CONFIG.LEVELS[i];
     }
   }
+  return CONFIG.LEVELS[0];
+}
 
-  // ═══════════════════════════════════════════════════════════════════
-  // LESSON MODAL
-  // ═══════════════════════════════════════════════════════════════════
-  function openLesson(day) {
-    const lesson = _findLesson(day);
-    if (!lesson) return;
-
-    const phase = CONFIG.COURSE.phases.find(p => p.lessons.some(l => l.day === day));
-    const isCompleted = _courseProgress[day];
-
-    const modal = document.getElementById('lesson-modal');
-    const content = document.getElementById('lesson-modal-content');
-
-    if (!modal || !content) return;
-
-    content.innerHTML = `
-      <div class="lesson-modal-header">
-        <div class="lesson-modal-day">Day ${lesson.day}</div>
-        <h3>${lesson.emoji} ${lesson.title}</h3>
-        <div class="lesson-modal-meta">${phase ? phase.name : ''} • ${lesson.duration} • +${lesson.xp} XP</div>
-      </div>
-
-      <div class="lesson-content">
-        <div class="lesson-section">
-          <h4>🎯 Today's Task</h4>
-          <p>${lesson.task}</p>
-        </div>
-
-        <div class="lesson-section">
-          <h4>💡 Key Takeaways</h4>
-          <ul>
-            ${lesson.keyTakeaways.map(k => `<li>${k}</li>`).join('')}
-          </ul>
-        </div>
-
-        <div class="lesson-section">
-          <h4>📝 Practice</h4>
-          <p>Complete today's task to earn <strong>+${lesson.xp} XP</strong>!</p>
-        </div>
-      </div>
-
-      <div class="lesson-actions">
-        ${isCompleted 
-          ? '<button class="btn-primary" disabled>✓ Already Completed</button>'
-          : `<button class="btn-primary" id="btn-complete-lesson" data-day="${day}">🚀 Start Lesson</button>`
-        }
-      </div>
-    `;
-
-    // Attach complete button listener
-    const completeBtn = document.getElementById('btn-complete-lesson');
-    if (completeBtn) {
-      completeBtn.addEventListener('click', function() {
-        completeLesson(parseInt(this.dataset.day));
-      });
+// Render course grid
+function renderCourseGrid() {
+  const grid = document.getElementById('courseGrid');
+  if (!grid) return;
+  
+  const user = getCurrentUser();
+  const progress = user?.profile?.course_progress || {};
+  
+  grid.innerHTML = CONFIG.COURSE.map((day, index) => {
+    const isCompleted = progress[day.day];
+    const isLocked = !day.isFree && !isPaidUser();
+    const isNext = index === 0 || progress[CONFIG.COURSE[index - 1]?.day];
+    
+    let statusClass = '';
+    let statusIcon = '';
+    
+    if (isCompleted) {
+      statusClass = 'completed';
+      statusIcon = '✅';
+    } else if (isLocked) {
+      statusClass = 'locked';
+      statusIcon = '🔒';
+    } else if (!isNext && index > 0) {
+      statusClass = 'locked';
+      statusIcon = '🔒';
+    } else {
+      statusClass = 'available';
+      statusIcon = day.isFree ? '🆓' : '⭐';
     }
-
-    modal.style.display = 'flex';
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // COMPLETE LESSON
-  // ═══════════════════════════════════════════════════════════════════
-  function completeLesson(day) {
-    if (_courseProgress[day]) {
-      _showToast('Already completed! 🎉', 'info');
-      return;
-    }
-
-    const lesson = _findLesson(day);
-    if (!lesson) return;
-
-    // Mark complete
-    _courseProgress[day] = true;
-
-    // Add XP
-    _userXP += lesson.xp;
-
-    // Check for new badges
-    const newBadges = _checkBadges();
-    _userBadges = [...new Set([..._userBadges, ...newBadges])];
-
-    // Save to profile
-    if (_userProfile) {
-      _userProfile.course_progress = _courseProgress;
-      _userProfile.xp = _userXP;
-      _userProfile.badges = _userBadges;
-      Auth.updateUserStats(_userProfile.id, {
-        course_progress: _courseProgress,
-        xp: _userXP,
-        badges: _userBadges,
-      });
-    }
-
-    // Close modal
-    const modal = document.getElementById('lesson-modal');
-    if (modal) modal.style.display = 'none';
-
-    // Show celebration
-    _showToast(`🎉 +${lesson.xp} XP earned! Day ${day} complete!`, 'success');
-
-    // Show new badges
-    newBadges.forEach(badgeId => {
-      const badge = CONFIG.BADGES.find(b => b.id === badgeId);
-      if (badge) {
-        setTimeout(() => {
-          _showToast(`🏆 New Badge: ${badge.icon} ${badge.name}!`, 'success');
-        }, 1500);
-      }
-    });
-
-    // Re-render
-    renderCourse();
-    renderStats();
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // BADGES
-  // ═══════════════════════════════════════════════════════════════════
-  function _renderBadges() {
-    const earnedBadges = CONFIG.BADGES.filter(b => _userBadges.includes(b.id));
-    const lockedBadges = CONFIG.BADGES.filter(b => !_userBadges.includes(b.id));
-
+    
     return `
-      <div class="badges-section">
-        <h3 class="section-heading">🏆 Your Badges</h3>
-        <div class="badges-grid">
-          ${earnedBadges.map(b => `
-            <div class="badge-card earned">
-              <div class="badge-icon">${b.icon}</div>
-              <div class="badge-name">${b.name}</div>
-              <div class="badge-desc">${b.desc}</div>
-            </div>
-          `).join('')}
-          ${lockedBadges.map(b => `
-            <div class="badge-card locked">
-              <div class="badge-icon">🔒</div>
-              <div class="badge-name">${b.name}</div>
-              <div class="badge-desc">${b.desc}</div>
-            </div>
-          `).join('')}
+      <div class="course-card ${statusClass}" onclick="openDay(${day.day})" data-day="${day.day}">
+        <div class="course-day">Day ${day.day}</div>
+        <div class="course-phase">Phase ${day.phase}</div>
+        <h4>${day.title}</h4>
+        <div class="course-meta">
+          <span>${day.duration}</span>
+          <span class="status-icon">${statusIcon}</span>
         </div>
+        ${isCompleted ? '<div class="completed-badge">✓ Done</div>' : ''}
       </div>
     `;
+  }).join('');
+}
+
+// Check if user is paid
+function isPaidUser() {
+  // TODO: Implement payment check with Razorpay
+  // For now, check localStorage or Supabase
+  const user = getCurrentUser();
+  return user?.profile?.is_paid || false;
+}
+
+// Open day modal
+async function openDay(dayNum) {
+  const day = CONFIG.COURSE.find(d => d.day === dayNum);
+  if (!day) return;
+  
+  // Check if locked
+  if (!day.isFree && !isPaidUser()) {
+    showPaywall(day);
+    return;
   }
-
-  function _checkBadges() {
-    const newBadges = [];
-    const totalMsgs = _userProfile?.total_msgs || 0;
-    const sessions = _userProfile?.sessions || 0;
-    const completedDays = Object.keys(_courseProgress).filter(k => _courseProgress[k]).length;
-    const level = _getLevel(_userXP).level;
-
-    CONFIG.BADGES.forEach(badge => {
-      if (_userBadges.includes(badge.id)) return;
-
-      let earned = false;
-      switch(badge.id) {
-        case 'first_msg': earned = totalMsgs >= 10; break;
-        case 'date_closer': earned = sessions >= 1; break;
-        case 'rejection_pro': earned = sessions >= 3; break;
-        case 'streak_7': earned = _streak >= 7; break;
-        case 'week1_done': earned = completedDays >= 7; break;
-        case 'course_complete': earned = completedDays >= 28; break;
-        case 'level_5': earned = level >= 5; break;
-      }
-
-      if (earned) newBadges.push(badge.id);
-    });
-
-    return newBadges;
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // LEVEL SYSTEM
-  // ═══════════════════════════════════════════════════════════════════
-  function _getLevel(xp) {
-    for (let i = CONFIG.LEVELS.length - 1; i >= 0; i--) {
-      if (xp >= CONFIG.LEVELS[i].minXP) {
-        return CONFIG.LEVELS[i];
-      }
-    }
-    return CONFIG.LEVELS[0];
-  }
-
-  function _findLesson(day) {
-    for (const phase of CONFIG.COURSE.phases) {
-      const lesson = phase.lessons.find(l => l.day === day);
-      if (lesson) return lesson;
-    }
-    return null;
-  }
-
-  function getNextLessonDay() {
-    for (let day = 1; day <= CONFIG.COURSE.totalDays; day++) {
-      if (!_courseProgress[day]) {
-        return day;
-      }
-    }
-    return null;
-  }
-
-  function loadProgress() {
-    if (_userProfile) {
-      _courseProgress = _userProfile.course_progress || {};
-      _userXP = _userProfile.xp || 0;
-      _userBadges = _userProfile.badges || [];
-      _streak = _userProfile.streak || 0;
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
-  // SCENARIOS
-  // ═══════════════════════════════════════════════════════════════════
-  function renderScenarios(onScenarioClick) {
-    const container = document.getElementById('scenarios-grid');
-    if (!container) return;
-
-    const userPlan = _userProfile?.plan || 'free';
-    const allowedScenarios = CONFIG.PLANS[userPlan]?.scenarios || CONFIG.PLANS.free.scenarios;
-
-    container.innerHTML = Object.values(CONFIG.SCENARIOS).map(scenario => {
-      const isLocked = !allowedScenarios.includes(scenario.id);
-      return `
-        <div class="scenario-card ${isLocked ? 'locked' : ''}"
-             onclick="${isLocked ? 'Dashboard.showUpgradePrompt()' : `Dashboard.handleScenarioClick('${scenario.id}')`}"
-             data-scenario="${scenario.id}">
-          <div class="scenario-emoji">${scenario.emoji}</div>
-          ${isLocked ? '<div class="lock-badge">🔒</div>' : ''}
-          <div class="scenario-info">
-            <div class="scenario-persona">${scenario.persona}</div>
-            <div class="scenario-name">${scenario.name}</div>
-            <div class="scenario-desc">${scenario.description}</div>
-          </div>
-          <div class="scenario-tag ${isLocked ? 'tag-paid' : 'tag-free'}">
-            ${isLocked ? 'Starter+' : 'Free'}
-          </div>
+  
+  currentDay = day;
+  scrollProgress = 0;
+  quizAnswers = {};
+  readingStartTime = Date.now();
+  
+  // Render modal content
+  const modal = document.getElementById('courseModal');
+  const content = document.getElementById('courseModalContent');
+  
+  if (!modal || !content) return;
+  
+  content.innerHTML = `
+    <div class="course-reader">
+      <div class="reader-header">
+        <div class="reader-day">Day ${day.day} · Phase ${day.phase}</div>
+        <h2>${day.title}</h2>
+        <div class="reader-meta">
+          <span>⏱️ ${day.duration}</span>
+          <span>🎥 Video included</span>
         </div>
-      `;
-    }).join('');
+      </div>
+      
+      <div class="video-container">
+        <iframe src="${day.videoUrl}" frameborder="0" allowfullscreen></iframe>
+      </div>
+      
+      <div class="reader-content" id="readerContent">
+        ${day.content}
+      </div>
+      
+      <div class="reading-progress">
+        <div class="progress-label">Reading Progress</div>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="readingProgressBar" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">0%</div>
+      </div>
+      
+      <div class="quiz-section" id="quizSection">
+        <h3>🧠 Quick Quiz</h3>
+        ${day.quiz.map((q, i) => `
+          <div class="quiz-question" data-q="${i}">
+            <p><strong>Q${i + 1}:</strong> ${q.q}</p>
+            <div class="quiz-options">
+              ${q.options.map((opt, j) => `
+                <label class="quiz-option">
+                  <input type="radio" name="q${i}" value="${j}" onchange="selectAnswer(${i}, ${j})">
+                  <span>${opt}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div class="coach-tip">
+        <div class="coach-avatar">🎯</div>
+        <div class="coach-text">
+          <strong>Coach Tip:</strong>
+          <p>${day.coachTip}</p>
+        </div>
+      </div>
+      
+      <button class="btn-complete" id="completeBtn" onclick="completeDay()" disabled>
+        Mark Complete (+${CONFIG.XP_PER_LESSON} XP)
+      </button>
+    </div>
+  `;
+  
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  
+  // Setup scroll tracking
+  setupScrollTracking();
+  
+  // Setup timer
+  setupReadingTimer();
+}
 
-    _scenarioClickHandler = onScenarioClick;
+// Setup scroll tracking for completion
+function setupScrollTracking() {
+  const content = document.getElementById('readerContent');
+  if (!content) return;
+  
+  content.addEventListener('scroll', () => {
+    const scrollTop = content.scrollTop;
+    const scrollHeight = content.scrollHeight - content.clientHeight;
+    scrollProgress = Math.min(100, Math.round((scrollTop / scrollHeight) * 100));
+    
+    // Update progress bar
+    const bar = document.getElementById('readingProgressBar');
+    const text = document.getElementById('progressText');
+    if (bar) bar.style.width = scrollProgress + '%';
+    if (text) text.textContent = scrollProgress + '%';
+    
+    // Enable complete button at 80% scroll
+    const btn = document.getElementById('completeBtn');
+    if (btn && scrollProgress >= 80) {
+      btn.disabled = false;
+      btn.classList.add('active');
+    }
+  });
+}
+
+// Setup reading timer (minimum 2 minutes)
+function setupReadingTimer() {
+  const btn = document.getElementById('completeBtn');
+  if (!btn) return;
+  
+  let timeElapsed = 0;
+  const minTime = 120; // 2 minutes in seconds
+  
+  const timer = setInterval(() => {
+    timeElapsed++;
+    
+    // Only enable if both scroll and time conditions met
+    if (timeElapsed >= minTime && scrollProgress >= 80) {
+      btn.disabled = false;
+      btn.classList.add('active');
+      clearInterval(timer);
+    }
+  }, 1000);
+}
+
+// Select quiz answer
+function selectAnswer(questionIndex, answerIndex) {
+  quizAnswers[questionIndex] = answerIndex;
+}
+
+// Complete day
+async function completeDay() {
+  if (!currentDay) return;
+  
+  const user = getCurrentUser();
+  if (!user) {
+    alert('Please login first!');
+    return;
   }
-
-  let _scenarioClickHandler = null;
-
-  function handleScenarioClick(scenarioId) {
-    if (_scenarioClickHandler) _scenarioClickHandler(scenarioId);
-  }
-
-  function showUpgradePrompt() {
-    const modal = document.getElementById('upgrade-modal');
-    if (modal) modal.style.display = 'flex';
-  }
-
-  // Helper
-  function _setText(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  }
-
-  function _showToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    if (!toast) return;
-    toast.textContent = message;
-    toast.className = `toast toast-${type} show`;
-    setTimeout(() => { toast.className = 'toast'; }, 3500);
-  }
-
-  return {
-    setProfile,
-    getProfile,
-    renderStats,
-    renderScenarios,
-    handleScenarioClick,
-    showUpgradePrompt,
-    renderCourse,
-    openLesson,
-    completeLesson,
-    loadProgress,
-    getNextLessonDay,
+  
+  // Calculate quiz score
+  let correctAnswers = 0;
+  currentDay.quiz.forEach((q, i) => {
+    if (quizAnswers[i] === q.correct) correctAnswers++;
+  });
+  
+  const quizScore = Math.round((correctAnswers / currentDay.quiz.length) * 100);
+  const quizBonus = quizScore === 100 ? CONFIG.XP_PER_QUIZ : 0;
+  
+  // Calculate total XP
+  const totalXP = CONFIG.XP_PER_LESSON + quizBonus;
+  
+  // Update progress
+  const progress = user.profile?.course_progress || {};
+  progress[currentDay.day] = {
+    completed: true,
+    completedAt: new Date().toISOString(),
+    quizScore: quizScore,
+    timeSpent: Math.round((Date.now() - readingStartTime) / 1000)
   };
-})();
+  
+  // Update user stats
+  const updates = {
+    xp: (user.profile?.xp || 0) + totalXP,
+    course_progress: progress
+  };
+  
+  await updateUserStats(updates);
+  
+  // Check badges
+  checkCourseBadges(progress);
+  
+  // Show completion modal
+  showCompletionModal(totalXP, quizScore);
+  
+  // Refresh dashboard
+  renderStats();
+  renderCourseGrid();
+  
+  // Close reader
+  closeCourseModal();
+}
+
+// Check course-related badges
+function checkCourseBadges(progress) {
+  const completedDays = Object.keys(progress).length;
+  
+  if (completedDays >= 7) unlockBadge('week1_complete');
+  if (completedDays >= 30) unlockBadge('course_complete');
+  
+  // Check streak
+  checkStreak();
+}
+
+// Check streak
+function checkStreak() {
+  const user = getCurrentUser();
+  const lastCompleted = user?.profile?.last_completed_at;
+  
+  if (!lastCompleted) return;
+  
+  const lastDate = new Date(lastCompleted);
+  const today = new Date();
+  const diffDays = Math.floor((today - lastDate) / (1000 * 60 * 60 * 24));
+  
+  let streak = user?.profile?.streak || 0;
+  
+  if (diffDays === 1) {
+    streak++;
+  } else if (diffDays > 1) {
+    streak = 1; // Reset but count today
+  }
+  
+  if (streak >= 7) unlockBadge('streak_7');
+  if (streak >= 30) unlockBadge('streak_30');
+  
+  // Update streak in DB
+  updateUserStats({ streak: streak, last_completed_at: new Date().toISOString() });
+}
+
+// Show completion modal
+function showCompletionModal(xp, quizScore) {
+  const modal = document.createElement('div');
+  modal.className = 'completion-modal';
+  modal.innerHTML = `
+    <div class="completion-content">
+      <div class="completion-emoji">🎉</div>
+      <h2>Day ${currentDay.day} Complete!</h2>
+      <div class="completion-stats">
+        <div class="stat">
+          <span class="stat-value">+${xp}</span>
+          <span class="stat-label">XP Earned</span>
+        </div>
+        <div class="stat">
+          <span class="stat-value">${quizScore}%</span>
+          <span class="stat-label">Quiz Score</span>
+        </div>
+      </div>
+      <button onclick="this.closest('.completion-modal').remove()" class="btn-primary">
+        Continue
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    modal.remove();
+  }, 3000);
+}
+
+// Show paywall
+function showPaywall(day) {
+  const modal = document.getElementById('courseModal');
+  const content = document.getElementById('courseModalContent');
+  
+  if (!modal || !content) return;
+  
+  content.innerHTML = `
+    <div class="paywall">
+      <div class="paywall-icon">🔒</div>
+      <h2>Unlock Day ${day.day}</h2>
+      <p>This content is part of the premium course.</p>
+      <div class="paywall-features">
+        <div class="feature">✅ Days 8-30 Full Content</div>
+        <div class="feature">✅ AI Voice Call Practice</div>
+        <div class="feature">✅ 1-on-1 Coach Session</div>
+        <div class="feature">✅ Certificate of Completion</div>
+      </div>
+      <div class="paywall-price">₹99/month</div>
+      <button class="btn-primary" onclick="initiatePayment()">
+        Unlock Now
+      </button>
+      <button class="btn-secondary" onclick="closeCourseModal()">
+        Maybe Later
+      </button>
+    </div>
+  `;
+  
+  modal.style.display = 'flex';
+}
+
+// Close course modal
+function closeCourseModal() {
+  const modal = document.getElementById('courseModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+  }
+  currentDay = null;
+}
+
+// Render badges
+function renderBadges() {
+  const container = document.getElementById('badgesContainer');
+  if (!container) return;
+  
+  const user = getCurrentUser();
+  const earnedBadges = user?.profile?.badges || [];
+  
+  container.innerHTML = CONFIG.BADGES.map(badge => {
+    const isEarned = earnedBadges.includes(badge.id);
+    return `
+      <div class="badge ${isEarned ? 'earned' : 'locked'}" title="${badge.desc}">
+        <span class="badge-icon">${isEarned ? badge.icon : '🔒'}</span>
+        <span class="badge-name">${badge.name}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// Unlock badge
+async function unlockBadge(badgeId) {
+  const user = getCurrentUser();
+  if (!user) return;
+  
+  const badges = user.profile?.badges || [];
+  if (badges.includes(badgeId)) return; // Already have it
+  
+  badges.push(badgeId);
+  await updateUserStats({ badges: badges });
+  
+  // Show notification
+  const badge = CONFIG.BADGES.find(b => b.id === badgeId);
+  if (badge) {
+    showBadgeNotification(badge);
+  }
+  
+  renderBadges();
+}
+
+// Show badge notification
+function showBadgeNotification(badge) {
+  const notif = document.createElement('div');
+  notif.className = 'badge-notification';
+  notif.innerHTML = `
+    <div class="badge-notif-content">
+      <span class="badge-notif-icon">${badge.icon}</span>
+      <div>
+        <strong>Badge Unlocked!</strong>
+        <p>${badge.name}</p>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(notif);
+  
+  setTimeout(() => {
+    notif.classList.add('show');
+  }, 100);
+  
+  setTimeout(() => {
+    notif.classList.remove('show');
+    setTimeout(() => notif.remove(), 300);
+  }, 3000);
+}
+
+// Payment placeholder
+function initiatePayment() {
+  alert('Payment integration coming soon! Contact support to upgrade.');
+}
+
+// Helper: Update element text
+function updateElement(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+// Export
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    initDashboard,
+    openDay,
+    closeCourseModal,
+    completeDay,
+    selectAnswer,
+    unlockBadge
+  };
+}
