@@ -77,63 +77,82 @@
   <div class="error-box" id="error-state">
     <h3>❌ Login Failed</h3>
     <p id="error-message">Something went wrong.</p>
-    <button onclick="window.location.href='../index.html'">Try Again →</button>
+    <button onclick="window.location.href='index.html'">Try Again →</button>
   </div>
 
   <script>
-    // Supabase config (same as main app)
-    const SUPABASE_URL = 'https://xzdjxvitqktsfeuzshik.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW';
+    // Use window._supabase to avoid global conflict with Supabase library
+    window._supabaseClient = window.supabase.createClient(
+      'https://xzdjxvitqktsfeuzshik.supabase.co',
+      'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW'
+    );
 
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    let sessionChecked = false;
 
     async function handleCallback() {
       try {
-        // Get the full URL
-        const url = new URL(window.location.href);
+        // Method 1: Listen for auth state change (most reliable)
+        window._supabaseClient.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth event:', event);
 
-        // Check for error in query params
-        const error = url.searchParams.get('error');
-        const errorDescription = url.searchParams.get('error_description');
-
-        if (error) {
-          throw new Error(errorDescription || 'Authentication failed');
-        }
-
-        // PKCE flow: exchange code for session
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href);
-
-        if (exchangeError) {
-          // Fallback: try to get existing session (implicit flow)
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-
-          if (sessionError || !session) {
-            throw new Error('Could not establish session. Please try again.');
+          if (event === 'SIGNED_IN' && session) {
+            if (!sessionChecked) {
+              sessionChecked = true;
+              await handleSuccess(session);
+            }
           }
+        });
 
-          // Session exists, proceed
-          await handleSuccess(session);
-          return;
-        }
+        // Method 2: Also try direct session check after delay
+        setTimeout(async () => {
+          if (!sessionChecked) {
+            const { data: { session }, error } = await window._supabaseClient.auth.getSession();
 
-        if (data?.session) {
-          await handleSuccess(data.session);
-        } else {
-          throw new Error('No session returned from authentication.');
-        }
+            if (error) {
+              console.error('Session error:', error);
+              return;
+            }
+
+            if (session) {
+              sessionChecked = true;
+              await handleSuccess(session);
+            } else {
+              // Method 3: Check if there's an error in URL
+              const url = new URL(window.location.href);
+              const error = url.searchParams.get('error');
+              const errorDesc = url.searchParams.get('error_description');
+
+              if (error) {
+                showError(errorDesc || 'Authentication failed. Please try again.');
+              } else if (!sessionChecked) {
+                // No session and no error — maybe already processed
+                // Try one more time
+                setTimeout(async () => {
+                  const { data: { session: finalSession } } = await window._supabaseClient.auth.getSession();
+                  if (finalSession && !sessionChecked) {
+                    sessionChecked = true;
+                    await handleSuccess(finalSession);
+                  } else if (!sessionChecked) {
+                    showError('Unable to complete login. Please try again.');
+                  }
+                }, 2000);
+              }
+            }
+          }
+        }, 3000);
 
       } catch (err) {
-        console.error('OAuth callback error:', err);
-        showError(err.message);
+        console.error('Callback error:', err);
+        showError(err.message || 'Something went wrong. Please try again.');
       }
     }
 
     async function handleSuccess(session) {
       const user = session.user;
 
-      // Check if user exists in DB, if not create profile
+      // Create/update user profile in DB
       try {
-        const { data: existingUser, error: fetchError } = await supabase
+        const { data: existingUser, error: fetchError } = await window._supabaseClient
           .from('users')
           .select('*')
           .eq('id', user.id)
@@ -145,7 +164,7 @@
           const email = user.email;
           const gender = user.user_metadata?.gender || 'male';
 
-          await supabase.from('users').upsert({
+          await window._supabaseClient.from('users').upsert({
             id: user.id,
             name: name,
             email: email,
@@ -159,11 +178,10 @@
         }
       } catch (e) {
         console.error('Profile creation error:', e);
-        // Don't block login if profile creation fails
       }
 
       // Redirect to app
-      window.location.href = '../app.html';
+      window.location.href = 'app.html';
     }
 
     function showError(message) {
