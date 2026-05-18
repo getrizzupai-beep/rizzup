@@ -624,18 +624,7 @@ document.querySelectorAll('[data-action="google-signin"]').forEach(btn => {
   });
 });
 
-// Already logged in → show Go to App button
-window.addEventListener('DOMContentLoaded', () => {
-  Auth.init();
-  Auth.getSession().then(session => {
-    if (session) {
-      const navArea = document.getElementById('nav-auth-area');
-      if (navArea) {
-        navArea.innerHTML = `<a href="app.html" class="nav-cta" style="text-decoration:none">Go to App →</a>`;
-      }
-    }
-  });
-});
+// Nav update handled by main.js
 </script>
 
 </body>
