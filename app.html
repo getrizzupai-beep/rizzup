@@ -13,7 +13,7 @@
   <!-- Supabase -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- Razorpay (payment ke liye) -->
+  <!-- Razorpay -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
   <!-- Our JS -->
@@ -23,26 +23,6 @@
   <script src="js/dashboard.js"></script>
 
   <link rel="stylesheet" href="css/app.css" />
-
-  <style>
-    /* ✅ FIX: Chat section initial states */
-    #chat-messages {
-      display: none; /* JS show karega jab scenario select ho */
-    }
-    .chat-input-area {
-      display: none; /* JS show karega jab scenario select ho */
-    }
-
-    /* ✅ FIX: Dashboard tab default show, baaki hide — JS override karega */
-    [data-tab-panel="chat"],
-    [data-tab-panel="course"],
-    [data-tab-panel="upgrade"] {
-      display: none;
-    }
-    [data-tab-panel="dashboard"] {
-      display: block;
-    }
-  </style>
 </head>
 <body>
 
@@ -60,6 +40,7 @@
 
   <!-- ─── MAIN LAYOUT ───────────────────────────────────────────── -->
   <div class="app-layout">
+
     <!-- Sidebar -->
     <aside class="app-sidebar">
       <button class="tab-btn active" data-tab="dashboard">🏠 Dashboard</button>
@@ -73,13 +54,16 @@
 
       <!-- ─── DASHBOARD TAB ─────────────────────────────────────── -->
       <div data-tab-panel="dashboard">
+
         <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
         <p class="tab-subtitle">Ready to practice today?</p>
 
         <!-- Stats Row -->
         <div class="stats-row">
           <div class="stat-box">
-            <div class="stat-value"><span id="stat-mins-used">0</span>/<span id="stat-mins-limit">20</span></div>
+            <div class="stat-value">
+              <span id="stat-mins-used">0</span>/<span id="stat-mins-limit">20</span>
+            </div>
             <div class="stat-label">mins used today</div>
             <div class="progress-bar">
               <div class="progress-fill" id="mins-progress-bar" style="width:0%"></div>
@@ -101,35 +85,37 @@
 
         <!-- Limit Warning -->
         <div class="limit-warning" id="limit-warning" style="display:none;">
-          ⚠️ Daily limit reached! <button class="link-btn" onclick="Dashboard.showUpgradePrompt()">Upgrade to keep practicing →</button>
+          ⚠️ Daily limit reached!
+          <button class="link-btn" onclick="Dashboard.showUpgradePrompt()">Upgrade to keep practicing →</button>
         </div>
 
         <!-- Scenarios -->
         <h3 class="section-heading">Pick a Scenario 👇</h3>
         <div class="scenarios-grid" id="scenarios-grid">
-          <!-- JS se render hoga -->
           <div class="loading-scenarios">Loading scenarios...</div>
         </div>
+
       </div>
 
       <!-- ─── CHAT TAB ──────────────────────────────────────────── -->
-      <div data-tab-panel="chat" style="display:none; height:100%; display:flex; flex-direction:column;">
+      <div data-tab-panel="chat" style="display:none;">
+
         <!-- Chat Header -->
         <div class="chat-header">
           <div class="chat-persona-avatar" id="chat-persona-avatar">👩</div>
           <div class="chat-persona-info">
             <div class="chat-persona-name" id="chat-persona-name">Select a Scenario</div>
-            <div class="chat-persona-status" id="chat-status">Go to Dashboard and pick one</div>
+            <div class="chat-persona-status" id="chat-status">Dashboard pe jao aur scenario choose karo</div>
           </div>
           <button class="btn-coach" id="btn-coach-feedback">🎯 Coach Feedback</button>
         </div>
 
-        <!-- No scenario selected state -->
+        <!-- No scenario selected -->
         <div class="no-scenario-state" id="no-scenario-state">
           <div class="no-scenario-icon">💬</div>
           <h3>Koi scenario select karo</h3>
           <p>Dashboard pe jaao aur ek scenario choose karo practice ke liye.</p>
-          <button class="btn-primary" onclick="document.querySelector('[data-tab=\'dashboard\']').click()">
+          <button class="btn-primary" onclick="document.querySelector('[data-tab=dashboard]').click()">
             Go to Dashboard →
           </button>
         </div>
@@ -138,30 +124,29 @@
         <div class="chat-messages" id="chat-messages" style="display:none;"></div>
 
         <!-- Chat Input -->
-        <div class="chat-input-area" style="display:none;">
-          <textarea 
-            id="chat-input" 
+        <div class="chat-input-area" id="chat-input-area" style="display:none;">
+          <textarea
+            id="chat-input"
             placeholder="Apna message type karo... (Enter = send, Shift+Enter = new line)"
             rows="1"
           ></textarea>
           <button class="btn-send" id="btn-send">➤</button>
         </div>
+
       </div>
 
       <!-- ─── COURSE TAB ─────────────────────────────────────────── -->
       <div data-tab-panel="course" style="display:none;">
         <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
         <p class="tab-subtitle">Daily lessons to go from nervous to confident. Week 1 is free!</p>
-        <div class="course-list" id="course-list">
-          <!-- JS se render hoga -->
-        </div>
+        <div class="course-list" id="course-list"></div>
       </div>
 
       <!-- ─── UPGRADE TAB ────────────────────────────────────────── -->
       <div data-tab-panel="upgrade" style="display:none;">
         <h2 class="tab-title">Unlock Everything ⚡</h2>
         <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
-        
+
         <div class="upgrade-pricing-grid">
           <div class="upgrade-price-card popular">
             <div class="popular-label">🔥 Most Popular</div>
@@ -202,17 +187,20 @@
         <div class="upgrade-modal-icon">🔒</div>
         <h3>Upgrade to Unlock</h3>
         <p>Yeh scenario Starter plan ke liye available hai. Upgrade karke sab 6 scenarios, full course, aur Wingman Mode unlock karo!</p>
-        <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
+        <button class="btn-primary full-width"
+          onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
           Get Starter — ₹199/mo ⚡
         </button>
-        <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">
+        <button class="btn-ghost full-width"
+          onclick="document.getElementById('upgrade-modal').style.display='none'">
           Maybe later
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Main JS (last mein) -->
+  <!-- Main JS (last mein load karo) -->
   <script src="js/main.js"></script>
+
 </body>
 </html>
