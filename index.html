@@ -9,12 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@400;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- Supabase CDN — PEHLE load karo -->
+  <!-- Supabase CDN only — auth.js/app.js NOT loaded here to avoid double declare -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-
-  <!-- Our config + auth — correct order -->
   <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
 
   <!-- Landing CSS — correct file -->
   <link rel="stylesheet" href="css/landing.css">
@@ -453,6 +450,15 @@ function toggleFaq(el) {
   el.parentElement.classList.toggle('open');
 }
 
+// ===== SUPABASE CLIENT — seedha yahan init, Auth object se independent =====
+let _sb = null;
+function getSB() {
+  if (!_sb) {
+    _sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  }
+  return _sb;
+}
+
 // ===== AUTH ACTIONS =====
 async function doSignup() {
   const name = document.getElementById('sName').value.trim();
@@ -462,8 +468,18 @@ async function doSignup() {
   if (!email) return showAuthError('Email daalo!');
   if (!password || password.length < 6) return showAuthError('Password kam se kam 6 characters ka hona chahiye!');
   try {
-    Auth.init();
-    await Auth.signUp(name, email, password);
+    const { data, error } = await getSB().auth.signUp({
+      email, password, options: { data: { full_name: name } }
+    });
+    if (error) throw error;
+    // DB mein save karo
+    if (data.user) {
+      await getSB().from('users').upsert({
+        id: data.user.id, name, email, plan: 'free',
+        mins_used: 0, total_msgs: 0, sessions: 0,
+        created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+    }
     closeAuthModal();
     showToast('Account bana diya! 🎉 Email check karo verify karne ke liye.', 'success');
   } catch (err) {
@@ -476,11 +492,10 @@ async function doLogin() {
   const password = document.getElementById('lPassword').value;
   if (!email || !password) return showAuthError('Email aur password daalo!');
   try {
-    Auth.init();
-    await Auth.signIn(email, password);
+    const { error } = await getSB().auth.signInWithPassword({ email, password });
+    if (error) throw error;
     closeAuthModal();
     showToast('Welcome back! 👋', 'success');
-    // App pe redirect karo
     setTimeout(() => window.location.href = 'app.html', 800);
   } catch (err) {
     showAuthError(err.message || 'Login failed. Check email/password!');
@@ -489,21 +504,21 @@ async function doLogin() {
 
 async function doGoogleLogin() {
   try {
-    Auth.init();
-    await Auth.signInWithGoogle();
+    const { error } = await getSB().auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin + '/auth_callback.html' }
+    });
+    if (error) throw error;
   } catch (err) {
-    showAuthError('Google login failed. Try again!');
+    showAuthError('Google login failed: ' + (err.message || 'Try again'));
   }
 }
 
 // ===== AUTH STATE — agar already logged in hai toh app.html pe bhejo =====
 (async () => {
   try {
-    Auth.init();
-    const session = await Auth.getSession();
-    if (session) {
-      window.location.href = 'app.html';
-    }
+    const { data: { session } } = await getSB().auth.getSession();
+    if (session) window.location.href = 'app.html';
   } catch(e) {
     // Not logged in, stay on landing
   }
