@@ -1,15 +1,20 @@
 // js/main.js — Glue code: sab modules connect karta hai
 
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🚀 main.js loaded');
 
   // ─── 1. AUTH INIT ─────────────────────────────────────────────
   Auth.init();
 
   // ─── 2. AUTH STATE LISTENER ───────────────────────────────────
   Auth.onAuthChange(async (event, user) => {
+    console.log('🔐 Auth event:', event, 'User:', user ? user.id : null);
     if (event === 'SIGNED_IN' && user) {
       const profile = await Auth.getUserProfile(user.id);
       if (profile) {
+        // Ensure gender is set
+        if (!profile.gender) profile.gender = 'male';
+
         Dashboard.setProfile(profile);
         _updateNavUI(profile);
         Dashboard.renderStats();
@@ -42,6 +47,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const profile = await Auth.getUserProfile(user.id);
   if (profile) {
+    // Ensure gender is set (fallback for Google users without gender in DB)
+    if (!profile.gender) {
+      profile.gender = 'male'; // Default fallback
+      console.log('Gender not set in profile, using default: male');
+    }
+
+    console.log('Loaded profile:', profile);
+
     Dashboard.setProfile(profile);
     _updateNavUI(profile);
     Dashboard.renderStats();
@@ -50,6 +63,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ← SET GENDER IN CHAT MODULE
     Chat.setGender(profile.gender || 'male');
+  } else {
+    console.error('No profile found for user:', user.id);
   }
 
   // ─── 4. SETUP UI ──────────────────────────────────────────────
