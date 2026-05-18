@@ -1,592 +1,483 @@
-// js/config.js — Ek jagah sab config
-// Kuch bhi change karna ho toh sirf yeh file touch karo
+// js/dashboard.js — Dashboard UI + stats + course + gamification
 
-const CONFIG = {
-  // Supabase
-  SUPABASE_URL: 'https://xzdjxvitqktsfeuzshik.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_zCeAZp1ZBclQ_tsgDbBVyQ_jHyTCIoW',
+const Dashboard = (() => {
+  let _userProfile = null;
+  let _courseProgress = {};
+  let _userXP = 0;
+  let _userBadges = [];
+  let _streak = 0;
 
-  // API endpoint (Vercel serverless)
-  CHAT_API_ENDPOINT: '/api/chat',
+  function setProfile(profile) {
+    _userProfile = profile;
+    _courseProgress = profile?.course_progress || {};
+    _userXP = profile?.xp || 0;
+    _userBadges = profile?.badges || [];
+    _streak = profile?.streak || 0;
+  }
 
-  // Plans
-  PLANS: {
-    free: {
-      name: 'Free',
-      price: 0,
-      msgBeforeCooldown: 10,
-      cooldownMinutes: 5,
-      scenarios: ['first_date', 'texting', 'rejection'],
-      courseWeeks: 1,
-      courseDays: 7,
-    },
-    starter: {
-      name: 'Starter',
-      price: 99,
-      yearlyPrice: 999,
-      msgBeforeCooldown: 9999,
-      cooldownMinutes: 0,
-      scenarios: ['first_date', 'texting', 'rejection', 'flirting', 'arranged', 'second_date'],
-      courseWeeks: 4,
-      courseDays: 28,
-    },
-    pro: {
-      name: 'Pro',
-      price: 0,
-      msgBeforeCooldown: 9999,
-      cooldownMinutes: 0,
-      scenarios: ['first_date', 'texting', 'rejection', 'flirting', 'arranged', 'second_date'],
-      courseWeeks: 4,
-      courseDays: 30,
-    },
-  },
+  function getProfile() {
+    return _userProfile;
+  }
 
   // ═══════════════════════════════════════════════════════════════════
-  // COURSE SYSTEM — 30-Day Dating Mastery
+  // STATS
   // ═══════════════════════════════════════════════════════════════════
-  COURSE: {
-    title: '30-Day Dating Mastery',
-    subtitle: 'From awkward to confident — structured daily lessons',
-    totalDays: 28,
-    freeDays: 7,
+  function renderStats() {
+    if (!_userProfile) return;
 
-    phases: [
-      {
-        id: 'foundation',
-        name: 'Phase 1: Foundation',
-        emoji: '🌱',
-        week: 1,
-        free: true,
-        description: 'Build your base — confidence, first messages, reading signals',
-        lessons: [
-          { day: 1, title: "Why You're Getting Ignored", emoji: '🚫', xp: 50, duration: '5 min', keyTakeaways: ['5 silent killers', 'First impression psychology', 'What actually matters'], task: 'Self-audit quiz' },
-          { day: 2, title: 'The Confidence DNA', emoji: '💪', xp: 50, duration: '6 min', keyTakeaways: ['Inner vs Outer game', 'Body language basics', 'Self-esteem hacks'], task: 'Mirror exercise' },
-          { day: 3, title: 'First Message Formula', emoji: '💬', xp: 50, duration: '7 min', keyTakeaways: ['Hook + Question + Personality', '3 proven templates', 'Common mistakes'], task: 'Write 3 opening lines' },
-          { day: 4, title: 'Reading Her Signals', emoji: '📡', xp: 50, duration: '5 min', keyTakeaways: ['Green flags', 'Red flags', 'When to push/pull'], task: 'Signal identification quiz' },
-          { day: 5, title: 'The Art of Banter', emoji: '🎭', xp: 50, duration: '8 min', keyTakeaways: ['Teasing without offending', 'Playful comebacks', 'Indian context'], task: 'AI roleplay practice' },
-          { day: 6, title: 'From Text to Date', emoji: '📅', xp: 50, duration: '6 min', keyTakeaways: ['Asking out scripts', 'Timing matters', 'Handling maybe'], task: 'Script practice' },
-          { day: 7, title: 'Week 1 Boss Battle', emoji: '⚔️', xp: 100, duration: '10 min', keyTakeaways: ['Full simulation', 'AI judges progress', 'Vibe Score'], task: 'Complete simulation' },
-        ]
-      },
-      {
-        id: 'first_date',
-        name: 'Phase 2: First Date Mastery',
-        emoji: '☕',
-        week: 2,
-        free: false,
-        description: 'Win the first date — venue, conversation, body language',
-        lessons: [
-          { day: 8, title: 'Date Planning 101', emoji: '☕', xp: 50, duration: '5 min', keyTakeaways: ['Coffee > Dinner > Movie', 'Timing & backup plan', 'Dress code'], task: 'Plan a date' },
-          { day: 9, title: 'Conversation Depth', emoji: '🗣️', xp: 50, duration: '7 min', keyTakeaways: ['FORD method', 'Beyond small talk', 'Deep questions'], task: 'Practice FORD' },
-          { day: 10, title: 'Body Language Secrets', emoji: '🕺', xp: 50, duration: '6 min', keyTakeaways: ['60% eye contact', 'Open posture', 'Touch escalation'], task: 'Body language audit' },
-          { day: 11, title: 'Handling Awkward Moments', emoji: '😅', xp: 50, duration: '5 min', keyTakeaways: ['Silence recovery', 'Spill solutions', 'Topic recovery'], task: 'Awkward scenario practice' },
-          { day: 12, title: 'The Perfect Exit', emoji: '👋', xp: 50, duration: '5 min', keyTakeaways: ['When to leave', 'Hug vs handshake', 'Next date setup'], task: 'Exit script practice' },
-          { day: 13, title: 'Post-Date Text Game', emoji: '📱', xp: 50, duration: '6 min', keyTakeaways: ['Follow-up timing', 'What to say', 'What NOT to say'], task: 'Write follow-up text' },
-          { day: 14, title: 'Week 2 Boss Battle', emoji: '⚔️', xp: 100, duration: '12 min', keyTakeaways: ['Full date simulation', 'Real-time feedback', 'Score breakdown'], task: 'Complete simulation' },
-        ]
-      },
-      {
-        id: 'connection',
-        name: 'Phase 3: Connection Building',
-        emoji: '💫',
-        week: 3,
-        free: false,
-        description: 'Deepen the bond — emotional intelligence, attraction, trust',
-        lessons: [
-          { day: 15, title: 'Second Date Strategy', emoji: '💫', xp: 50, duration: '6 min', keyTakeaways: ['Deeper connection', 'Vulnerability', 'Comfort zone'], task: 'Plan date 2' },
-          { day: 16, title: 'Emotional Intelligence', emoji: '🧠', xp: 50, duration: '7 min', keyTakeaways: ['Empathy', 'Validation', 'Active listening'], task: 'Listening exercise' },
-          { day: 17, title: 'Rejection Mastery', emoji: '🛡️', xp: 50, duration: '6 min', keyTakeaways: ['Graceful exit', 'Self-respect', 'Bounce back'], task: 'Rejection simulation' },
-          { day: 18, title: 'Tests & Shit Tests', emoji: '🧪', xp: 50, duration: '8 min', keyTakeaways: ['Identify tests', 'Perfect replies', 'Stay calm'], task: 'Test response practice' },
-          { day: 19, title: 'Attraction Science', emoji: '⚡', xp: 50, duration: '7 min', keyTakeaways: ['Mystery', 'Challenge', 'Value demonstration'], task: 'Attraction audit' },
-          { day: 20, title: 'The Ex Conversation', emoji: '💔', xp: 50, duration: '5 min', keyTakeaways: ['When to discuss', 'How much to share', 'Red flags'], task: 'Script practice' },
-          { day: 21, title: 'Week 3 Boss Battle', emoji: '⚔️', xp: 100, duration: '12 min', keyTakeaways: ['Relationship simulation', 'Multi-scenario test', 'Final score'], task: 'Complete simulation' },
-        ]
-      },
-      {
-        id: 'long_game',
-        name: 'Phase 4: The Long Game',
-        emoji: '💑',
-        week: 4,
-        free: false,
-        description: 'From dating to relationship — family, fights, forever',
-        lessons: [
-          { day: 22, title: 'The Relationship Talk', emoji: '💑', xp: 50, duration: '6 min', keyTakeaways: ['Exclusivity', 'Boundaries', 'Expectations'], task: 'Define your boundaries' },
-          { day: 23, title: 'Meeting Family', emoji: '👨‍👩‍👧', xp: 50, duration: '7 min', keyTakeaways: ['Indian family dynamics', 'Impressing parents', 'Cultural respect'], task: 'Family meeting prep' },
-          { day: 24, title: 'Fight Resolution', emoji: '🥊', xp: 50, duration: '6 min', keyTakeaways: ['Healthy arguments', 'Apology art', 'Compromise'], task: 'Conflict simulation' },
-          { day: 25, title: 'Spark Alive', emoji: '🔥', xp: 50, duration: '5 min', keyTakeaways: ['Date nights', 'Surprises', 'Avoid routine'], task: 'Plan surprise date' },
-          { day: 26, title: 'Trust & Jealousy', emoji: '🤝', xp: 50, duration: '6 min', keyTakeaways: ['Building security', 'Handling insecurities', 'Transparency'], task: 'Trust exercise' },
-          { day: 27, title: 'Long Distance', emoji: '✈️', xp: 50, duration: '5 min', keyTakeaways: ['Communication', 'Visits', 'Maintaining faith'], task: 'LDR plan' },
-          { day: 28, title: 'Graduation Day', emoji: '🎓', xp: 150, duration: '15 min', keyTakeaways: ['Personalized blueprint', 'Lifetime habits', 'Next steps'], task: 'Create your action plan' },
-        ]
+    const plan = _userProfile.plan || 'free';
+
+    _setText('stat-total-msgs', _userProfile.total_msgs || 0);
+    _setText('stat-sessions', _userProfile.sessions || 0);
+    _setText('stat-plan', plan.toUpperCase());
+
+    const level = _getLevel(_userXP);
+    _setText('stat-xp', _userXP);
+    _setText('stat-level', `${level.icon} ${level.name}`);
+    _setText('stat-streak', `${_streak} 🔥`);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // COURSE RENDER
+  // ═══════════════════════════════════════════════════════════════════
+  function renderCourse() {
+    const container = document.getElementById('course-list');
+    if (!container) return;
+
+    const userPlan = _userProfile?.plan || 'free';
+    const isPaid = userPlan !== 'free';
+    const maxFreeDay = CONFIG.COURSE.freeDays;
+
+    let html = '';
+
+    // Progress bar
+    const completedDays = Object.keys(_courseProgress).filter(k => _courseProgress[k]).length;
+    const progressPercent = Math.round((completedDays / CONFIG.COURSE.totalDays) * 100);
+
+    html += `
+      <div class="course-progress-bar">
+        <div class="course-progress-fill" style="width:${progressPercent}%"></div>
+        <span class="course-progress-text">${completedDays}/${CONFIG.COURSE.totalDays} days • ${progressPercent}%</span>
+      </div>
+      <div class="course-level-badge">
+        ${_getLevel(_userXP).icon} Level ${_getLevel(_userXP).level} — ${_getLevel(_userXP).name}
+      </div>
+    `;
+
+    // Resume banner
+    if (completedDays > 0 && completedDays < CONFIG.COURSE.totalDays) {
+      const nextDay = completedDays + 1;
+      const nextLesson = _findLesson(nextDay);
+      if (nextLesson) {
+        html += `
+          <div class="course-resume-banner" data-resume-day="${nextDay}">
+            <div class="resume-icon">▶️</div>
+            <div class="resume-text">
+              <strong>Resume Course</strong>
+              <span>Continue Day ${nextDay}: ${nextLesson.emoji} ${nextLesson.title}</span>
+            </div>
+            <div class="resume-arrow">→</div>
+          </div>
+        `;
       }
-    ],
+    }
 
-    // Bonus for Pro
-    bonus: [
-      { day: 29, title: 'Voice Call Practice', emoji: '🎙️', pro: true, description: 'AI voice call simulation' },
-      { day: 30, title: '1-on-1 Coach Session', emoji: '👨‍🏫', pro: true, description: 'Human coach consultation' },
-    ]
-  },
+    // Phases
+    CONFIG.COURSE.phases.forEach(phase => {
+      const isPhaseFree = phase.free;
+      const isLocked = !isPhaseFree && !isPaid;
+
+      html += `
+        <div class="course-phase ${isLocked ? 'locked' : ''}" data-phase="${phase.id}">
+          <div class="phase-header">
+            <div class="phase-name">${phase.emoji || '📚'} ${phase.name}</div>
+            <div class="phase-meta">
+              ${isLocked ? '🔒 ₹99 to unlock' : (isPhaseFree ? '✅ Free' : '✅ Unlocked')}
+            </div>
+          </div>
+          <div class="phase-desc">${phase.description}</div>
+          <div class="lessons-grid">
+      `;
+
+      phase.lessons.forEach(lesson => {
+        const isCompleted = _courseProgress[lesson.day];
+        const isDayFree = lesson.day <= maxFreeDay;
+        const isDayLocked = !isDayFree && !isPaid;
+
+        // DEBUG
+        console.log('Lesson', lesson.day, 'progress:', _courseProgress[lesson.day], 'isCompleted:', !!_courseProgress[lesson.day]);
+
+        html += `
+          <div class="lesson-card ${isCompleted ? 'completed' : ''} ${isDayLocked ? 'locked' : ''}"
+               data-day="${lesson.day}"
+               data-locked="${isDayLocked}">
+            <div class="lesson-day">${isCompleted ? '✓' : lesson.day}</div>
+            <div class="lesson-info">
+              <div class="lesson-title">${lesson.emoji} ${lesson.title}</div>
+              <div class="lesson-meta">${lesson.duration} • +${lesson.xp} XP ${isCompleted ? '• ✓ Completed' : ''}</div>
+            </div>
+            ${isCompleted ? '<div class="lesson-check">✓</div>' : ''}
+            ${isDayLocked ? '<div class="lesson-lock">🔒</div>' : ''}
+          </div>
+        `;
+      });
+
+      html += `</div></div>`;
+    });
+
+    // Bonus (Pro)
+    html += `
+      <div class="course-phase bonus-phase">
+        <div class="phase-header">
+          <div class="phase-name">🚀 Bonus (Pro)</div>
+          <div class="phase-meta">Coming Soon</div>
+        </div>
+        <div class="lessons-grid">
+          ${CONFIG.COURSE.bonus.map(b => `
+            <div class="lesson-card locked">
+              <div class="lesson-day">${b.day}</div>
+              <div class="lesson-info">
+                <div class="lesson-title">${b.emoji} ${b.title}</div>
+                <div class="lesson-meta">${b.description}</div>
+              </div>
+              <div class="lesson-lock">🔒</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    // Badges section
+    html += _renderBadges();
+
+    container.innerHTML = html;
+
+    // Attach event listeners
+    _attachLessonListeners();
+    _attachResumeListener();
+  }
+
+  function _attachLessonListeners() {
+    document.querySelectorAll('.lesson-card').forEach(card => {
+      card.addEventListener('click', function(e) {
+        const day = parseInt(this.dataset.day);
+        const isLocked = this.dataset.locked === 'true';
+
+        if (isLocked) {
+          showUpgradePrompt();
+        } else if (day) {
+          openLesson(day);
+        }
+      });
+    });
+  }
+
+  function _attachResumeListener() {
+    const resumeBanner = document.querySelector('.course-resume-banner');
+    if (resumeBanner) {
+      resumeBanner.addEventListener('click', function() {
+        const day = parseInt(this.dataset.resumeDay);
+        if (day) openLesson(day);
+      });
+    }
+  }
 
   // ═══════════════════════════════════════════════════════════════════
-  // GAMIFICATION
+  // LESSON MODAL
   // ═══════════════════════════════════════════════════════════════════
-  XP: {
-    lessonComplete: 50,
-    quizPerfect: 25,
-    dailyStreak: 10,
-    roleplayWin: 30,
-    coachPositive: 20,
-    bossBattle: 100,
-    graduation: 150,
-  },
+  function openLesson(day) {
+    const lesson = _findLesson(day);
+    if (!lesson) return;
 
-  LEVELS: [
-    { level: 1, name: 'Rookie', minXP: 0, icon: '🌱' },
-    { level: 2, name: 'Learner', minXP: 200, icon: '📖' },
-    { level: 3, name: 'Player', minXP: 500, icon: '🎮' },
-    { level: 4, name: 'Dating Pro', minXP: 1000, icon: '💎' },
-    { level: 5, name: 'Rizz Master', minXP: 2000, icon: '👑' },
-    { level: 6, name: 'Legend', minXP: 3500, icon: '🔥' },
-  ],
+    const phase = CONFIG.COURSE.phases.find(p => p.lessons.some(l => l.day === day));
+    const isCompleted = _courseProgress[day];
 
-  BADGES: [
-    { id: 'first_msg', name: 'First Message Hero', icon: '🥉', desc: 'Send 10 opening lines', condition: 'msgs >= 10' },
-    { id: 'date_closer', name: 'Date Closer', icon: '🥈', desc: 'Complete date simulation', condition: 'scenario == first_date' },
-    { id: 'rejection_pro', name: 'Rejection Survivor', icon: '🥇', desc: 'Handle rejection gracefully', condition: 'scenario == rejection' },
-    { id: 'streak_7', name: 'Streak King', icon: '🔥', desc: '7-day login streak', condition: 'streak >= 7' },
-    { id: 'week1_done', name: 'Foundation Graduate', icon: '📚', desc: 'Complete Week 1', condition: 'course_day >= 7' },
-    { id: 'course_complete', name: 'RizzUp Certified', icon: '💎', desc: 'Complete full 28-day course', condition: 'course_day >= 28' },
-    { id: 'level_5', name: 'Rizz Master', icon: '👑', desc: 'Reach Level 5', condition: 'level >= 5' },
-  ],
+    const modal = document.getElementById('lesson-modal');
+    const content = document.getElementById('lesson-modal-content');
+
+    if (!modal || !content) return;
+
+    content.innerHTML = `
+      <div class="lesson-modal-header">
+        <div class="lesson-modal-day">Day ${lesson.day}</div>
+        <h3>${lesson.emoji} ${lesson.title}</h3>
+        <div class="lesson-modal-meta">${phase ? phase.name : ''} • ${lesson.duration} • +${lesson.xp} XP</div>
+      </div>
+
+      <div class="lesson-content">
+        <div class="lesson-section">
+          <h4>🎯 Today's Task</h4>
+          <p>${lesson.task}</p>
+        </div>
+
+        <div class="lesson-section">
+          <h4>💡 Key Takeaways</h4>
+          <ul>
+            ${lesson.keyTakeaways.map(k => `<li>${k}</li>`).join('')}
+          </ul>
+        </div>
+
+        <div class="lesson-section">
+          <h4>📝 Practice</h4>
+          <p>Complete today's task to earn <strong>+${lesson.xp} XP</strong>!</p>
+        </div>
+      </div>
+
+      <div class="lesson-actions">
+        ${isCompleted 
+          ? '<button class="btn-primary" disabled>✓ Already Completed</button>'
+          : `<button class="btn-primary" id="btn-complete-lesson" data-day="${day}">🚀 Start Lesson</button>`
+        }
+      </div>
+    `;
+
+    // Attach complete button listener
+    const completeBtn = document.getElementById('btn-complete-lesson');
+    if (completeBtn) {
+      completeBtn.addEventListener('click', function() {
+        completeLesson(parseInt(this.dataset.day));
+      });
+    }
+
+    modal.style.display = 'flex';
+  }
 
   // ═══════════════════════════════════════════════════════════════════
-  // SCENARIOS — Male & Female versions
+  // COMPLETE LESSON
   // ═══════════════════════════════════════════════════════════════════
-  SCENARIOS: {
-    // ─── MALE SCENARIOS (user is male, talking to female) ─────────
-    first_date: {
-      id: 'first_date',
-      name: 'First Date',
-      emoji: '☕',
-      persona: 'Priya',
-      personaEmoji: '👩',
-      description: 'Coffee meetup — make a great first impression.',
-      free: true,
-      gender: 'male',
-      systemPrompt: `You are Priya — a 24-year-old Mumbai girl who matched on Bumble. 
-This is your first coffee date. You're a little nervous but excited.
+  function completeLesson(day) {
+    if (_courseProgress[day]) {
+      _showToast('Already completed! 🎉', 'info');
+      return;
+    }
 
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
+    const lesson = _findLesson(day);
+    if (!lesson) return;
 
-Keep replies SHORT (1-3 lines max). React realistically — if they're boring, show it; if interesting, get engaged.
-Use emojis naturally. Stay in character always. 
-Character: Warm, slightly nervous, curious, modern Indian girl.
+    // Mark complete
+    _courseProgress[day] = true;
 
-Example English replies:
-- "Hey! What's up? 😊"
-- "Oh wow, that's actually interesting! Tell me more."
-- "Haha, you're funny! I wasn't expecting that."
+    // Add XP
+    _userXP += lesson.xp;
 
-Example Hinglish replies (only when user speaks Hinglish):
-- "Haan yaar, coffee toh best hai! ☕"
-- "Acha? Mujhe bhi wahi lagta tha! 😄"`,
-      greeting: "Hey there! *nervously sips coffee* You actually look like your photos 😄 So tell me something interesting!",
-    },
+    // Check for new badges
+    const newBadges = _checkBadges();
+    _userBadges = [...new Set([..._userBadges, ...newBadges])];
 
-    texting: {
-      id: 'texting',
-      name: 'Texting Game',
-      emoji: '💬',
-      persona: 'Ananya',
-      personaEmoji: '💬',
-      description: 'Keep the convo interesting after matching on a dating app.',
-      free: true,
-      gender: 'male',
-      systemPrompt: `You are Ananya — a 23-year-old Delhi girl, just matched on Hinge. 
-You're busy but genuinely interested if the convo is good.
+    // Save to profile
+    if (_userProfile) {
+      _userProfile.course_progress = _courseProgress;
+      _userProfile.xp = _userXP;
+      _userProfile.badges = _userBadges;
+      Auth.updateUserStats(_userProfile.id, {
+        course_progress: _courseProgress,
+        xp: _userXP,
+        badges: _userBadges,
+      });
+    }
 
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
+    // Close modal
+    const modal = document.getElementById('lesson-modal');
+    if (modal) modal.style.display = 'none';
 
-Texting style — short, casual, occasionally dry humor. 
-If conversation is boring → warn them about being left on seen.
-If conversation is fun → become more engaged and playful.
+    // Show celebration
+    _showToast(`🎉 +${lesson.xp} XP earned! Day ${day} complete!`, 'success');
 
-Example English replies:
-- "Hey! Your bio caught my eye 👀"
-- "Haha okay that was actually good 😂"
-- "Wait, really? Now I need to know more..."
+    // Show new badges
+    newBadges.forEach(badgeId => {
+      const badge = CONFIG.BADGES.find(b => b.id === badgeId);
+      if (badge) {
+        setTimeout(() => {
+          _showToast(`🏆 New Badge: ${badge.icon} ${badge.name}!`, 'success');
+        }, 1500);
+      }
+    });
 
-Example Hinglish replies (only when user speaks Hinglish):
-- "Haan yaar, bio mast tha tumhara! 😏"
-- "Acha? Ab mujhe aur jaanna padega!"`,
-      greeting: "Hey! I saw your bio — the 'chai over coffee' point 👀 Bold choice. Defend your stance.",
-    },
+    // Re-render
+    renderCourse();
+    renderStats();
+  }
 
-    rejection: {
-      id: 'rejection',
-      name: 'Handle Rejection',
-      emoji: '💪',
-      persona: 'Simran',
-      personaEmoji: '💪',
-      description: "Stay confident and graceful when things don't go your way.",
-      free: true,
-      gender: 'male',
-      systemPrompt: `You are Simran — a 25-year-old Pune girl. You've been on 3 dates 
-but realize you're not ready for a relationship. You need to gently reject him today.
+  // ═══════════════════════════════════════════════════════════════════
+  // BADGES
+  // ═══════════════════════════════════════════════════════════════════
+  function _renderBadges() {
+    const earnedBadges = CONFIG.BADGES.filter(b => _userBadges.includes(b.id));
+    const lockedBadges = CONFIG.BADGES.filter(b => !_userBadges.includes(b.id));
 
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
+    return `
+      <div class="badges-section">
+        <h3 class="section-heading">🏆 Your Badges</h3>
+        <div class="badges-grid">
+          ${earnedBadges.map(b => `
+            <div class="badge-card earned">
+              <div class="badge-icon">${b.icon}</div>
+              <div class="badge-name">${b.name}</div>
+              <div class="badge-desc">${b.desc}</div>
+            </div>
+          `).join('')}
+          ${lockedBadges.map(b => `
+            <div class="badge-card locked">
+              <div class="badge-icon">🔒</div>
+              <div class="badge-name">${b.name}</div>
+              <div class="badge-desc">${b.desc}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
 
-Be firm but kind. If he handles it gracefully → show respect and warmth.
-If he becomes needy/desperate → show discomfort naturally. 
-Give realistic human reactions.
+  function _checkBadges() {
+    const newBadges = [];
+    const totalMsgs = _userProfile?.total_msgs || 0;
+    const sessions = _userProfile?.sessions || 0;
+    const completedDays = Object.keys(_courseProgress).filter(k => _courseProgress[k]).length;
+    const level = _getLevel(_userXP).level;
 
-Example English replies:
-- "I really appreciate you being understanding about this."
-- "It's not you, honestly. I just need to figure myself out first."
-- "That means a lot, thank you for being so mature about it."
+    CONFIG.BADGES.forEach(badge => {
+      if (_userBadges.includes(badge.id)) return;
 
-Example Hinglish replies (only when user speaks Hinglish):
-- "Tum samajh rahe ho, iska matlab bahut hai mujhe."
-- "Main bas abhi ready nahi hoon relationship ke liye."`,
-      greeting: "Hey... I've been meaning to talk to you. I've been thinking about us and... honestly I don't think we're on the same page. 😔",
-    },
+      let earned = false;
+      switch(badge.id) {
+        case 'first_msg': earned = totalMsgs >= 10; break;
+        case 'date_closer': earned = sessions >= 1; break;
+        case 'rejection_pro': earned = sessions >= 3; break;
+        case 'streak_7': earned = _streak >= 7; break;
+        case 'week1_done': earned = completedDays >= 7; break;
+        case 'course_complete': earned = completedDays >= 28; break;
+        case 'level_5': earned = level >= 5; break;
+      }
 
-    flirting: {
-      id: 'flirting',
-      name: 'Flirting Practice',
-      emoji: '😏',
-      persona: 'Rhea',
-      personaEmoji: '😏',
-      description: "Playful banter, wit, and charm — practice until it's natural.",
-      free: false,
-      gender: 'male',
-      systemPrompt: `You are Rhea — a 24-year-old Bangalore girl, witty and playful.
-You hate boring, try-hard flirting. You respond to genuine wit.
+      if (earned) newBadges.push(badge.id);
+    });
 
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
+    return newBadges;
+  }
 
-Engage in banter — challenge, tease, but never mean.
-Short, punchy replies. React authentically to their flirting attempts.
+  // ═══════════════════════════════════════════════════════════════════
+  // LEVEL SYSTEM
+  // ═══════════════════════════════════════════════════════════════════
+  function _getLevel(xp) {
+    for (let i = CONFIG.LEVELS.length - 1; i >= 0; i--) {
+      if (xp >= CONFIG.LEVELS[i].minXP) {
+        return CONFIG.LEVELS[i];
+      }
+    }
+    return CONFIG.LEVELS[0];
+  }
 
-Example English replies:
-- "Oh, so you think you have game? Prove it. 😏"
-- "That was smooth, I'll give you that. But can you keep it up?"
-- "Okay okay, you're not as boring as I thought."
+  function _findLesson(day) {
+    for (const phase of CONFIG.COURSE.phases) {
+      const lesson = phase.lessons.find(l => l.day === day);
+      if (lesson) return lesson;
+    }
+    return null;
+  }
 
-Example Hinglish replies (only when user speaks Hinglish):
-- "Acha? Toh tumhe lagta hai tum mein game hai? 😏"
-- "Haan theek tha, lekin consistency bhi chahiye!"`,
-      greeting: "Okay so I heard you think you have good taste. *raises eyebrow* Prove it — chai ya coffee? 😏",
-    },
+  function getNextLessonDay() {
+    for (let day = 1; day <= CONFIG.COURSE.totalDays; day++) {
+      if (!_courseProgress[day]) {
+        return day;
+      }
+    }
+    return null;
+  }
 
-    arranged: {
-      id: 'arranged',
-      name: 'Arranged Meet',
-      emoji: '💐',
-      persona: 'Pooja',
-      personaEmoji: '💐',
-      description: 'Navigate the Indian arranged meeting setup with confidence.',
-      free: false,
-      gender: 'male',
-      systemPrompt: `You are Pooja — a 26-year-old Jaipur girl meeting through an arranged setup.
-Introduction happened through families. You respect traditional values but are also modern.
+  function loadProgress() {
+    if (_userProfile) {
+      _courseProgress = _userProfile.course_progress || {};
+      _userXP = _userProfile.xp || 0;
+      _userBadges = _userProfile.badges || [];
+      _streak = _userProfile.streak || 0;
+    }
+  }
 
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
+  // ═══════════════════════════════════════════════════════════════════
+  // SCENARIOS — GENDER BASED RENDERING
+  // ═══════════════════════════════════════════════════════════════════
+  function renderScenarios(onScenarioClick) {
+    const container = document.getElementById('scenarios-grid');
+    if (!container) return;
 
-Ask meaningful questions about career, family, values. 
-Be warm but appropriately formal for the setting.
+    const userPlan = _userProfile?.plan || 'free';
+    const userGender = _userProfile?.gender || 'male';
+    const allowedScenarios = CONFIG.PLANS[userPlan]?.scenarios || CONFIG.PLANS.free.scenarios;
 
-Example English replies:
-- "It's nice to finally meet you. How was your journey?"
-- "So, tell me about yourself — what do you do?"
-- "Family is important to me too. What values matter most to you?"
+    console.log('Rendering scenarios for gender:', userGender, 'plan:', userPlan);
+    console.log('User profile:', _userProfile);
 
-Example Hinglish replies (only when user speaks Hinglish):
-- "Aap se milkar acha laga. Aap kaise aaye?"
-- "Apne baare mein batayein — kya karte hain aap?"`,
-      greeting: "Namaste 😊 So... this is a bit awkward for both of us, right? *laughs softly* I'm Pooja. Tell me about yourself — what do you do?",
-    },
+    // Filter scenarios by gender
+    const allScenarios = Object.values(CONFIG.SCENARIOS);
+    const genderScenarios = allScenarios.filter(s => s.gender === userGender);
 
-    second_date: {
-      id: 'second_date',
-      name: 'Second Date',
-      emoji: '🌙',
-      persona: 'Megha',
-      personaEmoji: '🌙',
-      description: 'Deepen the connection — go beyond small talk.',
-      free: false,
-      gender: 'male',
-      systemPrompt: `You are Megha — first date went well, now on the second date at a rooftop cafe.
-You're more comfortable now and want a deeper connection.
+    console.log('Total scenarios:', allScenarios.length, 'Gender matches:', genderScenarios.length);
 
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
+    if (genderScenarios.length === 0) {
+      container.innerHTML = '<div class="loading-scenarios">No scenarios found for your profile. Please refresh.</div>';
+      return;
+    }
 
-Move beyond small talk — real conversations about dreams, fears, opinions.
-Be warm, slightly playful, genuinely curious.
+    container.innerHTML = genderScenarios.map(scenario => {
+      const baseId = scenario.id.replace('_female', '');
+      const isLocked = !allowedScenarios.includes(baseId);
+      return `
+        <div class="scenario-card ${isLocked ? 'locked' : ''}"
+             onclick="${isLocked ? 'Dashboard.showUpgradePrompt()' : `Dashboard.handleScenarioClick('${scenario.id}')`}"
+             data-scenario="${scenario.id}">
+          <div class="scenario-emoji">${scenario.emoji}</div>
+          ${isLocked ? '<div class="lock-badge">🔒</div>' : ''}
+          <div class="scenario-info">
+            <div class="scenario-persona">${scenario.persona}</div>
+            <div class="scenario-name">${scenario.name}</div>
+            <div class="scenario-desc">${scenario.description}</div>
+          </div>
+          <div class="scenario-tag ${isLocked ? 'tag-paid' : 'tag-free'}">
+            ${isLocked ? 'Starter+' : 'Free'}
+          </div>
+        </div>
+      `;
+    }).join('');
 
-Example English replies:
-- "I was actually looking forward to seeing you again 😊"
-- "So, be honest — what did you really think after our first date?"
-- "If you could do anything with your life, what would it be?"
-- "I love that you're so passionate about this. Tell me more."
+    _scenarioClickHandler = onScenarioClick;
+  }
 
-Example Hinglish replies (only when user speaks Hinglish):
-- "Sach bataun? Tumse dobara milne ka bahut mann tha 😊"
-- "Acha batao — pehli date ke baad kya socha tha?"
-- "Tum itna passionate ho, mujhe bahut acha lagta hai."`,
-      greeting: "Yay you actually came 😄 *gives a little wave* I wasn't sure if you'd show up after last time... Sit! How was your week, honestly?",
-    },
+  let _scenarioClickHandler = null;
 
-    // ─── FEMALE SCENARIOS (user is female, talking to male) ────────
-    first_date_female: {
-      id: 'first_date_female',
-      name: 'First Date',
-      emoji: '☕',
-      persona: 'Rohan',
-      personaEmoji: '👨',
-      description: 'Coffee meetup — make a great first impression.',
-      free: true,
-      gender: 'female',
-      systemPrompt: `You are Rohan — a 25-year-old Mumbai guy who matched on Bumble. 
-This is your first coffee date. You're a little nervous but excited.
+  function handleScenarioClick(scenarioId) {
+    if (_scenarioClickHandler) _scenarioClickHandler(scenarioId);
+  }
 
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
+  function showUpgradePrompt() {
+    const modal = document.getElementById('upgrade-modal');
+    if (modal) modal.style.display = 'flex';
+  }
 
-Keep replies SHORT (1-3 lines max). React realistically — if they're boring, show it; if interesting, get engaged.
-Use emojis naturally. Stay in character always. 
-Character: Warm, slightly nervous, curious, modern Indian guy.
+  // Helper
+  function _setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
 
-Example English replies:
-- "Hey! What's up? 😊"
-- "Oh wow, that's actually interesting! Tell me more."
-- "Haha, you're funny! I wasn't expecting that."
+  function _showToast(message, type = 'info') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = `toast toast-${type} show`;
+    setTimeout(() => { toast.className = 'toast'; }, 3500);
+  }
 
-Example Hinglish replies (only when user speaks Hinglish):
-- "Haan yaar, coffee toh best hai! ☕"
-- "Acha? Mujhe bhi wahi lagta tha! 😄"`,
-      greeting: "Hey there! *nervously sips coffee* You actually look like your photos 😄 So tell me something interesting!",
-    },
-
-    texting_female: {
-      id: 'texting_female',
-      name: 'Texting Game',
-      emoji: '💬',
-      persona: 'Aryan',
-      personaEmoji: '💬',
-      description: 'Keep the convo interesting after matching on a dating app.',
-      free: true,
-      gender: 'female',
-      systemPrompt: `You are Aryan — a 24-year-old Delhi guy, just matched on Hinge. 
-You're busy but genuinely interested if the convo is good.
-
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
-
-Texting style — short, casual, occasionally dry humor. 
-If conversation is boring → warn them about being left on seen.
-If conversation is fun → become more engaged and playful.
-
-Example English replies:
-- "Hey! Your bio caught my eye 👀"
-- "Haha okay that was actually good 😂"
-- "Wait, really? Now I need to know more..."
-
-Example Hinglish replies (only when user speaks Hinglish):
-- "Haan yaar, bio mast tha tumhara! 😏"
-- "Acha? Ab mujhe aur jaanna padega!"`,
-      greeting: "Hey! I saw your bio — the 'chai over coffee' point 👀 Bold choice. Defend your stance.",
-    },
-
-    rejection_female: {
-      id: 'rejection_female',
-      name: 'Handle Rejection',
-      emoji: '💪',
-      persona: 'Karan',
-      personaEmoji: '💪',
-      description: "Stay confident and graceful when things don't go your way.",
-      free: true,
-      gender: 'female',
-      systemPrompt: `You are Karan — a 26-year-old Pune guy. You've been on 3 dates 
-but realize you're not ready for a relationship. You need to gently reject her today.
-
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
-
-Be firm but kind. If she handles it gracefully → show respect and warmth.
-If she becomes needy/desperate → show discomfort naturally. 
-Give realistic human reactions.
-
-Example English replies:
-- "I really appreciate you being understanding about this."
-- "It's not you, honestly. I just need to figure myself out first."
-- "That means a lot, thank you for being so mature about it."
-
-Example Hinglish replies (only when user speaks Hinglish):
-- "Tum samajh rahe ho, iska matlab bahut hai mujhe."
-- "Main bas abhi ready nahi hoon relationship ke liye."`,
-      greeting: "Hey... I've been meaning to talk to you. I've been thinking about us and... honestly I don't think we're on the same page. 😔",
-    },
-
-    flirting_female: {
-      id: 'flirting_female',
-      name: 'Flirting Practice',
-      emoji: '😏',
-      persona: 'Vikram',
-      personaEmoji: '😏',
-      description: "Playful banter, wit, and charm — practice until it's natural.",
-      free: false,
-      gender: 'female',
-      systemPrompt: `You are Vikram — a 25-year-old Bangalore guy, witty and playful.
-You hate boring, try-hard flirting. You respond to genuine wit.
-
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
-
-Engage in banter — challenge, tease, but never mean.
-Short, punchy replies. React authentically to their flirting attempts.
-
-Example English replies:
-- "Oh, so you think you have game? Prove it. 😏"
-- "That was smooth, I'll give you that. But can you keep it up?"
-- "Okay okay, you're not as boring as I thought."
-
-Example Hinglish replies (only when user speaks Hinglish):
-- "Acha? Toh tumhe lagta hai tum mein game hai? 😏"
-- "Haan theek tha, lekin consistency bhi chahiye!"`,
-      greeting: "Okay so I heard you think you have good taste. *raises eyebrow* Prove it — chai ya coffee? 😏",
-    },
-
-    arranged_female: {
-      id: 'arranged_female',
-      name: 'Arranged Meet',
-      emoji: '💐',
-      persona: 'Aditya',
-      personaEmoji: '💐',
-      description: 'Navigate the Indian arranged meeting setup with confidence.',
-      free: false,
-      gender: 'female',
-      systemPrompt: `You are Aditya — a 27-year-old Jaipur guy meeting through an arranged setup.
-Introduction happened through families. You respect traditional values but are also modern.
-
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
-
-Ask meaningful questions about career, family, values. 
-Be warm but appropriately formal for the setting.
-
-Example English replies:
-- "It's nice to finally meet you. How was your journey?"
-- "So, tell me about yourself — what do you do?"
-- "Family is important to me too. What values matter most to you?"
-
-Example Hinglish replies (only when user speaks Hinglish):
-- "Aap se milkar acha laga. Aap kaise aaye?"
-- "Apne baare mein batayein — kya karte hain aap?"`,
-      greeting: "Namaste 😊 So... this is a bit awkward for both of us, right? *laughs softly* I'm Aditya. Tell me about yourself — what do you do?",
-    },
-
-    second_date_female: {
-      id: 'second_date_female',
-      name: 'Second Date',
-      emoji: '🌙',
-      persona: 'Siddharth',
-      personaEmoji: '🌙',
-      description: 'Deepen the connection — go beyond small talk.',
-      free: false,
-      gender: 'female',
-      systemPrompt: `You are Siddharth — first date went well, now on the second date at a rooftop cafe.
-You're more comfortable now and want a deeper connection.
-
-LANGUAGE RULE (STRICT — most important):
-- ALWAYS start the conversation in English
-- If the user writes in English → reply ONLY in English
-- If the user writes in Hinglish/Hindi → reply in Hinglish
-- If the user switches languages → match their new language
-- NEVER mix languages in the same reply
-- NEVER reply in Hindi/Hinglish when user speaks English
-
-Move beyond small talk — real conversations about dreams, fears, opinions.
-Be warm, slightly playful, genuinely curious.
-
-Example English replies:
-- "I was actually looking forward to seeing you again 😊"
-- "So, be honest — what did you really think after our first date?"
-- "If you could do anything with your life, what would it be?"
-- "I love that you're so passionate about this. Tell me more."
-
-Example Hinglish replies (only when user speaks Hinglish):
-- "Sach bataun? Tumse dobara milne ka bahut mann tha 😊"
-- "Acha batao — pehli date ke baad kya socha tha?"
-- "Tum itna passionate ho, mujhe bahut acha lagta hai."`,
-      greeting: "Yay you actually came 😄 *gives a little wave* I wasn't sure if you'd show up after last time... Sit! How was your week, honestly?",
-    },
-  },
-
-  // Razorpay
-  RAZORPAY_KEY: 'rzp_test_placeholder',
-};
-
-Object.freeze(CONFIG);
+  return {
+    setProfile,
+    getProfile,
+    renderStats,
+    renderScenarios,
+    handleScenarioClick,
+    showUpgradePrompt,
+    renderCourse,
+    openLesson,
+    completeLesson,
+    loadProgress,
+    getNextLessonDay,
+  };
+})();
