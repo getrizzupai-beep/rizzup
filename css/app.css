@@ -1036,3 +1036,39 @@ body {
   .tab-title { font-size: 22px; }
   .stat-value { font-size: 22px; }
 }
+
+/* ========================================
+   COURSE — Week Groups (added)
+   ======================================== */
+.week-group {
+  margin-bottom: 24px;
+}
+
+.week-header {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--dark);
+  padding: 10px 16px;
+  background: var(--gradient-soft);
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border);
+}
+
+.week-header.week-locked {
+  opacity: 0.6;
+  background: var(--light);
+}
+
+.week-lock-tag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+  background: #fef3c7;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
