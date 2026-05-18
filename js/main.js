@@ -143,7 +143,7 @@ function _handleScenarioSelect(scenarioId) {
   // ✅ FIX 2: no-scenario-state hide karo, chat UI show karo
   const noScenarioState = document.getElementById('no-scenario-state');
   const chatMessages = document.getElementById('chat-messages');
-  const chatInputArea = document.querySelector('.chat-input-area');
+  const chatInputArea = document.getElementById('chat-input-area');
   
   if (noScenarioState) noScenarioState.style.display = 'none';
   if (chatMessages) chatMessages.style.display = 'flex';
