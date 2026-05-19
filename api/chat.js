@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { messages, system } = req.body;
+  const { messages, system, gender } = req.body;
 
   if (!messages || !system) {
     return res.status(400).json({ error: 'messages aur system required hain' });
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
           ...messages
         ],
         max_tokens: 300,
-        temperature: 0.9,
+        temperature: 0.7,
       }),
     });
 
