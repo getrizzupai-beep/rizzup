@@ -409,6 +409,25 @@ function _switchTab(tabName) {
   document.querySelectorAll('[data-tab-panel]').forEach(panel => {
     panel.style.display = panel.dataset.tabPanel === tabName ? 'block' : 'none';
   });
+
+  // Chat tab pe: scenario select hua hai toh no-scenario state hide karo
+  if (tabName === 'chat') {
+    const noScenario = document.getElementById('no-scenario-state');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.querySelector('.chat-input-area');
+
+    if (Chat.getCurrentScenario()) {
+      // Scenario selected — chat dikhao, no-scenario hide karo
+      if (noScenario) noScenario.style.display = 'none';
+      if (chatMessages) chatMessages.style.display = 'flex';
+      if (chatInput) chatInput.style.display = 'flex';
+    } else {
+      // No scenario — message dikhao
+      if (noScenario) noScenario.style.display = 'block';
+      if (chatMessages) chatMessages.style.display = 'none';
+      if (chatInput) chatInput.style.display = 'none';
+    }
+  }
 }
 
 // ─── NAV UI UPDATE ────────────────────────────────────────────────
