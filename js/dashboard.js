@@ -1,47 +1,42 @@
-// js/dashboard.js — Dashboard UI + stats
-// FIX: renderCourse() HTML classes app.css se match karti hain ab
+// js/dashboard.js — Dashboard UI + stats + limits
 
 const Dashboard = (() => {
   let _userProfile = null;
+  let _sessionMsgs = 0;          // messages in current session
   let _sessionStartTime = null;
   let _sessionMinsTimer = null;
+  let _cooldownTimer = null;
+  let _scenarioClickHandler = null;
 
-  function setProfile(profile) {
-    _userProfile = profile;
-  }
+  function setProfile(profile) { _userProfile = profile; }
+  function getProfile() { return _userProfile; }
 
-  function getProfile() {
-    return _userProfile;
-  }
-
-  // Dashboard stats render karo
+  // ─── STATS RENDER ─────────────────────────────────────────────
   function renderStats() {
     if (!_userProfile) return;
 
-    const plan = CONFIG.PLANS[_userProfile.plan] || CONFIG.PLANS.free;
-    const minsUsed = _userProfile.mins_used || 0;
-    const minsLimit = plan.dailyMinutes;
-    const percentage = Math.min(100, (minsUsed / minsLimit) * 100);
+    const plan = _userProfile.plan || 'free';
+    const limit = CONFIG.LIMITS[plan] || CONFIG.LIMITS.free;
+    const msgsUsed = _sessionMsgs;
+    const msgsLimit = limit.msgsPerSession;
+    const percentage = Math.min(100, (msgsUsed / msgsLimit) * 100);
 
-    _setText('stat-mins-used', minsUsed);
-    _setText('stat-mins-limit', minsLimit === 999 ? '∞' : minsLimit);
+    _setText('stat-mins-used', msgsUsed);
+    _setText('stat-mins-limit', msgsLimit === 999 ? '∞' : msgsLimit);
     _setText('stat-total-msgs', _userProfile.total_msgs || 0);
     _setText('stat-sessions', _userProfile.sessions || 0);
-    _setText('stat-plan', (_userProfile.plan || 'free').toUpperCase());
+    _setText('stat-plan', plan.toUpperCase());
 
     const progressBar = document.getElementById('mins-progress-bar');
     if (progressBar) {
       progressBar.style.width = percentage + '%';
-    }
-
-    const limitWarning = document.getElementById('limit-warning');
-    if (limitWarning) {
-      const minsLeft = Math.max(0, minsLimit - minsUsed);
-      limitWarning.style.display = minsLeft === 0 ? 'block' : 'none';
+      progressBar.style.background = percentage > 80
+        ? 'linear-gradient(90deg, #ff6b6b, #ee5a24)'
+        : 'linear-gradient(90deg, #fd79a8, #e84393)';
     }
   }
 
-  // Scenarios render karo
+  // ─── SCENARIOS RENDER ─────────────────────────────────────────
   function renderScenarios(onScenarioClick) {
     const container = document.getElementById('scenarios-grid');
     if (!container) return;
@@ -53,17 +48,17 @@ const Dashboard = (() => {
       const isLocked = !allowedScenarios.includes(scenario.id);
       return `
         <div class="scenario-card ${isLocked ? 'locked' : ''}"
-             ${!isLocked
-               ? `onclick="Dashboard.handleScenarioClick('${scenario.id}')"`
-               : 'onclick="Dashboard.showUpgradePrompt()"'}
-             data-scenario="${scenario.id}">
+             data-scenario="${scenario.id}"
+             onclick="${!isLocked ? `Dashboard.handleScenarioClick('${scenario.id}')` : 'Dashboard.showUpgradePrompt()'}">
           <div class="scenario-emoji">${scenario.emoji}</div>
           ${isLocked ? '<div class="lock-badge">🔒</div>' : ''}
-          <div class="scenario-persona">${scenario.persona}</div>
-          <div class="scenario-name">${scenario.name}</div>
-          <div class="scenario-desc">${scenario.description}</div>
+          <div class="scenario-info">
+            <div class="scenario-persona">${scenario.persona}</div>
+            <div class="scenario-name">${scenario.name}</div>
+            <div class="scenario-desc">${scenario.description}</div>
+          </div>
           <div class="scenario-tag ${isLocked ? 'tag-paid' : 'tag-free'}">
-            ${isLocked ? (userPlan === 'free' ? 'Starter+' : 'Pro+') : 'Free'}
+            ${isLocked ? 'Starter+' : 'Free'}
           </div>
         </div>
       `;
@@ -72,12 +67,8 @@ const Dashboard = (() => {
     _scenarioClickHandler = onScenarioClick;
   }
 
-  let _scenarioClickHandler = null;
-
   function handleScenarioClick(scenarioId) {
-    if (_scenarioClickHandler) {
-      _scenarioClickHandler(scenarioId);
-    }
+    if (_scenarioClickHandler) _scenarioClickHandler(scenarioId);
   }
 
   function showUpgradePrompt() {
@@ -85,15 +76,112 @@ const Dashboard = (() => {
     if (modal) modal.style.display = 'flex';
   }
 
+  // ─── MESSAGE LIMIT (Claude-style) ─────────────────────────────
   function hasReachedLimit() {
     if (!_userProfile) return false;
-    const plan = CONFIG.PLANS[_userProfile.plan] || CONFIG.PLANS.free;
-    if (plan.dailyMinutes === 999) return false;
-    return (_userProfile.mins_used || 0) >= plan.dailyMinutes;
+    const plan = _userProfile.plan || 'free';
+    const limit = CONFIG.LIMITS[plan] || CONFIG.LIMITS.free;
+    if (limit.msgsPerSession === 999) return false;
+    return _sessionMsgs >= limit.msgsPerSession;
   }
 
+  function incrementSessionMsg() {
+    _sessionMsgs++;
+    renderStats();
+  }
+
+  function resetSessionMsgs() {
+    _sessionMsgs = 0;
+    renderStats();
+  }
+
+  // ─── COOLDOWN SYSTEM ──────────────────────────────────────────
+  function startCooldown() {
+    if (!_userProfile) return;
+    const plan = _userProfile.plan || 'free';
+    const limit = CONFIG.LIMITS[plan] || CONFIG.LIMITS.free;
+    const cooldownMs = limit.cooldownMinutes * 60 * 1000;
+
+    if (cooldownMs === 0) return; // Pro = no cooldown
+
+    const endTime = Date.now() + cooldownMs;
+
+    // Show cooldown UI
+    _showCooldownUI(endTime);
+
+    _cooldownTimer = setInterval(() => {
+      const remaining = endTime - Date.now();
+      if (remaining <= 0) {
+        clearInterval(_cooldownTimer);
+        _cooldownTimer = null;
+        _sessionMsgs = 0;
+        _hideCooldownUI();
+        renderStats();
+      } else {
+        _updateCooldownTimer(remaining);
+      }
+    }, 1000);
+  }
+
+  function _showCooldownUI(endTime) {
+    // Hide chat input
+    const chatInput = document.querySelector('.chat-input-area');
+    if (chatInput) chatInput.style.display = 'none';
+
+    // Show cooldown banner
+    let banner = document.getElementById('cooldown-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'cooldown-banner';
+      banner.className = 'cooldown-banner';
+
+      const plan = _userProfile?.plan || 'free';
+      const limit = CONFIG.LIMITS[plan] || CONFIG.LIMITS.free;
+
+      banner.innerHTML = `
+        <div class="cooldown-icon">⏰</div>
+        <div class="cooldown-text">
+          <div class="cooldown-title">Session limit reached!</div>
+          <div class="cooldown-sub">Free plan mein ${limit.msgsPerSession} messages per session. Chat wapas shuru hoga:</div>
+          <div class="cooldown-timer" id="cooldown-timer-display">--:--</div>
+        </div>
+        <button class="btn-upgrade-now" onclick="Dashboard.showUpgradePrompt()">
+          ⚡ Upgrade for more
+        </button>
+      `;
+
+      const chatMessages = document.getElementById('chat-messages');
+      if (chatMessages && chatMessages.parentNode) {
+        chatMessages.parentNode.insertBefore(banner, chatMessages.nextSibling);
+      }
+    }
+
+    banner.style.display = 'flex';
+    _updateCooldownTimer(endTime - Date.now());
+  }
+
+  function _hideCooldownUI() {
+    const banner = document.getElementById('cooldown-banner');
+    if (banner) banner.style.display = 'none';
+
+    const chatInput = document.querySelector('.chat-input-area');
+    if (chatInput) chatInput.style.display = 'flex';
+  }
+
+  function _updateCooldownTimer(remainingMs) {
+    const display = document.getElementById('cooldown-timer-display');
+    if (!display) return;
+
+    const mins = Math.floor(remainingMs / 60000);
+    const secs = Math.floor((remainingMs % 60000) / 1000);
+    display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  // ─── SESSION TIMER (for DB tracking only) ─────────────────────
   function startSessionTimer(onMinuteTick) {
     _sessionStartTime = Date.now();
+    _sessionMsgs = 0;
+
     _sessionMinsTimer = setInterval(() => {
       const minsElapsed = Math.floor((Date.now() - _sessionStartTime) / 60000);
       if (onMinuteTick) onMinuteTick(minsElapsed);
@@ -113,178 +201,98 @@ const Dashboard = (() => {
     return 0;
   }
 
-  // Chat message append karo
+  // ─── CHAT UI ──────────────────────────────────────────────────
   function appendMessage(role, content) {
     const chatMessages = document.getElementById('chat-messages');
     if (!chatMessages) return;
 
-    // No scenario state chhupao
-    const noState = document.getElementById('no-scenario-state');
-    if (noState) noState.style.display = 'none';
-
     const msgDiv = document.createElement('div');
     msgDiv.className = `message ${role === 'user' ? 'user-message' : 'ai-message'}`;
 
-    const formattedContent = content
+    const formatted = content
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n/g, '<br>');
 
-    msgDiv.innerHTML = `<div class="message-bubble">${formattedContent}</div>`;
+    msgDiv.innerHTML = `<div class="message-bubble">${formatted}</div>`;
     chatMessages.appendChild(msgDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
 
-  // Typing indicator
   function showTypingIndicator(show) {
     const existing = document.getElementById('typing-indicator');
-
     if (show && !existing) {
       const chatMessages = document.getElementById('chat-messages');
       if (!chatMessages) return;
-
-      const typingDiv = document.createElement('div');
-      typingDiv.id = 'typing-indicator';
-      typingDiv.className = 'message ai-message';
-      typingDiv.innerHTML = `
-        <div class="message-bubble typing-bubble">
-          <span></span><span></span><span></span>
-        </div>
-      `;
-      chatMessages.appendChild(typingDiv);
+      const div = document.createElement('div');
+      div.id = 'typing-indicator';
+      div.className = 'message ai-message';
+      div.innerHTML = `<div class="message-bubble typing-bubble"><span></span><span></span><span></span></div>`;
+      chatMessages.appendChild(div);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     } else if (!show && existing) {
       existing.remove();
     }
   }
 
-  // Chat clear + greeting
   function clearChat(scenarioGreeting) {
     const chatMessages = document.getElementById('chat-messages');
     if (chatMessages) chatMessages.innerHTML = '';
 
-    if (scenarioGreeting) {
-      appendMessage('assistant', scenarioGreeting);
-    }
+    // Hide cooldown if showing
+    _hideCooldownUI();
+    _sessionMsgs = 0;
+
+    if (scenarioGreeting) appendMessage('assistant', scenarioGreeting);
   }
 
-  // Helper
-  function _setText(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  }
-
-  // ─── COURSE RENDER ───────────────────────────────────────────────
-  // FIX: HTML ab app.css ke .lesson-item classes se match karta hai
+  // ─── COURSE RENDER ────────────────────────────────────────────
   function renderCourse() {
-    const container = document.getElementById('course-list');
-    if (!container) return;
-
     const userPlan = _userProfile?.plan || 'free';
     const allowedWeeks = CONFIG.PLANS[userPlan]?.courseWeeks || 1;
 
     const lessons = [
-      // Week 1 — Foundation (Free)
-      { week: 1, day: 1, title: 'Why You\'re Getting Ignored',    emoji: '🚫', duration: '5 min',  xp: 50,  free: true,  done: false },
-      { week: 1, day: 2, title: 'The Confidence DNA',             emoji: '💡', duration: '6 min',  xp: 50,  free: true,  done: false, today: true },
-      { week: 1, day: 3, title: 'First Message Formula',          emoji: '💬', duration: '7 min',  xp: 50,  free: true,  done: false },
-      { week: 1, day: 4, title: 'Reading Her Signals',            emoji: '👁️', duration: '5 min',  xp: 50,  free: true,  done: false },
-      { week: 1, day: 5, title: 'The Art of Banter',              emoji: '😏', duration: '8 min',  xp: 50,  free: true,  done: false },
-      { week: 1, day: 6, title: 'From Text to Date',              emoji: '📅', duration: '6 min',  xp: 50,  free: true,  done: false },
-      { week: 1, day: 7, title: 'Week 1 Practice Challenge',      emoji: '🏆', duration: '10 min', xp: 100, free: true,  done: false },
-      // Week 2 — Dating Dynamics (Starter+)
-      { week: 2, day: 8,  title: 'Date Planning 101',             emoji: '🗺️', duration: '7 min',  xp: 75,  free: false },
-      { week: 2, day: 9,  title: 'Conversation Depth',            emoji: '🌊', duration: '8 min',  xp: 75,  free: false },
-      { week: 2, day: 10, title: 'The Vulnerability Playbook',    emoji: '❤️', duration: '9 min',  xp: 75,  free: false },
-      { week: 2, day: 11, title: 'Handling Awkward Silences',     emoji: '🤫', duration: '6 min',  xp: 75,  free: false },
-      { week: 2, day: 12, title: 'Escalation & Comfort',         emoji: '🔥', duration: '10 min', xp: 75,  free: false },
-      { week: 2, day: 13, title: 'The Follow-Up Game',            emoji: '📲', duration: '5 min',  xp: 75,  free: false },
-      { week: 2, day: 14, title: 'Week 2 Practice Challenge',     emoji: '🏆', duration: '12 min', xp: 150, free: false },
-      // Week 3 — Advanced (Starter+)
-      { week: 3, day: 15, title: 'Mastering Flirting',            emoji: '💫', duration: '9 min',  xp: 100, free: false },
-      { week: 3, day: 16, title: 'The Arranged Meet Playbook',    emoji: '💐', duration: '11 min', xp: 100, free: false },
-      { week: 3, day: 17, title: 'Rejection Recovery',            emoji: '💪', duration: '8 min',  xp: 100, free: false },
-      { week: 3, day: 18, title: 'Long Distance Texting',         emoji: '📡', duration: '7 min',  xp: 100, free: false },
-      { week: 3, day: 19, title: 'Understanding Boundaries',      emoji: '🛡️', duration: '8 min',  xp: 100, free: false },
-      { week: 3, day: 20, title: 'Building Real Attraction',      emoji: '✨', duration: '10 min', xp: 100, free: false },
-      { week: 3, day: 21, title: 'Week 3 Practice Challenge',     emoji: '🏆', duration: '15 min', xp: 200, free: false },
-      // Week 4 — Relationships (Starter+)
-      { week: 4, day: 22, title: 'The Commitment Conversation',   emoji: '💍', duration: '9 min',  xp: 100, free: false },
-      { week: 4, day: 23, title: 'Meeting Her Family',            emoji: '👨‍👩‍👧', duration: '10 min', xp: 100, free: false },
-      { week: 4, day: 24, title: 'Conflict Resolution',           emoji: '🤝', duration: '8 min',  xp: 100, free: false },
-      { week: 4, day: 25, title: 'Keeping the Spark Alive',       emoji: '🕯️', duration: '9 min',  xp: 100, free: false },
-      { week: 4, day: 26, title: 'Social Media & Dating',         emoji: '📱', duration: '7 min',  xp: 100, free: false },
-      { week: 4, day: 27, title: 'The Long Game',                 emoji: '♟️', duration: '11 min', xp: 100, free: false },
-      { week: 4, day: 28, title: 'Final Challenge + Graduation',  emoji: '🎓', duration: '20 min', xp: 500, free: false },
+      { week: 1, day: 1, title: 'Why You\'re Getting Ignored', free: true, done: true },
+      { week: 1, day: 2, title: 'The Confidence Framework', free: true, done: false, today: true },
+      { week: 1, day: 3, title: 'First Message Formula', free: false },
+      { week: 1, day: 4, title: 'Reading Her Signals', free: false },
+      { week: 1, day: 5, title: 'The Art of Banter', free: false },
+      { week: 2, day: 8, title: 'Date Planning 101', free: false },
+      { week: 2, day: 9, title: 'Conversation Depth', free: false },
     ];
 
-    // Group by week
-    const weeks = {};
-    lessons.forEach(l => {
-      if (!weeks[l.week]) weeks[l.week] = [];
-      weeks[l.week].push(l);
-    });
+    const container = document.getElementById('course-list');
+    if (!container) return;
 
-    const weekLabels = {
-      1: 'Week 1 — Foundation 🏗️',
-      2: 'Week 2 — Dating Dynamics 🎯',
-      3: 'Week 3 — Advanced Skills 🚀',
-      4: 'Week 4 — Relationships ❤️',
-    };
-
-    container.innerHTML = Object.entries(weeks).map(([week, items]) => {
-      const weekNum = parseInt(week);
-      const isWeekLocked = weekNum > allowedWeeks;
-
-      const lessonsHTML = items.map(lesson => {
-        const isLocked = isWeekLocked && !lesson.free;
-        const statusClass = lesson.done ? 'done' : lesson.today ? 'today' : isLocked ? 'locked' : '';
-
-        let indicatorContent;
-        if (lesson.done) indicatorContent = '✓';
-        else if (isLocked) indicatorContent = '🔒';
-        else indicatorContent = lesson.day;
-
-        return `
-          <div class="lesson-item ${statusClass}">
-            <div class="lesson-indicator">${indicatorContent}</div>
-            <div class="lesson-info">
-              <div class="lesson-title">${lesson.emoji} ${lesson.title}</div>
-              <div class="lesson-meta">
-                ${lesson.duration} • +${lesson.xp} XP
-                ${lesson.today ? ' • <strong style="color:var(--primary)">Today\'s lesson</strong>' : ''}
-                ${lesson.free ? ' • <span style="color:#059669;font-weight:600">Free</span>' : ''}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-
+    container.innerHTML = lessons.map(lesson => {
+      const isLocked = lesson.week > allowedWeeks && !lesson.free;
       return `
-        <div class="week-group">
-          <div class="week-header ${isWeekLocked ? 'week-locked' : ''}">
-            ${weekLabels[weekNum]}
-            ${isWeekLocked ? '<span class="week-lock-tag">🔒 Starter+</span>' : ''}
+        <div class="lesson-item ${lesson.done ? 'done' : ''} ${lesson.today ? 'today' : ''} ${isLocked ? 'locked' : ''}">
+          <div class="lesson-indicator">
+            ${lesson.done ? '✓' : isLocked ? '🔒' : lesson.day}
           </div>
-          ${lessonsHTML}
+          <div class="lesson-info">
+            <div class="lesson-title">${lesson.title}</div>
+            <div class="lesson-meta">Week ${lesson.week} · ${lesson.free ? 'Free' : 'Starter+'}${lesson.today ? ' · <strong>Today</strong>' : ''}</div>
+          </div>
         </div>
       `;
     }).join('');
   }
 
-  // Public API
+  function _setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  }
+
   return {
-    setProfile,
-    getProfile,
-    renderStats,
-    renderScenarios,
-    handleScenarioClick,
-    showUpgradePrompt,
-    hasReachedLimit,
-    startSessionTimer,
-    stopSessionTimer,
-    appendMessage,
-    showTypingIndicator,
-    clearChat,
+    setProfile, getProfile,
+    renderStats, renderScenarios,
+    handleScenarioClick, showUpgradePrompt,
+    hasReachedLimit, incrementSessionMsg, resetSessionMsgs,
+    startCooldown,
+    startSessionTimer, stopSessionTimer,
+    appendMessage, showTypingIndicator, clearChat,
     renderCourse,
   };
 })();
