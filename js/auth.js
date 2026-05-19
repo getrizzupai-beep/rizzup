@@ -1,13 +1,23 @@
-// js/auth.js — Auth logic
+// js/auth.js — Sirf auth logic
+// Kaam: login, signup, logout, session check
+// Kuch aur nahi karta yeh file
 
 const Auth = (() => {
-  // config.js ne already client bana diya — wahi use karo
-  const _supabase = window._supabaseClient;
+  let _supabase = null;
   let _currentUser = null;
   let _onAuthChangeCallbacks = [];
+  let _initialized = false; // Race condition FIX
 
+  // Supabase client init
   function init() {
+    _supabase = window.supabase.createClient(
+      CONFIG.SUPABASE_URL,
+      CONFIG.SUPABASE_ANON_KEY
+    );
+
+    // Auth state changes sun — reload loop FIX: sirf ek baar handle karo
     _supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[Auth] onAuthStateChange:', event);
       if (event === 'SIGNED_IN' && session?.user) {
         _currentUser = session.user;
         _onAuthChangeCallbacks.forEach(cb => cb('SIGNED_IN', session.user));
@@ -18,82 +28,156 @@ const Auth = (() => {
     });
   }
 
+  // Auth change pe callback register karo
   function onAuthChange(callback) {
     _onAuthChangeCallbacks.push(callback);
   }
 
+  // Current session check karo (page load pe)
   async function getSession() {
     const { data: { session } } = await _supabase.auth.getSession();
-    if (session?.user) _currentUser = session.user;
+    if (session?.user) {
+      _currentUser = session.user;
+    }
     return session;
   }
 
+  // Current user
   function getCurrentUser() {
     return _currentUser;
   }
 
+  // Email/password signup
   async function signUp(name, email, password) {
     const { data, error } = await _supabase.auth.signUp({
-      email, password,
-      options: { data: { full_name: name } }
+      email,
+      password,
+      options: {
+        data: { full_name: name }
+      }
     });
+
     if (error) throw error;
-    if (data.user) await _saveUserToDb(data.user.id, name, email);
+
+    // Users table mein save karo
+    if (data.user) {
+      await _saveUserToDb(data.user.id, name, email);
+    }
+
     return data;
   }
 
+  // Email/password login
   async function signIn(email, password) {
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await _supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
     if (error) throw error;
     return data;
   }
 
+  // Magic link / OTP
   async function signInWithOtp(email) {
     const { error } = await _supabase.auth.signInWithOtp({ email });
     if (error) throw error;
   }
 
+  // Google OAuth — FIX: auth_callback.html pe redirect karo, app.html pe nahi
   async function signInWithGoogle() {
     const { error } = await _supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth_callback.html' }
+      options: {
+        redirectTo: window.location.origin + '/auth_callback.html'
+      }
     });
     if (error) throw error;
   }
 
+  // Logout
   async function signOut() {
     const { error } = await _supabase.auth.signOut();
     if (error) throw error;
     _currentUser = null;
   }
 
+  // User data Supabase DB mein save karo
   async function _saveUserToDb(userId, name, email) {
-    const { error } = await _supabase.from('users').upsert({
-      id: userId, name, email, plan: 'free',
-      mins_used: 0, total_msgs: 0, sessions: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'id' });
+    const { error } = await _supabase
+      .from('users')
+      .upsert({
+        id: userId,
+        name,
+        email,
+        plan: 'free',
+        mins_used: 0,
+        total_msgs: 0,
+        sessions: 0,
+        last_reset_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'id' });
+
     if (error) console.error('DB save error:', error);
   }
 
+  // User profile Supabase se fetch karo
   async function getUserProfile(userId) {
     const { data, error } = await _supabase
-      .from('users').select('*').eq('id', userId).single();
-    if (error) return null;
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error) {
+      console.error('[Auth] getUserProfile error:', error);
+      return null;
+    }
+
+    // Daily reset check — agar aaj ka date alag hai toh mins_used reset karo
+    const today = new Date().toISOString().split('T')[0];
+    const lastReset = data.last_reset_date || '';
+
+    if (lastReset !== today) {
+      console.log('[Auth] Daily reset — resetting mins_used for today');
+      await _supabase
+        .from('users')
+        .update({
+          mins_used: 0,
+          last_reset_date: today,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+      data.mins_used = 0;
+      data.last_reset_date = today;
+    }
+
     return data;
   }
 
+  // User stats update karo
   async function updateUserStats(userId, updates) {
-    const { error } = await _supabase.from('users')
+    const { error } = await _supabase
+      .from('users')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', userId);
+
     if (error) console.error('Stats update error:', error);
   }
 
+  // Public API
   return {
-    init, onAuthChange, getSession, getCurrentUser,
-    signUp, signIn, signInWithOtp, signInWithGoogle,
-    signOut, getUserProfile, updateUserStats,
+    init,
+    onAuthChange,
+    getSession,
+    getCurrentUser,
+    signUp,
+    signIn,
+    signInWithOtp,
+    signInWithGoogle,
+    signOut,
+    getUserProfile,
+    updateUserStats,
   };
 })();
