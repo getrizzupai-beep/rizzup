@@ -1,165 +1,38 @@
-// js/chat.js — Sirf AI chat logic
-// Kaam: message bhejo, reply lo, coach feedback lo
-// Auth ya UI ke baare mein kuch nahi jaanta yeh file
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).end();
 
-const Chat = (() => {
-  let _conversationHistory = [];
-  let _currentScenario = null;
-  let _isTyping = false;
-  let _userGender = 'male';  // ← USER GENDER STORE
+  const { messages, system } = req.body;
 
-  // Set user gender
-  function setGender(gender) {
-    _userGender = gender || 'male';
-  }
-
-  // Naya scenario start karo
-  function startScenario(scenarioKey) {
-    const scenario = CONFIG.SCENARIOS[scenarioKey];
-    if (!scenario) {
-      console.error('Unknown scenario:', scenarioKey);
-      return null;
-    }
-
-    _currentScenario = scenario;
-    _conversationHistory = [];
-
-    // AI ka pehla greeting message history mein add karo
-    _conversationHistory.push({
-      role: 'assistant',
-      content: scenario.greeting
+  try {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [{ role: 'system', content: system }, ...messages],
+        max_tokens: 200,
+        temperature: 0.9
+      })
     });
 
-    return scenario;
-  }
+    const data = await response.json();
 
-  // Conversation reset
-  function resetConversation() {
-    _conversationHistory = [];
-    _currentScenario = null;
-  }
+    // ✅ FIX: Groq returns OpenAI format — choices[0].message.content
+    // Pehle data.reply likha tha jo WRONG tha — isliye replies toot rahe the
+    const reply = data?.choices?.[0]?.message?.content;
 
-  // Current scenario
-  function getCurrentScenario() {
-    return _currentScenario;
-  }
-
-  // Message bhejo, reply lo
-  async function sendMessage(userMessage) {
-    if (!_currentScenario) {
-      throw new Error('No scenario selected');
+    if (!reply) {
+      console.error('Groq API unexpected response:', JSON.stringify(data));
+      return res.status(500).json({ error: 'Empty response from AI' });
     }
 
-    if (_isTyping) {
-      throw new Error('Already waiting for response');
-    }
+    res.status(200).json({ reply });
 
-    // User message history mein add karo
-    _conversationHistory.push({
-      role: 'user',
-      content: userMessage
-    });
-
-    _isTyping = true;
-
-    try {
-      const response = await fetch(CONFIG.CHAT_API_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: _currentScenario.systemPrompt,
-          messages: _conversationHistory,
-          gender: _userGender,  // ← SEND GENDER TO API
-        }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const reply = data.reply;
-
-      if (!reply) throw new Error('Empty response from server');
-
-      // AI reply history mein add karo
-      _conversationHistory.push({
-        role: 'assistant',
-        content: reply
-      });
-
-      return reply;
-
-    } finally {
-      _isTyping = false;
-    }
+  } catch (err) {
+    console.error('Handler error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
-
-  // Coach feedback lo — alag API call, conversation history se analyze karo
-  async function getCoachFeedback() {
-    if (_conversationHistory.length < 3) {
-      return 'Thoda aur practice karo pehle! Kam se kam 2-3 messages ke baad coach feedback milega. 💪';
-    }
-
-    // Last kuch messages lo
-    const recentMessages = _conversationHistory.slice(-6);
-    const conversationText = recentMessages
-      .map(m => `${m.role === 'user' ? 'User' : _currentScenario.persona}: ${m.content}`)
-      .join('\n');
-
-    try {
-      const response = await fetch(CONFIG.CHAT_API_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system: `Tu ek expert Indian dating coach hai. Conversation analyze karke honest feedback do.
-Hamesha is format mein respond karo:
-**Vibe Score: X/10** — [ek line summary]
-
-**Kya kaam kiya:** [2-3 bullet points]
-**Improve karo:** [1-2 specific tips]  
-**Next bolna chahiye:** "[exact suggested reply]"
-
-Hinglish mein respond karo. Honest raho — sugar coat mat karo.`,
-          messages: [{
-            role: 'user',
-            content: `Yeh conversation analyze karo aur feedback do:\n\n${conversationText}`
-          }],
-          gender: _userGender,  // ← SEND GENDER TO API
-        }),
-      });
-
-      if (!response.ok) throw new Error('Feedback API error');
-
-      const data = await response.json();
-      return data.reply || 'Coach feedback abhi available nahi hai. Try again!';
-
-    } catch (error) {
-      console.error('Coach feedback error:', error);
-      return 'Coach feedback abhi available nahi hai. Thodi der mein try karo! 🙏';
-    }
-  }
-
-  // Conversation history
-  function getHistory() {
-    return [..._conversationHistory];
-  }
-
-  // Typing state
-  function isTyping() {
-    return _isTyping;
-  }
-
-  // Public API
-  return {
-    startScenario,
-    resetConversation,
-    getCurrentScenario,
-    sendMessage,
-    getCoachFeedback,
-    getHistory,
-    isTyping,
-    setGender,  // ← NEW: SET GENDER
-  };
-})();
+}
