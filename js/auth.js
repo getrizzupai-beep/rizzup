@@ -6,7 +6,6 @@ const Auth = (() => {
   let _supabase = null;
   let _currentUser = null;
   let _onAuthChangeCallbacks = [];
-  let _initialized = false; // Race condition FIX
 
   // Supabase client init
   function init() {
@@ -17,7 +16,6 @@ const Auth = (() => {
 
     // Auth state changes sun — reload loop FIX: sirf ek baar handle karo
     _supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[Auth] onAuthStateChange:', event);
       if (event === 'SIGNED_IN' && session?.user) {
         _currentUser = session.user;
         _onAuthChangeCallbacks.forEach(cb => cb('SIGNED_IN', session.user));
@@ -37,7 +35,7 @@ const Auth = (() => {
   async function getSession() {
     const { data: { session } } = await _supabase.auth.getSession();
     if (session?.user) {
-      _currentUser = session.user;
+      _currentUser = session.user; // FIX: yahan set karo
     }
     return session;
   }
@@ -84,12 +82,12 @@ const Auth = (() => {
     if (error) throw error;
   }
 
-  // Google OAuth — FIX: auth_callback.html pe redirect karo, app.html pe nahi
+  // Google OAuth
   async function signInWithGoogle() {
     const { error } = await _supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/auth_callback.html'
+        redirectTo: window.location.origin + '/app.html'
       }
     });
     if (error) throw error;
@@ -114,12 +112,20 @@ const Auth = (() => {
         mins_used: 0,
         total_msgs: 0,
         sessions: 0,
-        last_reset_date: new Date().toISOString().split('T')[0], // YYYY-MM-DD
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'id' });
 
     if (error) console.error('DB save error:', error);
+  }
+
+  // FIX: Naye user ke liye profile ensure karo (Google OAuth etc.)
+  async function ensureUserProfile(user) {
+    const existing = await getUserProfile(user.id);
+    if (!existing) {
+      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+      await _saveUserToDb(user.id, name, user.email);
+    }
   }
 
   // User profile Supabase se fetch karo
@@ -130,29 +136,7 @@ const Auth = (() => {
       .eq('id', userId)
       .single();
 
-    if (error) {
-      console.error('[Auth] getUserProfile error:', error);
-      return null;
-    }
-
-    // Daily reset check — agar aaj ka date alag hai toh mins_used reset karo
-    const today = new Date().toISOString().split('T')[0];
-    const lastReset = data.last_reset_date || '';
-
-    if (lastReset !== today) {
-      console.log('[Auth] Daily reset — resetting mins_used for today');
-      await _supabase
-        .from('users')
-        .update({
-          mins_used: 0,
-          last_reset_date: today,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-      data.mins_used = 0;
-      data.last_reset_date = today;
-    }
-
+    if (error) return null;
     return data;
   }
 
@@ -177,6 +161,7 @@ const Auth = (() => {
     signInWithOtp,
     signInWithGoogle,
     signOut,
+    ensureUserProfile,
     getUserProfile,
     updateUserStats,
   };
