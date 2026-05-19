@@ -54,30 +54,33 @@
 
       <!-- ─── DASHBOARD TAB ─────────────────────────────────────── -->
       <div data-tab-panel="dashboard">
-
-        <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
-        <p class="tab-subtitle">Ready to practice today?</p>
+        <div class="tab-header">
+          <h2 class="tab-title">Hey <span id="nav-user-name-dashboard">there</span>! 👋</h2>
+          <p class="tab-subtitle">Ready to practice today? Choose a scenario below.</p>
+        </div>
 
         <!-- Stats Row -->
         <div class="stats-row">
           <div class="stat-box">
-            <div class="stat-value">
-              <span id="stat-mins-used">0</span>/<span id="stat-mins-limit">20</span>
-            </div>
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-value"><span id="stat-mins-used">0</span>/<span id="stat-mins-limit">20</span></div>
             <div class="stat-label">mins used today</div>
-            <div class="progress-bar">
+            <div class="progress-bar-wrap">
               <div class="progress-fill" id="mins-progress-bar" style="width:0%"></div>
             </div>
           </div>
           <div class="stat-box">
+            <div class="stat-icon">💬</div>
             <div class="stat-value" id="stat-total-msgs">0</div>
             <div class="stat-label">total messages</div>
           </div>
           <div class="stat-box">
+            <div class="stat-icon">🎯</div>
             <div class="stat-value" id="stat-sessions">0</div>
             <div class="stat-label">sessions done</div>
           </div>
-          <div class="stat-box">
+          <div class="stat-box plan-box">
+            <div class="stat-icon">⚡</div>
             <div class="stat-value" id="stat-plan">FREE</div>
             <div class="stat-label">current plan</div>
           </div>
@@ -85,16 +88,18 @@
 
         <!-- Limit Warning -->
         <div class="limit-warning" id="limit-warning" style="display:none;">
-          ⚠️ Daily limit reached!
-          <button class="link-btn" onclick="Dashboard.showUpgradePrompt()">Upgrade to keep practicing →</button>
+          ⚠️ Daily limit reached! <button class="link-btn" onclick="Dashboard.showUpgradePrompt()">Upgrade to keep practicing →</button>
         </div>
 
         <!-- Scenarios -->
-        <h3 class="section-heading">Pick a Scenario 👇</h3>
+        <h3 class="section-heading">Pick a Scenario to Practice</h3>
         <div class="scenarios-grid" id="scenarios-grid">
-          <div class="loading-scenarios">Loading scenarios...</div>
+          <div class="loading-scenarios">
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+            <div class="loading-dot"></div>
+          </div>
         </div>
-
       </div>
 
       <!-- ─── CHAT TAB ──────────────────────────────────────────── -->
@@ -104,13 +109,13 @@
         <div class="chat-header">
           <div class="chat-persona-avatar" id="chat-persona-avatar">👩</div>
           <div class="chat-persona-info">
-            <div class="chat-persona-name" id="chat-persona-name">Select a Scenario</div>
-            <div class="chat-persona-status" id="chat-status">Dashboard pe jao aur scenario choose karo</div>
+            <div class="chat-persona-name" id="chat-persona-name">Select a scenario</div>
+            <div class="chat-persona-status" id="chat-status">Dashboard pe jaao aur scenario choose karo</div>
           </div>
           <button class="btn-coach" id="btn-coach-feedback">🎯 Coach Feedback</button>
         </div>
 
-        <!-- No scenario selected -->
+        <!-- No scenario selected state -->
         <div class="no-scenario-state" id="no-scenario-state">
           <div class="no-scenario-icon">💬</div>
           <h3>Koi scenario select karo</h3>
@@ -121,10 +126,10 @@
         </div>
 
         <!-- Chat Messages -->
-        <div class="chat-messages" id="chat-messages" style="display:none;"></div>
+        <div class="chat-messages" id="chat-messages"></div>
 
         <!-- Chat Input -->
-        <div class="chat-input-area" id="chat-input-area" style="display:none;">
+        <div class="chat-input-area">
           <textarea
             id="chat-input"
             placeholder="Apna message type karo... (Enter = send, Shift+Enter = new line)"
@@ -132,20 +137,26 @@
           ></textarea>
           <button class="btn-send" id="btn-send">➤</button>
         </div>
-
       </div>
 
       <!-- ─── COURSE TAB ─────────────────────────────────────────── -->
       <div data-tab-panel="course" style="display:none;">
-        <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
-        <p class="tab-subtitle">Daily lessons to go from nervous to confident. Week 1 is free!</p>
-        <div class="course-list" id="course-list"></div>
+        <div class="tab-header">
+          <h2 class="tab-title">30-Day Dating Bootcamp 📚</h2>
+          <p class="tab-subtitle">Daily lessons to go from nervous to confident. Week 1 is free!</p>
+        </div>
+        <div class="course-list" id="course-list">
+          <!-- JS se render hoga -->
+        </div>
       </div>
 
       <!-- ─── UPGRADE TAB ────────────────────────────────────────── -->
       <div data-tab-panel="upgrade" style="display:none;">
-        <h2 class="tab-title">Unlock Everything ⚡</h2>
-        <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more.</p>
+        <div class="tab-header" style="text-align:center;">
+          <div style="font-size:40px;margin-bottom:12px">⚡</div>
+          <h2 class="tab-title">Unlock Everything</h2>
+          <p class="tab-subtitle">Get all 6 scenarios, full 30-day course, Wingman Mode, and more. Cancel anytime.</p>
+        </div>
 
         <div class="upgrade-pricing-grid">
           <div class="upgrade-price-card popular">
@@ -174,33 +185,34 @@
             <button class="btn-outline full-width" onclick="initiatePayment('pro')">Get Pro 👑</button>
           </div>
         </div>
+
+        <p style="text-align:center;font-size:12px;color:#aaa;margin-top:20px">
+          🔒 Secure payments via Razorpay · UPI · Cards · NetBanking · 7-day money back guarantee
+        </p>
       </div>
 
     </main>
   </div>
 
   <!-- ─── UPGRADE MODAL ─────────────────────────────────────────── -->
-  <div class="modal-overlay" id="upgrade-modal" style="display:none;">
+  <div class="modal-overlay" id="upgrade-modal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
     <div class="modal-box">
       <button class="modal-close" id="upgrade-modal-close">✕</button>
       <div class="upgrade-modal-content">
         <div class="upgrade-modal-icon">🔒</div>
         <h3>Upgrade to Unlock</h3>
         <p>Yeh scenario Starter plan ke liye available hai. Upgrade karke sab 6 scenarios, full course, aur Wingman Mode unlock karo!</p>
-        <button class="btn-primary full-width"
-          onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
+        <button class="btn-primary full-width" onclick="initiatePayment('starter'); document.getElementById('upgrade-modal').style.display='none'">
           Get Starter — ₹199/mo ⚡
         </button>
-        <button class="btn-ghost full-width"
-          onclick="document.getElementById('upgrade-modal').style.display='none'">
+        <button class="btn-ghost full-width" onclick="document.getElementById('upgrade-modal').style.display='none'">
           Maybe later
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Main JS (last mein load karo) -->
+  <!-- Main JS (last mein) -->
   <script src="js/main.js"></script>
-
 </body>
 </html>
