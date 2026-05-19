@@ -9,8 +9,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ─── 1. AUTH INIT ───────────────────────────────────────────────
   Auth.init();
 
-  const isAppPage = window.location.pathname.includes('app.html');
+  // Auth change pe react karo
+  Auth.onAuthChange(async (event, user) => {
+    if (event === 'SIGNED_IN' && user) {
+      const profile = await Auth.getUserProfile(user.id);
+      if (profile) {
+        Dashboard.setProfile(profile);
+        _updateNavUI(profile);
+        Dashboard.renderStats();
+        Dashboard.renderScenarios(_handleScenarioSelect);
+        Dashboard.renderCourse();
+      }
+    } else if (event === 'SIGNED_OUT') {
+      if (window.location.pathname.includes('app.html')) {
+        window.location.href = 'index.html';
+      }
+    }
+  });
 
+  // ─── 2. PAGE DETECT: landing ya app? ────────────────────────────
+  const isAppPage = window.location.pathname.includes('app.html');
+  
   if (isAppPage) {
     await _initAppPage();
   } else {
@@ -20,27 +39,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ─── APP PAGE INIT ────────────────────────────────────────────────
 async function _initAppPage() {
-  // Session check — login nahi hai toh landing pe bhejo
   const session = await Auth.getSession();
   if (!session) {
-    console.log('[Main] No session — redirecting to index');
     window.location.href = 'index.html';
     return;
   }
 
-  console.log('[Main] Session found, loading profile...');
   const user = Auth.getCurrentUser();
+  const profile = await Auth.getUserProfile(user.id);
+  
+  if (profile) {
+    Dashboard.setProfile(profile);
+    _updateNavUI(profile);
+    Dashboard.renderStats();
+    Dashboard.renderScenarios(_handleScenarioSelect);
+    Dashboard.renderCourse();
+  }
 
-  // Profile load karo + dashboard render karo
-  await _loadAndRenderDashboard(user.id);
-
-  // Tab switching
   _setupTabs();
-
-  // Chat input
   _setupChatInput();
 
-  // Logout button
   const logoutBtn = document.getElementById('btn-logout');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
@@ -49,74 +67,27 @@ async function _initAppPage() {
     });
   }
 
-  // Coach feedback button
   const coachBtn = document.getElementById('btn-coach-feedback');
   if (coachBtn) {
     coachBtn.addEventListener('click', _handleCoachFeedback);
   }
 
-  // Upgrade modal close
   const upgradeClose = document.getElementById('upgrade-modal-close');
   if (upgradeClose) {
     upgradeClose.addEventListener('click', () => {
       document.getElementById('upgrade-modal').style.display = 'none';
     });
   }
-
-  // Auth change bhi sun (session expire ho jaaye toh)
-  Auth.onAuthChange(async (event, user) => {
-    if (event === 'SIGNED_OUT') {
-      window.location.href = 'index.html';
-    }
-  });
-}
-
-// ─── PROFILE LOAD + DASHBOARD RENDER ──────────────────────────────
-async function _loadAndRenderDashboard(userId) {
-  try {
-    const profile = await Auth.getUserProfile(userId);
-
-    if (!profile) {
-      console.error('[Main] Profile not found in DB!');
-      // Profile missing hai toh create karo aur try karo
-      _showToast('Profile load ho rahi hai... ek second!', 'info');
-      setTimeout(async () => {
-        const retryProfile = await Auth.getUserProfile(userId);
-        if (retryProfile) {
-          _renderDashboard(retryProfile);
-        } else {
-          _showToast('Profile load nahi hui. Refresh karo!', 'error');
-        }
-      }, 2000);
-      return;
-    }
-
-    _renderDashboard(profile);
-  } catch (err) {
-    console.error('[Main] Dashboard load error:', err);
-    _showToast('Kuch error hua. Page refresh karo!', 'error');
-  }
-}
-
-function _renderDashboard(profile) {
-  console.log('[Main] Rendering dashboard for:', profile.name);
-  Dashboard.setProfile(profile);
-  _updateNavUI(profile);
-  Dashboard.renderStats();
-  Dashboard.renderScenarios(_handleScenarioSelect);
-  Dashboard.renderCourse();
 }
 
 // ─── LANDING PAGE INIT ────────────────────────────────────────────
 function _initLandingPage() {
-  // Auth modal buttons
   const signupBtns = document.querySelectorAll('[data-action="open-signup"]');
   const loginBtns = document.querySelectorAll('[data-action="open-login"]');
-
+  
   signupBtns.forEach(btn => btn.addEventListener('click', () => openAuthModal('signup')));
   loginBtns.forEach(btn => btn.addEventListener('click', () => openAuthModal('login')));
 
-  // Modal close
   const modalClose = document.getElementById('auth-modal-close');
   if (modalClose) {
     modalClose.addEventListener('click', () => {
@@ -124,24 +95,10 @@ function _initLandingPage() {
     });
   }
 
-  // Click outside modal to close
-  const modal = document.getElementById('auth-modal');
-  if (modal) {
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.style.display = 'none';
-    });
-  }
-
-  // Auth form tabs
   _setupAuthTabs();
-
-  // Auth forms submit
   _setupAuthForms();
-
-  // FAQ accordion
   _setupFAQ();
 
-  // Session check — already logged in toh nav update karo
   Auth.getSession().then(session => {
     if (session) {
       const authBtns = document.querySelector('.nav-auth-btns');
@@ -159,32 +116,42 @@ function _handleScenarioSelect(scenarioId) {
     return;
   }
 
+  // Chat tab pe switch karo
   _switchTab('chat');
 
+  // Scenario start karo
   const scenario = Chat.startScenario(scenarioId);
   if (!scenario) return;
 
-  // No-scenario state hide karo
+  // ✅ FIX: no-scenario-state hide karo, chat-messages show karo
   const noScenarioState = document.getElementById('no-scenario-state');
-  if (noScenarioState) noScenarioState.style.display = 'none';
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInputArea = document.querySelector('.chat-input-area');
 
+  if (noScenarioState) noScenarioState.style.display = 'none';
+  if (chatMessages) chatMessages.style.display = 'flex';
+  if (chatInputArea) chatInputArea.style.display = 'flex';
+
+  // Chat header update karo
   const chatPersona = document.getElementById('chat-persona-name');
   const chatStatus = document.getElementById('chat-status');
   if (chatPersona) chatPersona.textContent = scenario.persona;
   if (chatStatus) chatStatus.textContent = `● Online now · ${scenario.name}`;
 
+  // Chat clear karke greeting dikhao
   Dashboard.clearChat(scenario.greeting);
 
+  // Session timer start karo
   Dashboard.startSessionTimer(async (minsElapsed) => {
     const profile = Dashboard.getProfile();
     if (!profile) return;
-
+    
     const newMinsUsed = (profile.mins_used || 0) + 1;
     profile.mins_used = newMinsUsed;
     Dashboard.renderStats();
-
+    
     await Auth.updateUserStats(profile.id, { mins_used: newMinsUsed });
-
+    
     if (Dashboard.hasReachedLimit()) {
       Dashboard.stopSessionTimer();
       Dashboard.showUpgradePrompt();
@@ -206,12 +173,6 @@ function _setupChatInput() {
       e.preventDefault();
       _sendChatMessage();
     }
-  });
-
-  // Auto-resize textarea
-  chatInput.addEventListener('input', () => {
-    chatInput.style.height = 'auto';
-    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
   });
 }
 
@@ -259,11 +220,11 @@ async function _handleCoachFeedback() {
   if (coachBtn) coachBtn.disabled = true;
 
   Dashboard.showTypingIndicator(true);
-
+  
   try {
     const feedback = await Chat.getCoachFeedback();
     Dashboard.showTypingIndicator(false);
-
+    
     const chatMessages = document.getElementById('chat-messages');
     if (chatMessages) {
       const feedbackDiv = document.createElement('div');
@@ -309,7 +270,6 @@ function _switchAuthTab(tab) {
 }
 
 function _setupAuthForms() {
-  // Signup form
   const signupForm = document.getElementById('form-signup');
   if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
@@ -317,7 +277,7 @@ function _setupAuthForms() {
       const name = document.getElementById('signup-name').value.trim();
       const email = document.getElementById('signup-email').value.trim();
       const password = document.getElementById('signup-password').value;
-
+      
       const btn = signupForm.querySelector('button[type="submit"]');
       btn.disabled = true;
       btn.textContent = 'Creating account...';
@@ -335,37 +295,35 @@ function _setupAuthForms() {
     });
   }
 
-  // Login form
   const loginForm = document.getElementById('form-login');
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
-
+      
       const btn = loginForm.querySelector('button[type="submit"]');
       btn.disabled = true;
       btn.textContent = 'Logging in...';
 
       try {
         await Auth.signIn(email, password);
-        // FIX: seedha redirect karo, onAuthStateChange pe depend mat karo
         window.location.href = 'app.html';
       } catch (error) {
-        _showToast(error.message || 'Login failed. Email/password check karo!', 'error');
+        _showToast(error.message || 'Login failed. Check email/password!', 'error');
+      } finally {
         btn.disabled = false;
         btn.textContent = 'Login →';
       }
     });
   }
 
-  // OTP form
   const otpForm = document.getElementById('form-otp');
   if (otpForm) {
     otpForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('otp-email').value.trim();
-
+      
       const btn = otpForm.querySelector('button[type="submit"]');
       btn.disabled = true;
       btn.textContent = 'Sending...';
@@ -382,12 +340,10 @@ function _setupAuthForms() {
     });
   }
 
-  // Google OAuth buttons
   document.querySelectorAll('[data-action="google-signin"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       try {
         await Auth.signInWithGoogle();
-        // Supabase redirect karega automatically auth_callback.html pe
       } catch (error) {
         _showToast('Google login failed. Try again!', 'error');
       }
@@ -416,11 +372,9 @@ function _switchTab(tabName) {
 function _updateNavUI(profile) {
   const planBadge = document.getElementById('nav-plan-badge');
   const userName = document.getElementById('nav-user-name');
-  const userNameDash = document.getElementById('nav-user-name-dashboard');
-
+  
   if (planBadge) planBadge.textContent = (profile.plan || 'FREE').toUpperCase();
   if (userName) userName.textContent = profile.name?.split(' ')[0] || 'User';
-  if (userNameDash) userNameDash.textContent = profile.name?.split(' ')[0] || 'there';
 }
 
 // ─── FAQ ACCORDION ────────────────────────────────────────────────
@@ -447,7 +401,7 @@ function _showToast(message, type = 'info') {
   document.body.appendChild(toast);
 
   setTimeout(() => toast.classList.add('show'), 10);
-
+  
   setTimeout(() => {
     toast.classList.remove('show');
     setTimeout(() => toast.remove(), 300);
@@ -483,7 +437,7 @@ function initiatePayment(planKey) {
       Dashboard.renderStats();
       Dashboard.renderScenarios(_handleScenarioSelect);
       _showToast(`${plan.name} plan active ho gaya! 🎉`, 'success');
-
+      
       const upgradeModal = document.getElementById('upgrade-modal');
       if (upgradeModal) upgradeModal.style.display = 'none';
     },
